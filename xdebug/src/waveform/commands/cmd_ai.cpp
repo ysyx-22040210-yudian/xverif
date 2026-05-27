@@ -1,0 +1,1739 @@
+#include "cmd_ai.h"
+
+#include "../apb/apb_config.h"
+#include "../apb/apb_manager.h"
+#include "../axi/axi_config.h"
+#include "../axi/axi_manager.h"
+#include "../client/client.h"
+#include "../event/event_config.h"
+#include "../event/event_manager.h"
+#include "json.hpp"
+#include "../list/list_manager.h"
+#include "../protocol/protocol.h"
+#include "../session/session_manager.h"
+#include "../session/session_registry.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cctype>
+#include <climits>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <fcntl.h>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <unistd.h>
+
+namespace xdebug_waveform {
+
+using Json = nlohmann::ordered_json;
+
+static const char* kApiVersion = "xdebug.internal.v1";
+
+static std::string read_stream(std::istream& is) {
+    std::ostringstream oss;
+    oss << is.rdbuf();
+    return oss.str();
+}
+
+static bool read_file(const std::string& path, std::string& out) {
+    std::ifstream ifs(path);
+    if (!ifs) return false;
+    out = read_stream(ifs);
+    return true;
+}
+
+static std::string trim(std::string s) {
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) s.erase(s.begin());
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.pop_back();
+    return s;
+}
+
+static std::string compact_expr_ws(const std::string& expr) {
+    std::string out;
+    out.reserve(expr.size());
+    for (char c : expr) {
+        if (!std::isspace(static_cast<unsigned char>(c))) out.push_back(c);
+    }
+    return out;
+}
+
+static bool contains_xz(const std::string& value) {
+    std::string v = trim(value);
+    size_t start = 0;
+    if (v.size() >= 2 && v[0] == '0' && (v[1] == 'x' || v[1] == 'X')) {
+        start = 2;
+    } else if (v.size() >= 2 && v[0] == '\'' &&
+               (v[1] == 'h' || v[1] == 'H' || v[1] == 'b' || v[1] == 'B' ||
+                v[1] == 'd' || v[1] == 'D')) {
+        start = 2;
+    }
+    for (size_t i = start; i < v.size(); ++i) {
+        char c = v[i];
+        if (c == 'x' || c == 'X' || c == 'z' || c == 'Z') return true;
+    }
+    return false;
+}
+
+static std::string normalize_numeric(std::string value) {
+    value = trim(value);
+    if (value.size() >= 2 && value[0] == '\'' && (value[1] == 'h' || value[1] == 'H')) {
+        value = "0x" + value.substr(2);
+    } else if (value.size() >= 2 && value[0] == '\'' && (value[1] == 'b' || value[1] == 'B')) {
+        value = "0b" + value.substr(2);
+    } else if (value.size() >= 2 && value[0] == '\'' && (value[1] == 'd' || value[1] == 'D')) {
+        value = value.substr(2);
+    }
+    if (value.size() > 2 && value[0] == '0' && (value[1] == 'x' || value[1] == 'X')) {
+        value = value.substr(2);
+    } else if (value.size() > 2 && value[0] == '0' && (value[1] == 'b' || value[1] == 'B')) {
+        unsigned long long n = strtoull(value.substr(2).c_str(), nullptr, 2);
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%llx", n);
+        value = buf;
+    } else {
+        bool decimal = !value.empty();
+        for (char c : value) {
+            if (!std::isdigit(static_cast<unsigned char>(c))) {
+                decimal = false;
+                break;
+            }
+        }
+        if (decimal) {
+            unsigned long long n = strtoull(value.c_str(), nullptr, 10);
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%llx", n);
+            value = buf;
+        }
+    }
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    size_t first = value.find_first_not_of('0');
+    if (first == std::string::npos) return "0";
+    return value.substr(first);
+}
+
+static Json make_value_object(const std::string& raw) {
+    Json v;
+    std::string text = trim(raw);
+    v["value"] = text;
+    v["known"] = !contains_xz(text);
+    return v;
+}
+
+static Json make_value_map(const Json& raw_map) {
+    Json out = Json::object();
+    if (!raw_map.is_object()) return out;
+    for (auto it = raw_map.begin(); it != raw_map.end(); ++it) {
+        if (it.value().is_string()) out[it.key()] = make_value_object(it.value().get<std::string>());
+        else out[it.key()] = it.value();
+    }
+    return out;
+}
+
+static Json simplify_event_value_objects(Json events) {
+    if (!events.is_array()) return events;
+    for (auto& ev : events) {
+        if (!ev.is_object()) continue;
+        if (ev.contains("signals")) ev["signals"] = make_value_map(ev["signals"]);
+        if (ev.contains("fields")) ev["fields"] = make_value_map(ev["fields"]);
+    }
+    return events;
+}
+
+static std::string event_group_value(const Json& ev, const std::string& key) {
+    auto get = [&](const char* section) -> std::string {
+        if (!ev.contains(section) || !ev[section].is_object()) return std::string();
+        auto it = ev[section].find(key);
+        if (it == ev[section].end()) return std::string();
+        if (it->is_string()) return it->get<std::string>();
+        if (it->is_object() && it->contains("value") && (*it)["value"].is_string()) return (*it)["value"].get<std::string>();
+        return std::string();
+    };
+    std::string v = get("fields");
+    if (v.empty()) v = get("signals");
+    if (v.empty() || v == "?" || contains_xz(v)) return "unknown";
+    return v;
+}
+
+static Json aggregate_events(const Json& events, const Json& aggregate_args, int limit) {
+    bool want_count = aggregate_args.value("count", true);
+    Json group_by_json = aggregate_args.value("group_by", Json::array());
+    std::vector<std::string> group_by;
+    if (group_by_json.is_array()) {
+        for (const auto& item : group_by_json) if (item.is_string()) group_by.push_back(item.get<std::string>());
+    }
+
+    Json out = Json::object();
+    size_t event_count = events.is_array() ? events.size() : 0;
+    if (want_count) out["count"] = event_count;
+    out["limited"] = limit > 0 && event_count >= static_cast<size_t>(limit);
+
+    if (!group_by.empty() && events.is_array()) {
+        struct GroupState {
+            Json key;
+            int count = 0;
+            std::string first_time;
+            std::string last_time;
+        };
+        std::map<std::string, GroupState> groups;
+        for (const auto& ev : events) {
+            Json key_obj = Json::object();
+            for (const auto& key : group_by) key_obj[key] = event_group_value(ev, key);
+            std::string group_id = key_obj.dump();
+            GroupState& st = groups[group_id];
+            if (st.count == 0) {
+                st.key = key_obj;
+                st.first_time = ev.value("time", std::string());
+            }
+            st.count++;
+            st.last_time = ev.value("time", std::string());
+        }
+        Json arr = Json::array();
+        for (const auto& kv : groups) {
+            arr.push_back({{"key", kv.second.key},
+                           {"count", kv.second.count},
+                           {"first_time", kv.second.first_time},
+                           {"last_time", kv.second.last_time}});
+        }
+        out["groups"] = arr;
+        out["group_count"] = arr.size();
+    }
+    return out;
+}
+
+static Json base_response(const Json& req,
+                          const std::string& action,
+                          bool ok,
+                          long long elapsed_ms) {
+    Json out;
+    out["api_version"] = kApiVersion;
+    if (req.contains("request_id")) out["request_id"] = req["request_id"];
+    out["ok"] = ok;
+    out["action"] = action;
+    out["tool"] = {{"name", "xdebug_waveform"}, {"version", "0.1.0"}};
+    out["session"] = Json::object();
+    out["summary"] = Json::object();
+    out["data"] = ok ? Json::object() : Json(nullptr);
+    out["findings"] = Json::array();
+    out["suggested_next_actions"] = Json::array();
+    out["warnings"] = Json::array();
+    out["error"] = nullptr;
+    out["meta"] = {{"elapsed_ms", elapsed_ms}, {"truncated", false}};
+    return out;
+}
+
+static Json error_response(const Json& req,
+                           const std::string& action,
+                           const std::string& code,
+                           const std::string& message,
+                           bool recoverable,
+                           long long elapsed_ms) {
+    Json out = base_response(req, action, false, elapsed_ms);
+    out["error"] = {
+        {"code", code},
+        {"message", message},
+        {"recoverable", recoverable},
+        {"candidates", Json::array()},
+        {"suggested_actions", Json::array()}
+    };
+    if (code == "SIGNAL_NOT_FOUND") {
+        out["suggested_next_actions"].push_back({
+            {"tool", "xdebug_waveform"},
+            {"action", "scope.list"},
+            {"reason", "exact signal was not found"}
+        });
+    }
+    return out;
+}
+
+static std::string response_verbosity(const Json& req, bool* valid = nullptr) {
+    if (valid) *valid = true;
+    Json output = req.value("output", Json::object());
+    std::string verbosity = "compact";
+    if (!output.is_object()) {
+        if (valid) *valid = false;
+        return "compact";
+    }
+    if (output.is_object()) {
+        auto it = output.find("verbosity");
+        if (it != output.end()) {
+            if (!it->is_string()) {
+                if (valid) *valid = false;
+                return "compact";
+            }
+            verbosity = it->get<std::string>();
+        }
+    }
+    if (verbosity.empty()) verbosity = "compact";
+    std::transform(verbosity.begin(), verbosity.end(), verbosity.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (verbosity == "compact" || verbosity == "full" || verbosity == "debug") return verbosity;
+    if (valid) *valid = false;
+    return "compact";
+}
+
+static bool json_empty_or_null(const Json& v) {
+    return v.is_null() || (v.is_object() && v.empty()) || (v.is_array() && v.empty());
+}
+
+static Json compact_session_json(const Json& full) {
+    Json out;
+    if (full.contains("id")) out["id"] = full["id"];
+    if (full.contains("fsdb")) out["fsdb"] = full["fsdb"];
+    return out;
+}
+
+static Json compact_error_json(const Json& full) {
+    if (!full.is_object()) return full;
+    Json out;
+    if (full.contains("code")) out["code"] = full["code"];
+    if (full.contains("message")) out["message"] = full["message"];
+    if (full.contains("recoverable")) out["recoverable"] = full["recoverable"];
+    if (full.contains("candidates") && !json_empty_or_null(full["candidates"])) out["candidates"] = full["candidates"];
+    if (full.contains("suggested_actions") && !json_empty_or_null(full["suggested_actions"])) {
+        out["suggested_actions"] = full["suggested_actions"];
+    }
+    return out;
+}
+
+static Json compact_response(const Json& full) {
+    Json out;
+    if (full.contains("request_id")) out["request_id"] = full["request_id"];
+    out["ok"] = full.value("ok", false);
+    out["action"] = full.value("action", std::string());
+
+    bool ok = out["ok"].get<bool>();
+    if (full.contains("summary") && !json_empty_or_null(full["summary"])) out["summary"] = full["summary"];
+
+    if (full.contains("data") && !json_empty_or_null(full["data"])) {
+        out["data"] = full["data"];
+        std::string action = out.value("action", std::string());
+        if ((action == "session.open" || action == "session.list") && out["data"].is_object()) {
+            if (out["data"].contains("session")) {
+                out["data"]["session"] = compact_session_json(out["data"]["session"]);
+            }
+            if (out["data"].contains("sessions") && out["data"]["sessions"].is_array()) {
+                Json sessions = Json::array();
+                for (const auto& s : out["data"]["sessions"]) sessions.push_back(compact_session_json(s));
+                out["data"]["sessions"] = sessions;
+            }
+        }
+    }
+
+    if (full.contains("findings") && !json_empty_or_null(full["findings"])) out["findings"] = full["findings"];
+    if (!ok && full.contains("error") && !json_empty_or_null(full["error"])) out["error"] = compact_error_json(full["error"]);
+    if (full.contains("suggested_next_actions") && !json_empty_or_null(full["suggested_next_actions"])) {
+        out["suggested_next_actions"] = full["suggested_next_actions"];
+    }
+    if (full.contains("warnings") && !json_empty_or_null(full["warnings"])) out["warnings"] = full["warnings"];
+    if (full.contains("meta") && full["meta"].is_object() &&
+        full["meta"].value("truncated", false)) {
+        out["meta"] = {{"truncated", true}};
+    }
+    if (!ok && full.contains("session") && !json_empty_or_null(full["session"])) {
+        out["session"] = compact_session_json(full["session"]);
+    }
+    return out;
+}
+
+static Json finalize_response(const Json& req, const Json& full) {
+    std::string verbosity = response_verbosity(req);
+    if (verbosity == "full" || verbosity == "debug") return full;
+    return compact_response(full);
+}
+
+static void print_json(const Json& j) {
+    printf("%s\n", j.dump(2).c_str());
+}
+
+static bool get_string(const Json& obj, const char* key, std::string& out) {
+    auto it = obj.find(key);
+    if (it == obj.end() || !it->is_string()) return false;
+    out = it->get<std::string>();
+    return true;
+}
+
+static std::string string_or(const Json& obj, const char* key, const std::string& def) {
+    std::string v;
+    return get_string(obj, key, v) ? v : def;
+}
+
+static int int_or(const Json& obj, const char* key, int def) {
+    auto it = obj.find(key);
+    if (it == obj.end() || !it->is_number_integer()) return def;
+    return it->get<int>();
+}
+
+static bool bool_or(const Json& obj, const char* key, bool def) {
+    auto it = obj.find(key);
+    if (it == obj.end() || !it->is_boolean()) return def;
+    return it->get<bool>();
+}
+
+static std::string create_session_quiet(SessionManager& manager, const std::string& fsdb, const std::string& name,
+                                        const SessionTransportOptions& transport);
+
+static bool resolve_session(const Json& target,
+                            bool allow_auto_open,
+                            std::string& session_id,
+                            SessionInfo& info,
+                            std::string& error) {
+    SessionManager manager;
+    session_id.clear();
+    auto sid_it = target.find("session_id");
+    if (sid_it != target.end()) {
+        if (!sid_it->is_string()) {
+            error = "target.session_id must be a string";
+            return false;
+        }
+        session_id = sid_it->get<std::string>();
+        if (!manager.get_session(session_id, info)) {
+            error = "session not found: " + session_id;
+            return false;
+        }
+        if (!manager.ensure_session_current(session_id) || !manager.get_session(session_id, info)) {
+            error = "session unavailable: " + session_id;
+            return false;
+        }
+        return true;
+    }
+
+    std::string fsdb;
+    if (get_string(target, "fsdb", fsdb)) {
+        bool auto_open = bool_or(target, "auto_open", allow_auto_open);
+        if (!auto_open) {
+            error = "target.fsdb requires auto_open=true when session_id is omitted";
+            return false;
+        }
+        std::string name;
+        if (!get_string(target, "name", name)) {
+            error = "target.name is required when auto-opening an FSDB";
+            return false;
+        }
+        SessionTransportOptions transport;
+        transport.transport = string_or(target, "transport", "uds");
+        transport.bind_host = string_or(target, "bind_host", string_or(target, "bind", ""));
+        transport.host = string_or(target, "host", "");
+        transport.port = int_or(target, "port", 0);
+        session_id = create_session_quiet(manager, fsdb, name, transport);
+        if (session_id.empty() || !manager.get_session(session_id, info)) {
+            error = "failed to open fsdb: " + fsdb;
+            return false;
+        }
+        return true;
+    }
+
+    if (!manager.get_latest_session(info)) {
+        error = "no active session";
+        return false;
+    }
+    if (!manager.ensure_session_current(info.session_id) || !manager.get_session(info.session_id, info)) {
+        error = "latest session unavailable";
+        return false;
+    }
+    session_id = info.session_id;
+    return true;
+}
+
+static std::string create_session_quiet(SessionManager& manager, const std::string& fsdb, const std::string& name,
+                                        const SessionTransportOptions& transport) {
+    fflush(stdout);
+    int saved_stdout = dup(STDOUT_FILENO);
+    int saved_stderr = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    if (saved_stdout >= 0) fcntl(saved_stdout, F_SETFD, FD_CLOEXEC);
+    if (saved_stderr >= 0) fcntl(saved_stderr, F_SETFD, FD_CLOEXEC);
+    if (devnull >= 0) fcntl(devnull, F_SETFD, FD_CLOEXEC);
+    if (saved_stdout >= 0 && devnull >= 0) {
+        dup2(devnull, STDOUT_FILENO);
+    }
+    if (saved_stderr >= 0 && devnull >= 0) {
+        dup2(devnull, STDERR_FILENO);
+    }
+    std::string sid = manager.create_session(fsdb, name, transport);
+    fflush(stdout);
+    fflush(stderr);
+    if (saved_stdout >= 0) {
+        dup2(saved_stdout, STDOUT_FILENO);
+        close(saved_stdout);
+    }
+    if (saved_stderr >= 0) {
+        dup2(saved_stderr, STDERR_FILENO);
+        close(saved_stderr);
+    }
+    if (devnull >= 0) close(devnull);
+    return sid;
+}
+
+static void fill_session(Json& out, const SessionInfo& info) {
+    out["session"] = {
+        {"id", info.session_id},
+        {"fsdb", info.fsdb_file},
+        {"pid", info.server_pid},
+        {"transport", info.transport},
+        {"socket_path", info.socket_path},
+        {"host", info.host},
+        {"port", info.port}
+    };
+}
+
+static bool capture_server_json(const std::string& session_id,
+                                const std::string& cmd,
+                                Json& data,
+                                std::string& error) {
+    std::string payload;
+    if (!send_command_capture(session_id, cmd.c_str(), payload)) {
+        error = trim(payload);
+        if (error.compare(0, strlen(ERROR_PREFIX), ERROR_PREFIX) == 0) {
+            error = trim(error.substr(strlen(ERROR_PREFIX)));
+        }
+        if (error.empty()) error = "server command failed";
+        return false;
+    }
+    try {
+        data = Json::parse(payload);
+    } catch (const std::exception&) {
+        data = trim(payload);
+    }
+    return true;
+}
+
+static bool capture_server_text(const std::string& session_id,
+                                const std::string& cmd,
+                                std::string& payload,
+                                std::string& error) {
+    if (!send_command_capture(session_id, cmd.c_str(), payload)) {
+        error = trim(payload);
+        if (error.compare(0, strlen(ERROR_PREFIX), ERROR_PREFIX) == 0) {
+            error = trim(error.substr(strlen(ERROR_PREFIX)));
+        }
+        if (error.empty()) error = "server command failed";
+        return false;
+    }
+    payload = trim(payload);
+    return true;
+}
+
+static Json session_info_json(const SessionInfo& s) {
+    Json j;
+    j["id"] = s.session_id;
+    j["pid"] = s.server_pid;
+    j["transport"] = s.transport;
+    j["socket_path"] = s.socket_path;
+    j["host"] = s.host;
+    j["bind_host"] = s.bind_host;
+    j["port"] = s.port;
+    j["server_host"] = s.server_host;
+    j["fsdb"] = s.fsdb_file;
+    j["created_at"] = static_cast<long long>(s.created_at);
+    j["last_active"] = static_cast<long long>(s.last_active);
+    j["fsdb_mtime"] = s.fsdb_mtime;
+    j["fsdb_size"] = s.fsdb_size;
+    j["fsdb_dev"] = s.fsdb_dev;
+    j["fsdb_inode"] = s.fsdb_inode;
+    return j;
+}
+
+static bool parse_apb_config(const Json& j, ApbConfig& c, std::string& err) {
+    auto get = [&j](const char* key) -> std::string {
+        auto it = j.find(key);
+        return it != j.end() && it->is_string() ? it->get<std::string>() : "";
+    };
+    c.paddr = get("paddr");
+    c.pwdata = get("pwdata");
+    c.prdata = get("prdata");
+    c.pwrite = get("pwrite");
+    c.penable = get("penable");
+    c.psel = get("psel");
+    c.clk = get("clk");
+    c.rst_n = get("rst_n");
+    std::string edge = get("edge");
+    if (edge.empty() || edge == "posedge") c.posedge = true;
+    else if (edge == "negedge") c.posedge = false;
+    else { err = "invalid APB edge: " + edge; return false; }
+    if (c.paddr.empty() || c.pwdata.empty() || c.prdata.empty() || c.pwrite.empty() ||
+        c.penable.empty() || c.psel.empty() || c.clk.empty() || c.rst_n.empty()) {
+        err = "missing required APB config field";
+        return false;
+    }
+    return true;
+}
+
+static Json apb_config_json(const ApbConfig& c) {
+    return {
+        {"name", c.name}, {"paddr", c.paddr}, {"pwdata", c.pwdata}, {"prdata", c.prdata},
+        {"pwrite", c.pwrite}, {"penable", c.penable}, {"psel", c.psel},
+        {"clk", c.clk}, {"rst_n", c.rst_n}, {"edge", c.posedge ? "posedge" : "negedge"}
+    };
+}
+
+static bool parse_axi_config(const Json& j, AxiConfig& c, std::string& err) {
+    auto get = [&j](const char* key) -> std::string {
+        auto it = j.find(key);
+        return it != j.end() && it->is_string() ? it->get<std::string>() : "";
+    };
+    c.awaddr = get("awaddr"); c.awid = get("awid"); c.awlen = get("awlen");
+    c.awsize = get("awsize"); c.awburst = get("awburst"); c.awvalid = get("awvalid");
+    c.awready = get("awready"); c.wdata = get("wdata"); c.wstrb = get("wstrb");
+    c.wlast = get("wlast"); c.wvalid = get("wvalid"); c.wready = get("wready");
+    c.bid = get("bid"); c.bresp = get("bresp"); c.bvalid = get("bvalid"); c.bready = get("bready");
+    c.araddr = get("araddr"); c.arid = get("arid"); c.arlen = get("arlen");
+    c.arsize = get("arsize"); c.arburst = get("arburst"); c.arvalid = get("arvalid");
+    c.arready = get("arready"); c.rid = get("rid"); c.rdata = get("rdata");
+    c.rresp = get("rresp"); c.rlast = get("rlast"); c.rvalid = get("rvalid");
+    c.rready = get("rready"); c.clk = get("clk"); c.rst_n = get("rst_n");
+    std::string edge = get("edge");
+    if (edge.empty() || edge == "posedge") c.posedge = true;
+    else if (edge == "negedge") c.posedge = false;
+    else { err = "invalid AXI edge: " + edge; return false; }
+    if (c.awaddr.empty() || c.awid.empty() || c.awlen.empty() || c.awsize.empty() ||
+        c.awburst.empty() || c.awvalid.empty() || c.awready.empty() || c.wdata.empty() ||
+        c.wstrb.empty() || c.wlast.empty() || c.wvalid.empty() || c.wready.empty() ||
+        c.bid.empty() || c.bresp.empty() || c.bvalid.empty() || c.bready.empty() ||
+        c.araddr.empty() || c.arid.empty() || c.arlen.empty() || c.arsize.empty() ||
+        c.arburst.empty() || c.arvalid.empty() || c.arready.empty() || c.rid.empty() ||
+        c.rdata.empty() || c.rresp.empty() || c.rlast.empty() || c.rvalid.empty() ||
+        c.rready.empty() || c.clk.empty() || c.rst_n.empty()) {
+        err = "missing required AXI config field";
+        return false;
+    }
+    return true;
+}
+
+static Json axi_config_json(const AxiConfig& c) {
+    Json j;
+    j["name"] = c.name;
+    j["awaddr"] = c.awaddr; j["awid"] = c.awid; j["awlen"] = c.awlen;
+    j["awsize"] = c.awsize; j["awburst"] = c.awburst; j["awvalid"] = c.awvalid;
+    j["awready"] = c.awready; j["wdata"] = c.wdata; j["wstrb"] = c.wstrb;
+    j["wlast"] = c.wlast; j["wvalid"] = c.wvalid; j["wready"] = c.wready;
+    j["bid"] = c.bid; j["bresp"] = c.bresp; j["bvalid"] = c.bvalid; j["bready"] = c.bready;
+    j["araddr"] = c.araddr; j["arid"] = c.arid; j["arlen"] = c.arlen;
+    j["arsize"] = c.arsize; j["arburst"] = c.arburst; j["arvalid"] = c.arvalid;
+    j["arready"] = c.arready; j["rid"] = c.rid; j["rdata"] = c.rdata;
+    j["rresp"] = c.rresp; j["rlast"] = c.rlast; j["rvalid"] = c.rvalid;
+    j["rready"] = c.rready; j["clk"] = c.clk; j["rst_n"] = c.rst_n;
+    j["edge"] = c.posedge ? "posedge" : "negedge";
+    return j;
+}
+
+static bool parse_nonnegative_int(const Json& v, int& out) {
+    if (!v.is_number_integer()) return false;
+    long long n = v.get<long long>();
+    if (n < 0 || n > INT_MAX) return false;
+    out = static_cast<int>(n);
+    return true;
+}
+
+static bool parse_field_ref(const std::string& text, EventField& field) {
+    size_t lb = text.find('[');
+    size_t colon = text.find(':', lb == std::string::npos ? 0 : lb);
+    size_t rb = text.find(']', colon == std::string::npos ? 0 : colon);
+    if (lb == std::string::npos || colon == std::string::npos ||
+        rb == std::string::npos || rb != text.size() - 1) return false;
+    field.signal_alias = text.substr(0, lb);
+    char* end = nullptr;
+    long left = strtol(text.substr(lb + 1, colon - lb - 1).c_str(), &end, 10);
+    if (!end || *end != '\0' || left < 0 || left > INT_MAX) return false;
+    long right = strtol(text.substr(colon + 1, rb - colon - 1).c_str(), &end, 10);
+    if (!end || *end != '\0' || right < 0 || right > INT_MAX) return false;
+    field.left = static_cast<int>(left);
+    field.right = static_cast<int>(right);
+    return !field.signal_alias.empty();
+}
+
+static bool parse_event_config(const Json& j, EventConfig& c, std::string& err) {
+    if (!get_string(j, "clk", c.clk)) {
+        err = "event config requires clk";
+        return false;
+    }
+    get_string(j, "rst_n", c.rst_n);
+    std::string edge = string_or(j, "edge", "posedge");
+    if (edge == "posedge") c.posedge = true;
+    else if (edge == "negedge") c.posedge = false;
+    else { err = "invalid event edge: " + edge; return false; }
+    auto sig_it = j.find("signals");
+    if (sig_it == j.end() || !sig_it->is_object() || sig_it->empty()) {
+        err = "event config requires non-empty signals object";
+        return false;
+    }
+    for (auto it = sig_it->begin(); it != sig_it->end(); ++it) {
+        if (!it.value().is_string()) {
+            err = "event signal alias must map to string path: " + it.key();
+            return false;
+        }
+        c.signals[it.key()] = it.value().get<std::string>();
+    }
+    auto fields_it = j.find("fields");
+    if (fields_it != j.end()) {
+        if (!fields_it->is_object()) {
+            err = "event fields must be object";
+            return false;
+        }
+        for (auto it = fields_it->begin(); it != fields_it->end(); ++it) {
+            EventField f;
+            if (it.value().is_string()) {
+                if (!parse_field_ref(it.value().get<std::string>(), f)) {
+                    err = "invalid field slice: " + it.key();
+                    return false;
+                }
+            } else if (it.value().is_object()) {
+                auto left_it = it.value().find("left");
+                auto right_it = it.value().find("right");
+                if (!get_string(it.value(), "signal", f.signal_alias) ||
+                    left_it == it.value().end() || right_it == it.value().end() ||
+                    !parse_nonnegative_int(*left_it, f.left) ||
+                    !parse_nonnegative_int(*right_it, f.right)) {
+                    err = "invalid field object: " + it.key();
+                    return false;
+                }
+            } else {
+                err = "invalid field definition: " + it.key();
+                return false;
+            }
+            if (c.signals.find(f.signal_alias) == c.signals.end()) {
+                err = "field references unknown signal alias: " + f.signal_alias;
+                return false;
+            }
+            c.fields[it.key()] = f;
+        }
+    }
+    return true;
+}
+
+static Json event_config_json(const EventConfig& c) {
+    Json j;
+    j["name"] = c.name;
+    j["clk"] = c.clk;
+    if (!c.rst_n.empty()) j["rst_n"] = c.rst_n;
+    j["edge"] = c.posedge ? "posedge" : "negedge";
+    j["signals"] = c.signals;
+    Json fields = Json::object();
+    for (const auto& kv : c.fields) {
+        fields[kv.first] = {
+            {"signal", kv.second.signal_alias},
+            {"left", kv.second.left},
+            {"right", kv.second.right}
+        };
+    }
+    j["fields"] = fields;
+    return j;
+}
+
+static bool load_config_json_arg(const Json& args, Json& config, std::string& err) {
+    auto cfg_it = args.find("config");
+    if (cfg_it != args.end()) {
+        if (!cfg_it->is_object()) {
+            err = "args.config must be an object";
+            return false;
+        }
+        config = *cfg_it;
+        return true;
+    }
+    std::string path;
+    if (!get_string(args, "config_path", path)) {
+        err = "missing args.config or args.config_path";
+        return false;
+    }
+    std::string text;
+    if (!read_file(path, text)) {
+        err = "cannot read config_path: " + path;
+        return false;
+    }
+    try {
+        config = Json::parse(text);
+    } catch (const std::exception& e) {
+        err = std::string("failed to parse config_path: ") + e.what();
+        return false;
+    }
+    return true;
+}
+
+static char fmt_char(const Json& args) {
+    std::string fmt = string_or(args, "format", "hex");
+    if (fmt == "binary" || fmt == "bin") return 'B';
+    if (fmt == "decimal" || fmt == "dec") return 'D';
+    return 'H';
+}
+
+static std::string arg_text(const Json& v) {
+    if (v.is_string()) return v.get<std::string>();
+    if (v.is_number_integer()) return std::to_string(v.get<long long>());
+    if (v.is_number_unsigned()) return std::to_string(v.get<unsigned long long>());
+    return v.dump();
+}
+
+static bool query_value(const std::string& session_id,
+                        const std::string& signal,
+                        const std::string& time,
+                        char fmt,
+                        std::string& raw,
+                        std::string& err) {
+    std::string cmd = std::string(CMD_VALUE) + " " + signal + " " + time + " " + fmt;
+    return capture_server_text(session_id, cmd, raw, err);
+}
+
+static Json resolve_time_spec_json(const std::string& session_id,
+                                   const std::string& spec,
+                                   bool allow_max,
+                                   std::string& err) {
+    Json out;
+    if (spec.empty()) return out;
+    std::string cmd = std::string(CMD_TIME_RESOLVE) + " " + spec + (allow_max ? " allow_max" : "");
+    if (!capture_server_json(session_id, cmd, out, err)) return Json();
+    return out;
+}
+
+static bool build_range_specs(const Json& args,
+                              std::string& begin,
+                              std::string& end,
+                              bool& around_window,
+                              std::string& err) {
+    Json tr = args.value("time_range", Json::object());
+    begin = string_or(tr, "begin", string_or(args, "begin", ""));
+    end = string_or(tr, "end", string_or(args, "end", ""));
+    around_window = false;
+    if (!begin.empty() || !end.empty()) {
+        if (begin.empty()) begin = "0ns";
+        if (end.empty()) end = "max";
+        return true;
+    }
+    std::string around = string_or(args, "around", "");
+    if (around.empty()) {
+        begin = "0ns";
+        end = "max";
+        return true;
+    }
+    std::string before = string_or(args, "before", "0ns");
+    std::string after = string_or(args, "after", "0ns");
+    if (before.empty()) before = "0ns";
+    if (after.empty()) after = "0ns";
+    if (!before.empty() && before[0] == '@') {
+        err = "TIME_SPEC_INVALID: before must be a duration, not a TimeSpec";
+        return false;
+    }
+    if (!after.empty() && after[0] == '@') {
+        err = "TIME_SPEC_INVALID: after must be a duration, not a TimeSpec";
+        return false;
+    }
+    begin = around + "-" + before;
+    end = around + "+" + after;
+    around_window = true;
+    return true;
+}
+
+static void fill_resolved_range(Json& out,
+                                const std::string& sid,
+                                const std::string& begin,
+                                const std::string& end,
+                                bool around_window,
+                                std::string& err) {
+    if (!out["data"].is_object()) out["data"] = Json::object();
+    out["data"]["resolved_time_range"]["begin"] = resolve_time_spec_json(sid, begin, false, err);
+    out["data"]["resolved_time_range"]["end"] = resolve_time_spec_json(sid, end, true, err);
+    if (around_window) out["data"]["resolved_time_range"]["source"] = "around_window";
+}
+
+enum class Tri { False, True, Unknown };
+
+static Tri tri_not(Tri v) {
+    if (v == Tri::Unknown) return Tri::Unknown;
+    return v == Tri::True ? Tri::False : Tri::True;
+}
+
+static Tri tri_and(Tri a, Tri b) {
+    if (a == Tri::False || b == Tri::False) return Tri::False;
+    if (a == Tri::Unknown || b == Tri::Unknown) return Tri::Unknown;
+    return Tri::True;
+}
+
+static Tri tri_or(Tri a, Tri b) {
+    if (a == Tri::True || b == Tri::True) return Tri::True;
+    if (a == Tri::Unknown || b == Tri::Unknown) return Tri::Unknown;
+    return Tri::False;
+}
+
+static Tri value_to_bool(const std::string& raw) {
+    if (contains_xz(raw)) return Tri::Unknown;
+    return normalize_numeric(raw) == "0" ? Tri::False : Tri::True;
+}
+
+class ExprParser {
+public:
+    ExprParser(const std::string& text, const Json& values)
+        : text_(text), values_(values), pos_(0), ok_(true) {}
+
+    Tri parse() {
+        Tri v = parse_or();
+        skip_ws();
+        if (pos_ != text_.size()) ok_ = false;
+        return ok_ ? v : Tri::Unknown;
+    }
+
+    bool ok() const { return ok_; }
+
+private:
+    void skip_ws() {
+        while (pos_ < text_.size() && std::isspace(static_cast<unsigned char>(text_[pos_]))) ++pos_;
+    }
+
+    bool eat(const std::string& token) {
+        skip_ws();
+        if (text_.compare(pos_, token.size(), token) == 0) {
+            pos_ += token.size();
+            return true;
+        }
+        return false;
+    }
+
+    std::string ident() {
+        skip_ws();
+        size_t start = pos_;
+        if (pos_ < text_.size() && (std::isalpha(static_cast<unsigned char>(text_[pos_])) || text_[pos_] == '_')) {
+            ++pos_;
+            while (pos_ < text_.size() &&
+                   (std::isalnum(static_cast<unsigned char>(text_[pos_])) || text_[pos_] == '_' || text_[pos_] == '.')) {
+                ++pos_;
+            }
+        }
+        return text_.substr(start, pos_ - start);
+    }
+
+    std::string literal() {
+        skip_ws();
+        size_t start = pos_;
+        if (pos_ < text_.size() && text_[pos_] == '\'') {
+            ++pos_;
+            if (pos_ < text_.size()) ++pos_;
+            while (pos_ < text_.size() && std::isxdigit(static_cast<unsigned char>(text_[pos_]))) ++pos_;
+            return text_.substr(start, pos_ - start);
+        }
+        while (pos_ < text_.size() &&
+               (std::isalnum(static_cast<unsigned char>(text_[pos_])) || text_[pos_] == 'x' ||
+                text_[pos_] == 'X' || text_[pos_] == '_' || text_[pos_] == '\'')) {
+            ++pos_;
+        }
+        return text_.substr(start, pos_ - start);
+    }
+
+    std::string value_for(const std::string& name) {
+        auto it = values_.find(name);
+        if (it == values_.end() || !it->is_object() || !it->contains("value")) {
+            ok_ = false;
+            return "";
+        }
+        return (*it)["value"]["value"].get<std::string>();
+    }
+
+    Tri parse_primary() {
+        if (eat("(")) {
+            Tri v = parse_or();
+            if (!eat(")")) ok_ = false;
+            return v;
+        }
+        if (eat("!")) return tri_not(parse_primary());
+
+        std::string name = ident();
+        if (name.empty()) {
+            ok_ = false;
+            return Tri::Unknown;
+        }
+        bool neq = false;
+        if (eat("==") || (neq = eat("!="))) {
+            std::string rhs = literal();
+            if (rhs.empty()) {
+                ok_ = false;
+                return Tri::Unknown;
+            }
+            std::string lhs_val = value_for(name);
+            if (contains_xz(lhs_val) || contains_xz(rhs)) return Tri::Unknown;
+            bool eq = normalize_numeric(lhs_val) == normalize_numeric(rhs);
+            return (neq ? !eq : eq) ? Tri::True : Tri::False;
+        }
+        return value_to_bool(value_for(name));
+    }
+
+    Tri parse_and() {
+        Tri v = parse_primary();
+        while (eat("&&")) v = tri_and(v, parse_primary());
+        return v;
+    }
+
+    Tri parse_or() {
+        Tri v = parse_and();
+        while (eat("||")) v = tri_or(v, parse_and());
+        return v;
+    }
+
+    std::string text_;
+    Json values_;
+    size_t pos_;
+    bool ok_;
+};
+
+static const char* tri_text(Tri v) {
+    if (v == Tri::True) return "true";
+    if (v == Tri::False) return "false";
+    return "unknown";
+}
+
+static bool action_known(const std::string& action);
+static int run_query(const Json& req, long long elapsed_ms);
+
+static void print_actions() {
+    Json actions = Json::array({
+        "session.open", "session.list", "session.doctor", "session.gc", "session.kill",
+        "cursor.set", "cursor.get", "cursor.list", "cursor.delete", "cursor.use",
+        "scope.list",
+        "value.at", "value.batch_at",
+        "list.create", "list.add", "list.delete", "list.show", "list.value_at", "list.validate", "list.diff",
+        "apb.config.load", "apb.config.list", "apb.query", "apb.cursor",
+        "axi.config.load", "axi.config.list", "axi.query", "axi.cursor", "axi.analysis",
+        "event.config.load", "event.config.list", "event.find", "event.export",
+        "verify.conditions", "expr.eval_at",
+        "window.verify", "signal.changes", "signal.stability", "signal.trend", "signal.statistics",
+        "sampled_pulse.inspect", "inspect_signal", "detect_anomaly", "handshake.inspect",
+        "axi.channel_stall", "axi.outstanding_timeline", "axi.request_response_pair",
+        "axi.latency_outlier", "apb.transfer_window"
+    });
+    Json out;
+    out["api_version"] = kApiVersion;
+    out["actions"] = actions;
+    out["implemented"] = Json::array({
+        "session.open", "session.list", "session.doctor", "session.gc", "session.kill",
+        "cursor.set", "cursor.get", "cursor.list", "cursor.delete", "cursor.use",
+        "scope.list", "value.at", "value.batch_at",
+        "list.create", "list.add", "list.delete", "list.show", "list.value_at", "list.validate", "list.diff",
+        "apb.config.load", "apb.config.list", "apb.query", "apb.cursor",
+        "axi.config.load", "axi.config.list", "axi.query", "axi.cursor", "axi.analysis",
+        "event.config.load", "event.config.list", "event.find", "event.export",
+        "verify.conditions", "expr.eval_at",
+        "window.verify", "signal.changes", "signal.stability", "signal.trend", "signal.statistics",
+        "sampled_pulse.inspect", "inspect_signal", "detect_anomaly", "handshake.inspect",
+        "axi.channel_stall", "axi.outstanding_timeline", "axi.request_response_pair",
+        "axi.latency_outlier", "apb.transfer_window"
+    });
+    out["planned"] = Json::array();
+    print_json(out);
+}
+
+static void print_schema() {
+    Json schema;
+    schema["$schema"] = "https://json-schema.org/draft/2020-12/schema";
+    schema["title"] = "xdebug.internal.v1 request";
+    schema["type"] = "object";
+    schema["required"] = Json::array({"api_version", "action"});
+    schema["properties"] = {
+        {"api_version", {{"const", kApiVersion}}},
+        {"request_id", {{"type", "string"}}},
+        {"action", {{"type", "string"}}},
+        {"target", {{"type", "object"}}},
+        {"args", {{"type", "object"}, {"description", "Action arguments. Time fields accept TimeSpec strings such as 100ns, @deadlock, @deadlock-20ns, @deadlock-10cycle(clk), or @+5ns. Range actions also accept around/before/after. Structured TimeSpec objects are planned but not implemented in this build."}}},
+        {"limits", {{"type", "object"}}},
+        {"output", {
+            {"type", "object"},
+            {"properties", {
+                {"verbosity", {
+                    {"type", "string"},
+                    {"enum", Json::array({"compact", "full", "debug"})},
+                    {"default", "compact"},
+                    {"description", "compact omits session/tool/meta empty scaffolding; full returns the complete envelope; debug keeps full diagnostic session details."}
+                }}
+            }}
+        }}
+    };
+    schema["xdebug_waveform_response_verbosity"] = {
+        {"default", "compact"},
+        {"compact", "Only key fields are returned. Successful responses omit tool, session, empty warnings, empty suggested_next_actions, and meta.elapsed_ms. meta.truncated is kept when true."},
+        {"full", "Return the complete compatibility envelope."},
+        {"debug", "Return the complete envelope with session/socket/pid/fingerprint diagnostics."}
+    };
+    schema["xdebug_waveform_time_spec"] = {
+        {"implemented", Json::array({"absolute time", "@cursor", "@cursor+duration", "@cursor-duration", "@+duration", "@-duration", "@cursor+Ncycle(clk)", "@cursor-Ncycle(clk)", "@cursor+Nposedge(clk)", "@cursor-Nnegedge(clk)", "around/before/after range"})},
+        {"planned", Json::array({"structured TimeSpec object"})}
+    };
+    schema["xdebug_waveform_value_shape"] = {
+        {"fields", Json::array({"value", "known"})},
+        {"description", "AI signal value objects only contain the display value string and known boolean. Use args.format to choose the display format."}
+    };
+        schema["xdebug_waveform_event_aggregate"] = {
+        {"action", "event.export"},
+        {"args", Json::object({{"aggregate", Json::object({{"count", true}, {"group_by", Json::array({"alias_or_field"})}, {"events", false}})}})}
+    };
+    schema["xdebug_waveform_sampled_pulse_inspect"] = {
+        {"action", "sampled_pulse.inspect"},
+        {"required_args", Json::array({"clock", "valid", "time_range"})},
+        {"optional_args", Json::array({"payload", "payloads", "sampling", "format", "max_samples", "max_events", "max_findings"})},
+        {"description", "Compare raw valid/payload transitions against DUT clock-sampled valid cycles and report unsampled pulse risks."}
+    };
+    schema["xdebug_waveform_transport"] = {
+        {"default", "uds"},
+        {"values", Json::array({"uds", "tcp"})},
+        {"tcp", "session.open accepts args.transport=tcp with optional bind_host/host/port. port 0 or omitted lets the server bind an automatically assigned port and write it to endpoint.json."}
+    };
+    print_json(schema);
+}
+
+static int print_error_and_return(const Json& req,
+                                  const std::string& action,
+                                  const std::string& code,
+                                  const std::string& msg,
+                                  long long elapsed_ms) {
+    print_json(finalize_response(req, error_response(req, action, code, msg, true, elapsed_ms)));
+    return 1;
+}
+
+static bool action_known(const std::string& action) {
+    static const std::vector<std::string> implemented = {
+        "session.open", "session.list", "session.doctor", "session.gc", "session.kill",
+        "cursor.set", "cursor.get", "cursor.list", "cursor.delete", "cursor.use",
+        "scope.list", "value.at", "value.batch_at",
+        "list.create", "list.add", "list.delete", "list.show", "list.value_at", "list.validate", "list.diff",
+        "apb.config.load", "apb.config.list", "apb.query", "apb.cursor",
+        "axi.config.load", "axi.config.list", "axi.query", "axi.cursor", "axi.analysis",
+        "event.config.load", "event.config.list", "event.find", "event.export",
+        "verify.conditions", "expr.eval_at",
+        "window.verify", "signal.changes", "signal.stability", "signal.trend", "signal.statistics",
+        "sampled_pulse.inspect", "inspect_signal", "detect_anomaly", "handshake.inspect",
+        "axi.channel_stall", "axi.outstanding_timeline", "axi.request_response_pair",
+        "axi.latency_outlier", "apb.transfer_window"
+    };
+    return std::find(implemented.begin(), implemented.end(), action) != implemented.end();
+}
+
+static bool server_ai_action(const std::string& action) {
+    static const std::vector<std::string> server_actions = {
+        "cursor.set", "cursor.get", "cursor.list", "cursor.delete", "cursor.use",
+        "expr.eval_at",
+        "window.verify", "signal.changes", "signal.stability", "signal.trend", "signal.statistics",
+        "sampled_pulse.inspect", "inspect_signal", "detect_anomaly", "handshake.inspect",
+        "axi.channel_stall", "axi.outstanding_timeline", "axi.request_response_pair",
+        "axi.latency_outlier", "apb.transfer_window"
+    };
+    return std::find(server_actions.begin(), server_actions.end(), action) != server_actions.end();
+}
+
+static int run_query(const Json& req, long long elapsed_ms) {
+    std::string action;
+    if (!get_string(req, "action", action)) {
+        return print_error_and_return(req, "", "MISSING_FIELD", "request.action is required", elapsed_ms);
+    }
+    if (!action_known(action)) {
+        return print_error_and_return(req, action, "UNKNOWN_ACTION", "action is not implemented: " + action, elapsed_ms);
+    }
+    Json target = req.value("target", Json::object());
+    Json args = req.value("args", Json::object());
+    Json limits = req.value("limits", Json::object());
+    int max_rows = int_or(limits, "max_rows", int_or(limits, "max_events", 1000));
+    bool verbosity_valid = true;
+    response_verbosity(req, &verbosity_valid);
+    if (!verbosity_valid) {
+        return print_error_and_return(req, action, "INVALID_REQUEST", "output.verbosity must be compact, full, or debug", elapsed_ms);
+    }
+
+    auto ok_out = [&](const SessionInfo* info = nullptr) {
+        Json out = base_response(req, action, true, elapsed_ms);
+        if (info) fill_session(out, *info);
+        return out;
+    };
+    auto emit = [&](const Json& out, int rc = 0) -> int {
+        print_json(finalize_response(req, out));
+        return rc;
+    };
+
+    if (action == "session.open") {
+        std::string fsdb;
+        if (!get_string(target, "fsdb", fsdb)) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "target.fsdb is required", elapsed_ms);
+        }
+        std::string name;
+        if (!get_string(args, "name", name) && !get_string(target, "name", name)) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "session.open requires args.name", elapsed_ms);
+        }
+        if (!SessionRegistry::is_valid_session_name(name)) {
+            return print_error_and_return(req, action, "INVALID_SESSION_ID", "invalid session name: " + name, elapsed_ms);
+        }
+        SessionManager manager;
+        SessionRegistry registry;
+        if (registry.exists(name)) {
+            return print_error_and_return(req, action, "SESSION_ID_EXISTS", "session id already exists: " + name, elapsed_ms);
+        }
+        SessionTransportOptions transport;
+        transport.transport = string_or(args, "transport", string_or(target, "transport", "uds"));
+        transport.bind_host = string_or(args, "bind_host", string_or(args, "bind", string_or(target, "bind_host", string_or(target, "bind", ""))));
+        transport.host = string_or(args, "host", string_or(target, "host", ""));
+        transport.port = int_or(args, "port", int_or(target, "port", 0));
+        std::string sid = create_session_quiet(manager, fsdb, name, transport);
+        SessionInfo info;
+        if (sid.empty() || !manager.get_session(sid, info)) {
+            return print_error_and_return(req, action, "INVALID_TARGET", "failed to open fsdb: " + fsdb, elapsed_ms);
+        }
+        Json out = ok_out(&info);
+        out["summary"] = {{"session_id", sid}, {"fsdb", info.fsdb_file}};
+        out["data"]["session"] = session_info_json(info);
+        return emit(out);
+    }
+
+    if (action == "session.list") {
+        SessionManager manager;
+        Json out = ok_out();
+        Json arr = Json::array();
+        for (const auto& s : manager.list_sessions()) arr.push_back(session_info_json(s));
+        out["summary"] = {{"session_count", arr.size()}};
+        out["data"]["sessions"] = arr;
+        return emit(out);
+    }
+
+    if (action == "session.gc") {
+        SessionManager manager;
+        manager.gc_sessions();
+        Json out = ok_out();
+        out["summary"] = {{"status", "completed"}};
+        return emit(out);
+    }
+
+    if (action == "session.kill") {
+        SessionManager manager;
+        bool ok = false;
+        if (string_or(args, "id", "") == "all" || string_or(args, "session_id", "") == "all") {
+            ok = manager.kill_all_sessions();
+        } else {
+            std::string sid = string_or(target, "session_id", string_or(args, "session_id", string_or(args, "id", "")));
+            if (sid.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "session.kill requires target.session_id or args.id", elapsed_ms);
+            ok = manager.kill_session(sid);
+        }
+        if (!ok) return print_error_and_return(req, action, "SESSION_UNHEALTHY", "failed to kill session", elapsed_ms);
+        Json out = ok_out();
+        out["summary"] = {{"status", "removed"}};
+        return emit(out);
+    }
+
+    if (action == "session.doctor") {
+        std::string sid = string_or(target, "session_id", string_or(args, "session_id", ""));
+        if (sid.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "session.doctor requires session_id", elapsed_ms);
+        SessionManager manager;
+        SessionHealth h = manager.diagnose_session(sid);
+        Json out = base_response(req, action, h.healthy, elapsed_ms);
+        fill_session(out, h.info);
+        out["summary"] = {{"healthy", h.healthy}, {"status", session_health_status_name(h.status)}, {"message", h.message}};
+        out["data"]["health"] = out["summary"];
+        if (!h.healthy) {
+            out["error"] = {{"code", "SESSION_UNHEALTHY"}, {"message", h.message}, {"recoverable", true}, {"candidates", Json::array()}, {"suggested_actions", Json::array()}};
+        }
+        return emit(out, h.healthy ? 0 : 1);
+    }
+
+    std::string sid;
+    SessionInfo info;
+    std::string err;
+    if (!resolve_session(target, true, sid, info, err)) {
+        return print_error_and_return(req, action, "SESSION_NOT_FOUND", err, elapsed_ms);
+    }
+
+    if (server_ai_action(action)) {
+        Json data;
+        std::string cmd = std::string(CMD_AI_QUERY) + " " + req.dump();
+        if (!capture_server_json(sid, cmd, data, err)) {
+            std::string code = err.find("Signal not found") != std::string::npos ? "SIGNAL_NOT_FOUND" :
+                               err.find("Clock signal not found") != std::string::npos ? "SIGNAL_NOT_FOUND" :
+                               err.find("SIGNAL_NOT_FOUND") != std::string::npos ? "SIGNAL_NOT_FOUND" :
+                               err.find("CURSOR_NOT_FOUND") != std::string::npos ? "CURSOR_NOT_FOUND" :
+                               err.find("TIME_OUT_OF_RANGE") != std::string::npos ? "TIME_OUT_OF_RANGE" :
+                               err.find("CLOCK_OFFSET_UNSUPPORTED") != std::string::npos ? "CLOCK_OFFSET_UNSUPPORTED" :
+                               err.find("TIME_SPEC_INVALID") != std::string::npos ? "TIME_SPEC_INVALID" :
+                               err.find("Invalid time") != std::string::npos ? "TIME_SPEC_INVALID" :
+                               err.find("Invalid TimeSpec") != std::string::npos ? "TIME_SPEC_INVALID" :
+                               err.find("config not found") != std::string::npos ? "INVALID_REQUEST" :
+                               err.find("expression") != std::string::npos ? "EXPR_PARSE_FAILED" :
+                               "WAVE_QUERY_FAILED";
+            return print_error_and_return(req, action, code, err, elapsed_ms);
+        }
+        Json out = ok_out(&info);
+        out["data"] = data;
+        std::string begin_spec, end_spec;
+        bool around_window = false;
+        if (build_range_specs(args, begin_spec, end_spec, around_window, err) &&
+            (args.contains("time_range") || args.contains("begin") || args.contains("end") || args.contains("around"))) {
+            fill_resolved_range(out, sid, begin_spec, end_spec, around_window, err);
+        }
+        std::string at_spec = string_or(args, "at", string_or(args, "time", ""));
+        if (!at_spec.empty() && out["data"].is_object() && !out["data"].contains("resolved_time")) {
+            Json resolved = resolve_time_spec_json(sid, at_spec, false, err);
+            if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+        }
+        if (data.contains("truncated")) out["meta"]["truncated"] = data["truncated"];
+        if (data.contains("findings")) out["findings"] = data["findings"];
+        if (action == "sampled_pulse.inspect") {
+            out["summary"] = {{"sample_count", data.value("sample_count", 0)},
+                              {"sampled_high_cycles", data.value("sampled_high_cycles", 0)},
+                              {"raw_valid_transition_count", data.value("raw_valid_transition_count", 0)},
+                              {"payload_transition_count", data.value("payload_transition_count", 0)},
+                              {"risk_count", data.value("risk_count", 0)}};
+        } else if (action == "window.verify") {
+            out["summary"] = {{"all_passed", data.value("all_passed", false)},
+                              {"sample_count", data.value("sample_count", 0)},
+                              {"failed_samples", data.value("failed_samples", 0)},
+                              {"unknown_samples", data.value("unknown_samples", 0)}};
+        } else if (action == "handshake.inspect") {
+            out["summary"] = {{"transfer_count", data.value("transfer_count", 0)},
+                              {"max_stall_cycles", data.value("max_stall_cycles", 0)}};
+        } else if (action == "detect_anomaly") {
+            out["summary"] = {{"finding_count", data.value("finding_count", 0)}};
+        } else if (data.contains("transaction_count")) {
+            out["summary"] = {{"transaction_count", data["transaction_count"]}};
+        } else if (data.contains("sample_count")) {
+            out["summary"] = {{"sample_count", data["sample_count"]}};
+        } else if (data.contains("transition_count")) {
+            out["summary"] = {{"transition_count", data["transition_count"]}};
+        } else if (data.contains("status")) {
+            out["summary"] = {{"status", data["status"]}, {"known", data.value("known", false)}};
+        }
+        return emit(out);
+    }
+
+    if (action == "value.at") {
+        std::string signal, time;
+        if (!get_string(args, "signal", signal)) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "value.at requires args.signal", elapsed_ms);
+        }
+        if (!get_string(args, "at", time) && !get_string(args, "time", time)) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "value.at requires args.time or args.at", elapsed_ms);
+        }
+        std::string raw;
+        if (!query_value(sid, signal, time, fmt_char(args), raw, err)) {
+            bool not_found = err.find("Signal not found") != std::string::npos ||
+                             err.find("Failed to read value for signal") != std::string::npos ||
+                             err.find("SIGNAL_NOT_FOUND") != std::string::npos;
+            std::string code = not_found ? "SIGNAL_NOT_FOUND" :
+                               err.find("CURSOR_NOT_FOUND") != std::string::npos ? "CURSOR_NOT_FOUND" :
+                               err.find("TIME_OUT_OF_RANGE") != std::string::npos ? "TIME_OUT_OF_RANGE" :
+                               err.find("CLOCK_OFFSET_UNSUPPORTED") != std::string::npos ? "CLOCK_OFFSET_UNSUPPORTED" :
+                               err.find("TIME_SPEC_INVALID") != std::string::npos ? "TIME_SPEC_INVALID" :
+                               err.find("Invalid") != std::string::npos ? "TIME_SPEC_INVALID" :
+                               "WAVE_QUERY_FAILED";
+            return print_error_and_return(req, action, code, err, elapsed_ms);
+        }
+        Json out = ok_out(&info);
+        out["summary"] = {{"signal", signal}, {"time", time}, {"known", !contains_xz(raw)}};
+        out["data"]["signal"] = signal;
+        out["data"]["time"] = time;
+        Json resolved = resolve_time_spec_json(sid, time, false, err);
+        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+        out["data"]["value"] = make_value_object(raw);
+        return emit(out);
+    }
+
+    if (action == "value.batch_at") {
+        std::string time;
+        if ((!get_string(args, "at", time) && !get_string(args, "time", time)) ||
+            !args.contains("signals") || !args["signals"].is_array()) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "value.batch_at requires args.time/args.at and args.signals[]", elapsed_ms);
+        }
+        Json arr = Json::array();
+        int unknown = 0, missing = 0;
+        for (const auto& s : args["signals"]) {
+            if (!s.is_string()) continue;
+            std::string signal = s.get<std::string>();
+            std::string raw;
+            Json item;
+            item["signal"] = signal;
+            item["time"] = time;
+            if (query_value(sid, signal, time, fmt_char(args), raw, err)) {
+                item["status"] = "ok";
+                item["value"] = make_value_object(raw);
+                if (contains_xz(raw)) unknown++;
+            } else {
+                item["status"] = "not_found";
+                item["value"] = nullptr;
+                item["error"] = err;
+                missing++;
+            }
+            arr.push_back(item);
+        }
+        Json out = ok_out(&info);
+        out["summary"] = {{"time", time}, {"signal_count", arr.size()}, {"unknown_count", unknown}, {"missing_count", missing}};
+        Json resolved = resolve_time_spec_json(sid, time, false, err);
+        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+        out["data"]["values"] = arr;
+        return emit(out, missing == 0 ? 0 : 1);
+    }
+
+    if (action == "scope.list") {
+        std::string path;
+        if (!get_string(args, "path", path)) return print_error_and_return(req, action, "MISSING_FIELD", "scope.list requires args.path", elapsed_ms);
+        bool recursive = bool_or(args, "recursive", false);
+        Json data;
+        std::string cmd = std::string(CMD_SCOPE) + " " + path + " " + (recursive ? "1" : "0") + " json";
+        if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
+        bool truncated = false;
+        if (data.is_array() && max_rows >= 0 && data.size() > static_cast<size_t>(max_rows)) {
+            Json limited = Json::array();
+            for (int i = 0; i < max_rows; ++i) limited.push_back(data[i]);
+            data = limited;
+            truncated = true;
+        }
+        Json out = ok_out(&info);
+        out["summary"] = {{"path", path}, {"recursive", recursive}, {"signal_count", data.is_array() ? data.size() : 0}, {"truncated", truncated}};
+        out["data"]["signals"] = data;
+        out["meta"]["truncated"] = truncated;
+        return emit(out);
+    }
+
+    if (action.compare(0, 5, "list.") == 0) {
+        ListManager lm;
+        std::string name = string_or(args, "name", string_or(args, "list", ""));
+        if (name.empty() && action != "list.create") lm.get_latest_list(sid, name);
+        if (action == "list.create") {
+            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "list.create requires args.name", elapsed_ms);
+            if (!lm.create_list(sid, name)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to create list", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "created"}}; return emit(out);
+        }
+        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "list action requires args.name or latest list", elapsed_ms);
+        if (action == "list.add") {
+            std::string signal;
+            if (!get_string(args, "signal", signal)) return print_error_and_return(req, action, "MISSING_FIELD", "list.add requires args.signal", elapsed_ms);
+            std::string payload;
+            if (!capture_server_text(sid, std::string(CMD_SIGNAL_CHECK) + " " + signal, payload, err)) {
+                return print_error_and_return(req, action, "SIGNAL_NOT_FOUND", err, elapsed_ms);
+            }
+            if (!lm.add_signal(sid, name, signal)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to add signal", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"signal", signal}, {"status", "added"}}; return emit(out);
+        }
+        if (action == "list.delete") {
+            std::string signal = string_or(args, "signal", string_or(args, "index", ""));
+            if (signal.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "list.delete requires args.signal or args.index", elapsed_ms);
+            if (!lm.del_signal(sid, name, signal)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to delete signal", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"removed", signal}}; return emit(out);
+        }
+        if (action == "list.show") {
+            SignalList list;
+            if (!lm.get_list(sid, name, list)) return print_error_and_return(req, action, "INVALID_REQUEST", "list not found", elapsed_ms);
+            Json arr = Json::array();
+            for (size_t i = 0; i < list.signals.size(); ++i) arr.push_back({{"index", i + 1}, {"signal", list.signals[i]}});
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"signal_count", arr.size()}}; out["data"]["signals"] = arr; return emit(out);
+        }
+        if (action == "list.value_at") {
+            std::string time;
+            if (!get_string(args, "at", time) && !get_string(args, "time", time)) {
+                return print_error_and_return(req, action, "MISSING_FIELD", "list.value_at requires args.time or args.at", elapsed_ms);
+            }
+            Json data;
+            std::string cmd = std::string(CMD_LIST_VALUE) + " " + name + " " + time + " " + fmt_char(args) + " json";
+            bool ok = capture_server_json(sid, cmd, data, err);
+            Json out = base_response(req, action, ok, elapsed_ms);
+            fill_session(out, info);
+            out["summary"] = {{"name", name}, {"time", time}};
+            if (data.is_object() && data.contains("values") && data["values"].is_object()) {
+                data["values"] = make_value_map(data["values"]);
+            } else if (data.is_object()) {
+                data = make_value_map(data);
+            }
+            out["data"] = data;
+            Json resolved = resolve_time_spec_json(sid, time, false, err);
+            if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+            if (!ok) out["error"] = {{"code", "SIGNAL_NOT_FOUND"}, {"message", err}, {"recoverable", true}, {"candidates", Json::array()}, {"suggested_actions", Json::array()}};
+            return emit(out, ok ? 0 : 1);
+        }
+        if (action == "list.validate") {
+            Json data;
+            bool ok = capture_server_json(sid, std::string(CMD_LIST_VALIDATE) + " " + name + " json", data, err);
+            Json out = base_response(req, action, ok, elapsed_ms);
+            fill_session(out, info);
+            out["summary"] = {{"name", name}, {"all_found", ok}};
+            out["data"]["signals"] = data;
+            if (!ok) out["error"] = {{"code", "SIGNAL_NOT_FOUND"}, {"message", err}, {"recoverable", true}, {"candidates", Json::array()}, {"suggested_actions", Json::array()}};
+            return emit(out, ok ? 0 : 1);
+        }
+        if (action == "list.diff") {
+            std::string begin, end;
+            bool around_window = false;
+            if (!build_range_specs(args, begin, end, around_window, err)) {
+                return print_error_and_return(req, action, "TIME_SPEC_INVALID", err, elapsed_ms);
+            }
+            std::string payload;
+            if (!capture_server_text(sid, std::string(CMD_LIST_DIFF) + " " + name + " " + begin + " " + end, payload, err)) {
+                return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
+            }
+            Json out = ok_out(&info);
+            out["summary"] = {{"name", name}, {"diff_time", payload}};
+            out["data"]["time"] = payload;
+            fill_resolved_range(out, sid, begin, end, around_window, err);
+            return emit(out);
+        }
+    }
+
+    if (action.compare(0, 4, "apb.") == 0) {
+        ApbManager am;
+        std::string name = string_or(args, "name", "");
+        if (action == "apb.config.load") {
+            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "apb.config.load requires args.name", elapsed_ms);
+            Json cfg_json; if (!load_config_json_arg(args, cfg_json, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
+            ApbConfig cfg; if (!parse_apb_config(cfg_json, cfg, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
+            cfg.name = name;
+            if (!am.create_apb(sid, cfg)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to save APB config", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "loaded"}}; out["data"]["config"] = apb_config_json(cfg); return emit(out);
+        }
+        if (name.empty()) am.get_latest_apb(sid, name);
+        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "APB action requires args.name or latest config", elapsed_ms);
+        if (action == "apb.config.list") {
+            ApbConfig cfg; if (!am.get_apb(sid, name, cfg)) return print_error_and_return(req, action, "INVALID_REQUEST", "APB config not found", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"]["config"] = apb_config_json(cfg); return emit(out);
+        }
+        std::string cmd;
+        if (action == "apb.query") {
+            std::string dir = string_or(args, "direction", "wr");
+            cmd = std::string(dir == "rd" ? CMD_APB_RD : CMD_APB_WR) + " " + name;
+            if (args.contains("address")) cmd += " addr " + arg_text(args["address"]);
+            if (args.contains("num")) cmd += " num " + std::to_string(args["num"].get<int>());
+            if (bool_or(args, "last", false)) cmd += " last";
+            cmd += " json";
+        } else {
+            std::string op = string_or(args, "op", "begin");
+            const char* pcmd = op == "next" ? CMD_APB_NEXT : op == "pre" ? CMD_APB_PREV : op == "last" ? CMD_APB_LAST : CMD_APB_BEGIN;
+            cmd = std::string(pcmd) + " " + name + " " + string_or(args, "direction", "all") + " json";
+        }
+        Json data; if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
+        Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"] = data; return emit(out);
+    }
+
+    if (action.compare(0, 4, "axi.") == 0) {
+        AxiManager am;
+        std::string name = string_or(args, "name", "");
+        if (action == "axi.config.load") {
+            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "axi.config.load requires args.name", elapsed_ms);
+            Json cfg_json; if (!load_config_json_arg(args, cfg_json, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
+            AxiConfig cfg; if (!parse_axi_config(cfg_json, cfg, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
+            cfg.name = name;
+            if (!am.create_axi(sid, cfg)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to save AXI config", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "loaded"}}; out["data"]["config"] = axi_config_json(cfg); return emit(out);
+        }
+        if (name.empty()) am.get_latest_axi(sid, name);
+        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "AXI action requires args.name or latest config", elapsed_ms);
+        if (action == "axi.config.list") {
+            AxiConfig cfg; if (!am.get_axi(sid, name, cfg)) return print_error_and_return(req, action, "INVALID_REQUEST", "AXI config not found", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"]["config"] = axi_config_json(cfg); return emit(out);
+        }
+        std::string cmd;
+        if (action == "axi.query") {
+            std::string dir = string_or(args, "direction", "wr");
+            cmd = std::string(dir == "rd" ? CMD_AXI_RD : CMD_AXI_WR) + " " + name;
+            if (args.contains("address")) cmd += " addr " + arg_text(args["address"]);
+            if (args.contains("id")) cmd += " id " + arg_text(args["id"]);
+            if (args.contains("num")) cmd += " num " + std::to_string(args["num"].get<int>());
+            if (bool_or(args, "last", false)) cmd += " last";
+            cmd += " json";
+        } else if (action == "axi.analysis") {
+            std::string analysis = string_or(args, "analysis", "latency");
+            cmd = std::string(analysis == "osd" ? CMD_AXI_OSD : CMD_AXI_LATENCY) + " " + name + " " + string_or(args, "direction", "all");
+            if (args.contains("id")) cmd += " id " + arg_text(args["id"]);
+            cmd += " json";
+        } else {
+            std::string op = string_or(args, "op", "begin");
+            const char* pcmd = op == "next" ? CMD_AXI_NEXT : op == "pre" ? CMD_AXI_PREV : op == "last" ? CMD_AXI_LAST : CMD_AXI_BEGIN;
+            cmd = std::string(pcmd) + " " + name + " " + string_or(args, "direction", "all") + " json";
+        }
+        Json data; if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
+        Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"] = data; return emit(out);
+    }
+
+    if (action.compare(0, 6, "event.") == 0) {
+        EventManager em;
+        std::string name = string_or(args, "name", "");
+        if (action == "event.config.load") {
+            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "event.config.load requires args.name", elapsed_ms);
+            Json cfg_json; if (!load_config_json_arg(args, cfg_json, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
+            EventConfig cfg; if (!parse_event_config(cfg_json, cfg, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
+            cfg.name = name;
+            if (!em.create_event(sid, info.fsdb_file, cfg)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to save event config", elapsed_ms);
+            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "loaded"}}; out["data"]["config"] = event_config_json(cfg); return emit(out);
+        }
+        if (action == "event.config.list") {
+            Json out = ok_out(&info);
+            if (name.empty()) {
+                Json arr = em.list_events(sid, info.fsdb_file);
+                out["summary"] = {{"count", arr.size()}};
+                out["data"]["events"] = arr;
+            } else {
+                EventConfig cfg; if (!em.get_event(sid, info.fsdb_file, name, cfg)) return print_error_and_return(req, action, "INVALID_REQUEST", "event config not found", elapsed_ms);
+                out["summary"] = {{"name", name}};
+                out["data"]["config"] = event_config_json(cfg);
+            }
+            return emit(out);
+        }
+        if (name.empty()) em.get_latest_event(sid, info.fsdb_file, name);
+        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "event action requires args.name or latest config", elapsed_ms);
+        std::string expr; if (!get_string(args, "expr", expr)) return print_error_and_return(req, action, "MISSING_FIELD", "event.find/export requires args.expr", elapsed_ms);
+        expr = compact_expr_ws(expr);
+        std::string begin, end;
+        bool around_window = false;
+        if (!build_range_specs(args, begin, end, around_window, err)) {
+            return print_error_and_return(req, action, "TIME_SPEC_INVALID", err, elapsed_ms);
+        }
+        int limit = action == "event.find" ? 1 : int_or(limits, "max_rows", int_or(args, "limit", 1000));
+        Json ctx = args.value("context", Json::object());
+        std::string mode = "json";
+        std::string cmd;
+        if (ctx.is_object() && ctx.contains("window")) {
+            std::string window = string_or(ctx, "window", "0ns");
+            std::string axi = string_or(ctx, "axi", "-"); if (axi.empty()) axi = "-";
+            std::string apb = string_or(ctx, "apb", "-"); if (apb.empty()) apb = "-";
+            cmd = std::string(action == "event.find" ? CMD_EVENT_FIND_CTX : CMD_EVENT_EXPORT_CTX) + " " + name + " " + begin + " " + end + " " + std::to_string(limit) + " " + mode + " " + window + " " + axi + " " + apb + " expr " + expr;
+        } else {
+            cmd = std::string(action == "event.find" ? CMD_EVENT_FIND : CMD_EVENT_EXPORT) + " " + name + " " + begin + " " + end + " " + std::to_string(limit) + " " + mode + " expr " + expr;
+        }
+        Json data; if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
+        Json raw_events = data;
+        Json aggregate = Json::object();
+        bool has_aggregate = action == "event.export" && args.contains("aggregate") && args["aggregate"].is_object();
+        bool include_events = true;
+        if (has_aggregate) {
+            aggregate = aggregate_events(raw_events, args["aggregate"], limit);
+            include_events = args["aggregate"].value("events", true);
+        }
+        Json out = ok_out(&info);
+        out["summary"] = {{"name", name}, {"begin", begin}, {"end", end}};
+        if (data.is_array()) out["summary"]["event_count"] = data.size();
+        if (has_aggregate) {
+            out["summary"]["aggregate_count"] = aggregate.value("count", 0);
+            out["summary"]["limited"] = aggregate.value("limited", false);
+            if (aggregate.contains("group_count")) out["summary"]["group_count"] = aggregate["group_count"];
+            out["data"]["aggregate"] = aggregate;
+        }
+        if (include_events) out["data"]["events"] = simplify_event_value_objects(data);
+        fill_resolved_range(out, sid, begin, end, around_window, err);
+        return emit(out);
+    }
+
+    if (action == "verify.conditions") {
+        std::string time;
+        if ((!get_string(args, "at", time) && !get_string(args, "time", time)) ||
+            !args.contains("conditions") || !args["conditions"].is_array()) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "verify.conditions requires args.time/args.at and args.conditions[]", elapsed_ms);
+        }
+        Json checks = Json::array();
+        int passed = 0, failed = 0, unknown = 0;
+        for (const auto& cond : args["conditions"]) {
+            std::string signal, op, expected;
+            get_string(cond, "signal", signal);
+            get_string(cond, "op", op);
+            get_string(cond, "value", expected);
+            Json item = {{"signal", signal}, {"time", time}, {"op", op}, {"expected", expected}};
+            std::string raw;
+            if (!query_value(sid, signal, time, 'H', raw, err)) {
+                item["status"] = "unknown"; item["known"] = false; item["pass"] = nullptr; item["error"] = err; unknown++;
+            } else if (contains_xz(raw) || contains_xz(expected)) {
+                item["observed"] = make_value_object(raw); item["status"] = "unknown"; item["known"] = false; item["pass"] = nullptr; unknown++;
+            } else {
+                bool eq = normalize_numeric(raw) == normalize_numeric(expected);
+                bool pass = (op == "!=") ? !eq : eq;
+                item["observed"] = make_value_object(raw); item["status"] = pass ? "pass" : "fail"; item["known"] = true; item["pass"] = pass;
+                if (pass) passed++; else failed++;
+            }
+            checks.push_back(item);
+        }
+        Json out = ok_out(&info);
+        out["summary"] = {{"all_passed", failed == 0 && unknown == 0}, {"passed", passed}, {"failed", failed}, {"unknown", unknown}};
+        Json resolved = resolve_time_spec_json(sid, time, false, err);
+        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+        out["data"]["checks"] = checks;
+        return emit(out);
+    }
+
+    if (action == "expr.eval_at") {
+        std::string time, expr;
+        if ((!get_string(args, "at", time) && !get_string(args, "time", time)) ||
+            !get_string(args, "expr", expr) || !args.contains("signals") || !args["signals"].is_object()) {
+            return print_error_and_return(req, action, "MISSING_FIELD", "expr.eval_at requires args.time/args.at, args.expr, args.signals", elapsed_ms);
+        }
+        Json values = Json::object();
+        Json operands = Json::array();
+        int unknown = 0;
+        for (auto it = args["signals"].begin(); it != args["signals"].end(); ++it) {
+            std::string alias = it.key();
+            std::string signal = it.value().get<std::string>();
+            std::string raw;
+            Json item = {{"alias", alias}, {"signal", signal}};
+            if (query_value(sid, signal, time, 'H', raw, err)) {
+                item["value"] = make_value_object(raw);
+                if (contains_xz(raw)) unknown++;
+            } else {
+                item["value"] = nullptr;
+                item["error"] = err;
+                unknown++;
+            }
+            values[alias] = item;
+            operands.push_back(item);
+        }
+        ExprParser parser(expr, values);
+        Tri v = parser.parse();
+        if (!parser.ok()) return print_error_and_return(req, action, "EXPR_PARSE_FAILED", "failed to parse expression", elapsed_ms);
+        Json out = ok_out(&info);
+        out["summary"] = {{"expr", expr}, {"expr_value", v == Tri::True ? Json(true) : v == Tri::False ? Json(false) : Json(nullptr)}, {"status", tri_text(v)}, {"known", v != Tri::Unknown}};
+        Json resolved = resolve_time_spec_json(sid, time, false, err);
+        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+        out["data"]["operands"] = operands;
+        out["data"]["unknown_count"] = unknown;
+        return emit(out);
+    }
+
+    return print_error_and_return(req, action, "UNKNOWN_ACTION", "unhandled action: " + action, elapsed_ms);
+}
+
+int cmd_ai(int argc, char** argv) {
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s ai <query|schema|actions> ...\n", argv[0]);
+        return 1;
+    }
+    std::string sub = argv[2];
+    if (sub == "actions") {
+        print_actions();
+        return 0;
+    }
+    if (sub == "schema") {
+        print_schema();
+        return 0;
+    }
+    if (sub != "query") {
+        fprintf(stderr, "Unknown ai subcommand: %s\n", sub.c_str());
+        return 1;
+    }
+
+    std::string text;
+    if (argc >= 5 && std::string(argv[3]) == "--json") {
+        text = argv[4];
+    } else if (argc >= 4 && std::string(argv[3]) == "-") {
+        text = read_stream(std::cin);
+    } else if (argc >= 4) {
+        if (!read_file(argv[3], text)) {
+            Json empty = Json::object();
+            print_json(error_response(empty, "", "INVALID_REQUEST", std::string("cannot read request file: ") + argv[3], true, 0));
+            return 1;
+        }
+    } else {
+        fprintf(stderr, "Usage: %s ai query <request.json>|-|--json '<json>'\n", argv[0]);
+        return 1;
+    }
+
+    auto start = std::chrono::steady_clock::now();
+    Json req;
+    try {
+        req = Json::parse(text);
+    } catch (const std::exception& e) {
+        Json empty = Json::object();
+        print_json(error_response(empty, "", "INVALID_REQUEST", std::string("invalid JSON: ") + e.what(), true, 0));
+        return 1;
+    }
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+    std::string api;
+    if (!get_string(req, "api_version", api) || api != kApiVersion) {
+        return print_error_and_return(req, string_or(req, "action", ""), "UNSUPPORTED_API_VERSION", "api_version must be xdebug.internal.v1", elapsed);
+    }
+    return run_query(req, elapsed);
+}
+
+} // namespace xdebug_waveform

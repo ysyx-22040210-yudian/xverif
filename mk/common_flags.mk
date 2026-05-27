@@ -1,0 +1,5 @@
+CXX ?= g++
+CXXSTD ?= -std=c++11
+WARN_FLAGS ?= -Wall
+
+COMMON_CXXFLAGS ?= $(WARN_FLAGS) $(CXXSTD)

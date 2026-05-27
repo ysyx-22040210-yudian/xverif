@@ -1,0 +1,542 @@
+#include "server.h"
+#include "../common/xdebug_design_paths.h"
+#include "../protocol/protocol.h"
+#include "../trace/trace_engine.h"
+#include "../signal/signal_finder.h"
+#include "../port/port_analyzer.h"
+#include "../session/session_registry.h"
+#include "../session/session_transport.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/stat.h>
+#include <signal.h>
+#include <cstdarg>
+#include <strings.h>
+
+#include "npi.h"
+
+namespace xdebug_design {
+
+// Global for cleanup
+static std::string g_session_id;
+static int g_srv_fd = -1;
+static char g_sock_path[SOCK_PATH_LEN];
+static std::string g_transport = "uds";
+static std::string g_bind_host;
+static std::string g_host;
+static int g_port = 0;
+static std::string g_auth_token;
+static FILE* g_debug_log = nullptr;
+
+static bool server_debug_enabled() {
+    const char* env = getenv("XDEBUG_DESIGN_DEBUG");
+    return env && env[0] != '\0' && strcmp(env, "0") != 0 &&
+           strcasecmp(env, "false") != 0 && strcasecmp(env, "off") != 0;
+}
+
+static void server_debug_open_log() {
+    if (!server_debug_enabled() || g_session_id.empty()) return;
+    xdebug_design_ensure_session_dir(g_session_id);
+    char log_path[SOCK_PATH_LEN];
+    get_debug_log_path(log_path, g_session_id);
+    g_debug_log = fopen(log_path, "a");
+    if (g_debug_log) {
+        chmod(log_path, 0600);
+        fprintf(g_debug_log, "=== xdebug_design server debug session=%s ===\n", g_session_id.c_str());
+        fflush(g_debug_log);
+    }
+}
+
+static void server_debug_log(const char* fmt, ...) {
+    if (!g_debug_log) return;
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(g_debug_log, fmt, ap);
+    va_end(ap);
+    fprintf(g_debug_log, "\n");
+    fflush(g_debug_log);
+}
+
+static void cleanup_and_exit(int sig) {
+    server_debug_log("signal_exit sig=%d", sig);
+    if (g_srv_fd >= 0) {
+        close(g_srv_fd);
+    }
+    if (strlen(g_sock_path) > 0) {
+        unlink(g_sock_path);
+    }
+    if (g_debug_log) {
+        fclose(g_debug_log);
+        g_debug_log = nullptr;
+    }
+    // Note: npi_end not called here because signal handler context
+    exit(0);
+}
+
+static void daemonize_io() {
+    int devnull = open("/dev/null", O_RDWR);
+    if (devnull >= 0) {
+        dup2(devnull, STDIN_FILENO);
+        dup2(devnull, STDOUT_FILENO);
+        dup2(devnull, STDERR_FILENO);
+        close(devnull);
+    }
+}
+
+static bool send_all(int fd, const char* buf, size_t len) {
+    size_t sent = 0;
+    while (sent < len) {
+        ssize_t n = write(fd, buf + sent, len - sent);
+        if (n <= 0) return false;
+        sent += n;
+    }
+    return true;
+}
+
+static bool read_command_line(int fd, char* line, size_t line_size) {
+    size_t total = 0;
+    while (total < line_size - 1) {
+        ssize_t n = read(fd, line + total, 1);
+        if (n <= 0) return false;
+        if (line[total] == '\n') break;
+        total++;
+    }
+    line[total] = '\0';
+    return true;
+}
+
+static char* trim_command(char* cmd) {
+    while (*cmd == ' ' || *cmd == '\t') cmd++;
+    size_t len = strlen(cmd);
+    while (len > 0 && (cmd[len - 1] == '\n' || cmd[len - 1] == '\r' || cmd[len - 1] == ' ')) {
+        cmd[len - 1] = '\0';
+        len--;
+    }
+    return cmd;
+}
+
+static std::vector<std::string> split_tokens(const char* text) {
+    std::vector<std::string> tokens;
+    std::istringstream in(text ? text : "");
+    std::string token;
+    while (in >> token) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+static TraceOptions parse_trace_options(const std::vector<std::string>& tokens,
+                                        size_t start_index) {
+    TraceOptions options;
+    for (size_t i = start_index; i < tokens.size(); ++i) {
+        if (tokens[i] == "--limit" && i + 1 < tokens.size()) {
+            options.limit = atoi(tokens[++i].c_str());
+        } else if (tokens[i] == "--role" && i + 1 < tokens.size()) {
+            options.role = tokens[++i];
+        } else if (tokens[i] == "--no-statement-only") {
+            options.no_statement_only = true;
+        }
+    }
+    return options;
+}
+
+static int parse_limit_option(const std::vector<std::string>& tokens, size_t start_index, int default_limit) {
+    int limit = default_limit;
+    for (size_t i = start_index; i < tokens.size(); ++i) {
+        if (tokens[i] == "--limit" && i + 1 < tokens.size()) {
+            limit = atoi(tokens[++i].c_str());
+        }
+    }
+    return limit;
+}
+
+static void handle_trace(int client_fd, const char* request, TraceMode mode, bool json_output, bool ai_output = false) {
+    std::vector<std::string> tokens = split_tokens(request);
+    if (tokens.empty()) {
+        const char* err = ERROR_PREFIX "Missing signal\n";
+        send_all(client_fd, err, strlen(err));
+        send_all(client_fd, END_MARKER, strlen(END_MARKER));
+        return;
+    }
+
+    std::string signal = tokens[0];
+    TraceOptions options = parse_trace_options(tokens, 1);
+    TraceEngine engine;
+    TraceResult result = engine.trace(signal, mode, options);
+    std::string payload = ai_output ? engine.render_ai_json(result) :
+                          json_output ? engine.render_json(result) : engine.render_text(result);
+    send_all(client_fd, payload.c_str(), payload.size());
+    send_all(client_fd, END_MARKER, strlen(END_MARKER));
+}
+
+static void handle_signal_resolve(int client_fd, const char* request, bool json_output) {
+    std::vector<std::string> tokens = split_tokens(request);
+    if (tokens.empty()) {
+        const char* err = ERROR_PREFIX "Missing signal\n";
+        send_all(client_fd, err, strlen(err));
+        send_all(client_fd, END_MARKER, strlen(END_MARKER));
+        return;
+    }
+
+    SignalFinder finder;
+    SignalResolveResult result = finder.resolve(tokens[0]);
+    std::string payload = json_output ? finder.render_json(result) : finder.render_text(result);
+    send_all(client_fd, payload.c_str(), payload.size());
+    send_all(client_fd, END_MARKER, strlen(END_MARKER));
+}
+
+static void handle_port_command(int client_fd, const char* request, const std::string& action) {
+    std::vector<std::string> tokens = split_tokens(request);
+    if (tokens.empty()) {
+        const char* err = ERROR_PREFIX "Missing path\n";
+        send_all(client_fd, err, strlen(err));
+        send_all(client_fd, END_MARKER, strlen(END_MARKER));
+        return;
+    }
+    int limit = parse_limit_option(tokens, 1, 0);
+    PortAnalyzer analyzer;
+    std::string payload;
+    if (action == "port.trace") {
+        payload = analyzer.render_port_trace(tokens[0], limit);
+    } else if (action == "instance.map") {
+        payload = analyzer.render_instance_map(tokens[0]);
+    } else {
+        payload = analyzer.render_interface_resolve(tokens[0]);
+    }
+    send_all(client_fd, payload.c_str(), payload.size());
+    send_all(client_fd, END_MARKER, strlen(END_MARKER));
+}
+
+static bool handle_client(int client_fd, bool& should_quit) {
+    should_quit = false;
+
+    // Read command line
+    char line[1024] = {};
+    if (!read_command_line(client_fd, line, sizeof(line))) return false;
+
+    // Trim whitespace
+    char* cmd = trim_command(line);
+
+    if (g_transport == "tcp") {
+        std::string expected = std::string(CMD_AUTH) + " " + g_auth_token;
+        if (strcmp(cmd, expected.c_str()) != 0) {
+            const char* err = ERROR_PREFIX "AUTH failed\n" END_MARKER;
+            send_all(client_fd, err, strlen(err));
+            return false;
+        }
+        const char* ok = "OK\n";
+        send_all(client_fd, ok, strlen(ok));
+        memset(line, 0, sizeof(line));
+        if (!read_command_line(client_fd, line, sizeof(line))) return false;
+        cmd = trim_command(line);
+    }
+
+    // Handle QUIT
+    if (strcmp(cmd, CMD_QUIT) == 0) {
+        send_all(client_fd, END_MARKER, strlen(END_MARKER));
+        should_quit = true;
+        return true;
+    }
+
+    // Handle PING
+    if (strcmp(cmd, CMD_PING) == 0) {
+        const char* pong = "PONG\n" END_MARKER;
+        send_all(client_fd, pong, strlen(pong));
+        return true;
+    }
+
+    if (strcmp(cmd, CMD_VERSION) == 0) {
+        const char* version = PROTOCOL_VERSION "\n" END_MARKER;
+        send_all(client_fd, version, strlen(version));
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_DRIVER_AI, strlen(CMD_DRIVER_AI)) == 0) {
+        const char* rest = cmd + strlen(CMD_DRIVER_AI);
+        while (*rest == ' ') rest++;
+
+        handle_trace(client_fd, rest, TraceMode::Driver, true, true);
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_LOAD_AI, strlen(CMD_LOAD_AI)) == 0) {
+        const char* rest = cmd + strlen(CMD_LOAD_AI);
+        while (*rest == ' ') rest++;
+
+        handle_trace(client_fd, rest, TraceMode::Load, true, true);
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_DRIVER_JSON, strlen(CMD_DRIVER_JSON)) == 0) {
+        const char* rest = cmd + strlen(CMD_DRIVER_JSON);
+        while (*rest == ' ') rest++;
+
+        handle_trace(client_fd, rest, TraceMode::Driver, true);
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_LOAD_JSON, strlen(CMD_LOAD_JSON)) == 0) {
+        const char* rest = cmd + strlen(CMD_LOAD_JSON);
+        while (*rest == ' ') rest++;
+
+        handle_trace(client_fd, rest, TraceMode::Load, true);
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_SIGNAL_RESOLVE_TEXT, strlen(CMD_SIGNAL_RESOLVE_TEXT)) == 0) {
+        const char* rest = cmd + strlen(CMD_SIGNAL_RESOLVE_TEXT);
+        while (*rest == ' ') rest++;
+
+        handle_signal_resolve(client_fd, rest, false);
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_SIGNAL_RESOLVE, strlen(CMD_SIGNAL_RESOLVE)) == 0) {
+        const char* rest = cmd + strlen(CMD_SIGNAL_RESOLVE);
+        while (*rest == ' ') rest++;
+
+        handle_signal_resolve(client_fd, rest, true);
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_PORT_TRACE_AI, strlen(CMD_PORT_TRACE_AI)) == 0) {
+        const char* rest = cmd + strlen(CMD_PORT_TRACE_AI);
+        while (*rest == ' ') rest++;
+        handle_port_command(client_fd, rest, "port.trace");
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_INSTANCE_MAP_AI, strlen(CMD_INSTANCE_MAP_AI)) == 0) {
+        const char* rest = cmd + strlen(CMD_INSTANCE_MAP_AI);
+        while (*rest == ' ') rest++;
+        handle_port_command(client_fd, rest, "instance.map");
+        return true;
+    }
+
+    if (strncmp(cmd, CMD_INTERFACE_RESOLVE_AI, strlen(CMD_INTERFACE_RESOLVE_AI)) == 0) {
+        const char* rest = cmd + strlen(CMD_INTERFACE_RESOLVE_AI);
+        while (*rest == ' ') rest++;
+        handle_port_command(client_fd, rest, "interface.resolve");
+        return true;
+    }
+
+    // Handle DRIVER
+    if (strncmp(cmd, CMD_DRIVER, strlen(CMD_DRIVER)) == 0) {
+        const char* rest = cmd + strlen(CMD_DRIVER);
+        while (*rest == ' ') rest++;
+
+        handle_trace(client_fd, rest, TraceMode::Driver, false);
+        return true;
+    }
+
+    // Handle LOAD
+    if (strncmp(cmd, CMD_LOAD, strlen(CMD_LOAD)) == 0) {
+        const char* rest = cmd + strlen(CMD_LOAD);
+        while (*rest == ' ') rest++;
+
+        handle_trace(client_fd, rest, TraceMode::Load, false);
+        return true;
+    }
+
+    // Unknown command
+    const char* err = ERROR_PREFIX "Unknown command\n" END_MARKER;
+    send_all(client_fd, err, strlen(err));
+    return true;
+}
+
+int server_main(int argc, char** argv) {
+    // argv: [exe, session_id, ...design_args...]
+    if (argc < 2) {
+        fprintf(stderr, "Server mode requires session_id argument\n");
+        return 1;
+    }
+
+    int arg_idx = 1;
+
+    // Parse session ID
+    g_session_id = argv[arg_idx];
+    if (g_session_id.empty()) {
+        fprintf(stderr, "Invalid session ID: %s\n", argv[arg_idx]);
+        return 1;
+    }
+    arg_idx++;
+    server_debug_open_log();
+    server_debug_log("server_main: parsed session_id=%s argc=%d", g_session_id.c_str(), argc);
+
+    std::vector<std::string> design_args;
+    while (arg_idx < argc) {
+        std::string opt = argv[arg_idx++];
+        if (opt == "--transport" && arg_idx < argc) g_transport = argv[arg_idx++];
+        else if (opt == "--bind" && arg_idx < argc) g_bind_host = argv[arg_idx++];
+        else if (opt == "--host" && arg_idx < argc) g_host = argv[arg_idx++];
+        else if (opt == "--port" && arg_idx < argc) g_port = atoi(argv[arg_idx++]);
+        else if (opt == "--auth" && arg_idx < argc) g_auth_token = argv[arg_idx++];
+        else design_args.push_back(opt);
+    }
+    if (g_transport == "tcp") {
+        if (g_bind_host.empty()) g_bind_host = "127.0.0.1";
+        if (g_host.empty()) {
+            g_host = (g_bind_host == "0.0.0.0" || g_bind_host == "::") ? current_host_name() : g_bind_host;
+        }
+    }
+    server_debug_log("server_main: transport=%s bind=%s host=%s port=%d",
+                     g_transport.c_str(), g_bind_host.c_str(), g_host.c_str(), g_port);
+
+    // Build design args for NPI: [exe, ...design_args...]
+    int npi_argc = static_cast<int>(design_args.size()) + 1;
+    char** npi_argv = new char*[npi_argc];
+    npi_argv[0] = argv[0];  // exe name
+    for (int i = 1; i < npi_argc; i++) {
+        npi_argv[i] = const_cast<char*>(design_args[i - 1].c_str());
+    }
+
+    // Keep session startup quiet so CLI JSON output remains machine-parseable.
+    daemonize_io();
+
+    // Initialize NPI
+    server_debug_log("npi_init: begin argc=%d", npi_argc);
+    int result = npi_init(npi_argc, npi_argv);
+    if (result == 0) {
+        server_debug_log("npi_init: failed");
+        delete[] npi_argv;
+        return 1;
+    }
+    server_debug_log("npi_init: ok");
+
+    server_debug_log("npi_load_design: begin");
+    result = npi_load_design(npi_argc, npi_argv);
+    if (result == 0) {
+        server_debug_log("npi_load_design: failed");
+        npi_end();
+        delete[] npi_argv;
+        return 1;
+    }
+    server_debug_log("npi_load_design: ok");
+
+    delete[] npi_argv;
+
+    // Set up signal handlers
+    signal(SIGTERM, cleanup_and_exit);
+    signal(SIGINT, cleanup_and_exit);
+
+    get_sock_path(g_sock_path, g_session_id);
+    if (g_transport == "tcp") {
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = AI_PASSIVE;
+        struct addrinfo* res = nullptr;
+        std::string port_s = std::to_string(g_port);
+        int gai = getaddrinfo(g_bind_host.c_str(), port_s.c_str(), &hints, &res);
+        if (gai != 0) {
+            server_debug_log("tcp getaddrinfo failed: %s", gai_strerror(gai));
+            npi_end();
+            return 1;
+        }
+        for (struct addrinfo* p = res; p; p = p->ai_next) {
+            g_srv_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+            if (g_srv_fd < 0) continue;
+            int one = 1;
+            setsockopt(g_srv_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+            if (bind(g_srv_fd, p->ai_addr, p->ai_addrlen) == 0) break;
+            close(g_srv_fd);
+            g_srv_fd = -1;
+        }
+        freeaddrinfo(res);
+        if (g_srv_fd < 0) {
+            server_debug_log("tcp bind failed");
+            npi_end();
+            return 1;
+        }
+        struct sockaddr_storage ss;
+        socklen_t slen = sizeof(ss);
+        if (getsockname(g_srv_fd, reinterpret_cast<struct sockaddr*>(&ss), &slen) == 0) {
+            if (ss.ss_family == AF_INET) g_port = ntohs(reinterpret_cast<struct sockaddr_in*>(&ss)->sin_port);
+            else if (ss.ss_family == AF_INET6) g_port = ntohs(reinterpret_cast<struct sockaddr_in6*>(&ss)->sin6_port);
+        }
+        server_debug_log("tcp bind ok host=%s port=%d", g_host.c_str(), g_port);
+    } else {
+        g_srv_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (g_srv_fd < 0) {
+            server_debug_log("socket: failed");
+            npi_end();
+            return 1;
+        }
+        unlink(g_sock_path);
+        server_debug_log("socket_path: %s", g_sock_path);
+        struct sockaddr_un addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sun_family = AF_UNIX;
+        strncpy(addr.sun_path, g_sock_path, sizeof(addr.sun_path) - 1);
+        if (bind(g_srv_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            server_debug_log("bind: failed path=%s", g_sock_path);
+            close(g_srv_fd);
+            npi_end();
+            return 1;
+        }
+        chmod(g_sock_path, 0600);
+        server_debug_log("bind: ok");
+    }
+
+    if (listen(g_srv_fd, 8) < 0) {
+        server_debug_log("listen: failed");
+        close(g_srv_fd);
+        unlink(g_sock_path);
+        npi_end();
+        return 1;
+    }
+    server_debug_log("listen: ok");
+
+    {
+        SessionInfo endpoint;
+        endpoint.session_id = g_session_id;
+        endpoint.transport = g_transport;
+        endpoint.socket_path = g_sock_path;
+        endpoint.host = g_transport == "tcp" ? g_host : "";
+        endpoint.bind_host = g_transport == "tcp" ? g_bind_host : "";
+        endpoint.port = g_transport == "tcp" ? g_port : 0;
+        endpoint.server_host = current_host_name();
+        endpoint.auth_token = g_transport == "tcp" ? g_auth_token : "";
+        write_endpoint_file(endpoint);
+    }
+
+    // Accept loop
+    while (true) {
+        int client_fd = accept(g_srv_fd, nullptr, nullptr);
+        if (client_fd < 0) continue;
+
+        bool quit = false;
+        handle_client(client_fd, quit);
+        close(client_fd);
+
+        if (quit) break;
+    }
+
+    // Cleanup
+    server_debug_log("normal_exit: cleanup begin");
+    close(g_srv_fd);
+    unlink(g_sock_path);
+    npi_end();
+    server_debug_log("normal_exit: cleanup done");
+    if (g_debug_log) {
+        fclose(g_debug_log);
+        g_debug_log = nullptr;
+    }
+
+    return 0;
+}
+
+} // namespace xdebug_design

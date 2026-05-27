@@ -1,0 +1,18 @@
+{
+  "clk": "ai_complex_top.clk",
+  "rst_n": "ai_complex_top.rst_n",
+  "edge": "posedge",
+  "signals": {
+    "vld": "ai_complex_top.event_vld",
+    "rdy": "ai_complex_top.event_rdy",
+    "payload": "ai_complex_top.event_payload",
+    "xz": "ai_complex_top.xz_bus"
+  },
+  "fields": {
+    "payload_lo": {
+      "signal": "payload",
+      "left": 3,
+      "right": 0
+    }
+  }
+}

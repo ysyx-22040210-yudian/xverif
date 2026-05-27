@@ -1,0 +1,11 @@
+{
+  "paddr": "ai_complex_top.paddr",
+  "pwdata": "ai_complex_top.pwdata",
+  "prdata": "ai_complex_top.prdata",
+  "pwrite": "ai_complex_top.pwrite",
+  "penable": "ai_complex_top.penable",
+  "psel": "ai_complex_top.psel",
+  "clk": "ai_complex_top.clk",
+  "rst_n": "ai_complex_top.rst_n",
+  "edge": "posedge"
+}

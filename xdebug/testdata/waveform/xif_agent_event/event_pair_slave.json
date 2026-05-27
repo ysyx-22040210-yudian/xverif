@@ -1,0 +1,17 @@
+{
+  "clk": "xif_event_top.clk",
+  "rst_n": "xif_event_top.rst_n",
+  "edge": "posedge",
+  "signals": {
+    "vld": "xif_event_top.if_pair_slave.vld",
+    "rdy": "xif_event_top.if_pair_slave.rdy",
+    "bp": "xif_event_top.if_pair_slave.bp",
+    "pd": "xif_event_top.if_pair_slave.pd"
+  },
+  "fields": {
+    "opcode": "pd[31:24]",
+    "channel": "pd[23:20]",
+    "id": "pd[19:16]",
+    "data": "pd[15:0]"
+  }
+}
