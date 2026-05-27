@@ -30,6 +30,13 @@ DESIGN_SRCS = src/design/main.cpp \
               src/design/session/session_transport.cpp \
               src/design/client/client.cpp \
               src/design/commands/cmd_ai.cpp \
+              src/design/service/action_support.cpp \
+              src/design/service/trace_actions.cpp \
+              src/design/service/graph_actions.cpp \
+              src/design/service/source_actions.cpp \
+              src/design/service/semantic_actions.cpp \
+              src/design/service/port_actions.cpp \
+              src/design/service/router.cpp \
               src/design/server/server.cpp \
               src/design/common/xdebug_design_paths.cpp \
               src/design/ast/ast_extractor.cpp \
