@@ -55,6 +55,13 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/service/config_support.cpp \
                 src/waveform/service/router.cpp \
                 src/waveform/server/server.cpp \
+                src/waveform/server/service/context.cpp \
+                src/waveform/server/service/value_scope.cpp \
+                src/waveform/server/service/signal_analysis.cpp \
+                src/waveform/server/service/signal_inspect.cpp \
+                src/waveform/server/service/query_actions.cpp \
+                src/waveform/server/service/event_handlers.cpp \
+                src/waveform/server/service/request_router.cpp \
                 src/waveform/server/fsdb_value_reader.cpp \
                 src/waveform/server/fsdb_scan_utils.cpp \
                 src/waveform/list/list_manager.cpp \
