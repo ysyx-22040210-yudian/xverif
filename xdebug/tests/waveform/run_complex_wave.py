@@ -98,6 +98,7 @@ class AiRunner(object):
             "api_version": "xdebug.v1",
             "action": action,
             "args": args or {},
+            "output": {"verbosity": "full"},
         }
         if target is not None:
             req["target"] = target

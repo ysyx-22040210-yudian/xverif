@@ -1,10 +1,7 @@
 #include "action_support.h"
-#include "../apb/apb_manager.h"
-#include "../axi/axi_manager.h"
-#include "../event/event_manager.h"
+#include "router_actions.h"
 #include "../list/list_manager.h"
 #include "../protocol/protocol.h"
-#include "../session/session_registry.h"
 #include <algorithm>
 #include <vector>
 
@@ -38,87 +35,9 @@ int run_query(const Json& req, long long elapsed_ms) {
         return rc;
     };
 
-    if (action == "session.open") {
-        std::string fsdb;
-        if (!get_string(target, "fsdb", fsdb)) {
-            return print_error_and_return(req, action, "MISSING_FIELD", "target.fsdb is required", elapsed_ms);
-        }
-        std::string name;
-        if (!get_string(args, "name", name) && !get_string(target, "name", name)) {
-            return print_error_and_return(req, action, "MISSING_FIELD", "session.open requires args.name", elapsed_ms);
-        }
-        if (!SessionRegistry::is_valid_session_name(name)) {
-            return print_error_and_return(req, action, "INVALID_SESSION_ID", "invalid session name: " + name, elapsed_ms);
-        }
-        SessionManager manager;
-        SessionRegistry registry;
-        if (registry.exists(name)) {
-            return print_error_and_return(req, action, "SESSION_ID_EXISTS", "session id already exists: " + name, elapsed_ms);
-        }
-        SessionTransportOptions transport;
-        transport.transport = string_or(args, "transport", string_or(target, "transport", "uds"));
-        transport.bind_host = string_or(args, "bind_host", string_or(args, "bind", string_or(target, "bind_host", string_or(target, "bind", ""))));
-        transport.host = string_or(args, "host", string_or(target, "host", ""));
-        transport.port = int_or(args, "port", int_or(target, "port", 0));
-        std::string sid = create_session_quiet(manager, fsdb, name, transport);
-        SessionInfo info;
-        if (sid.empty() || !manager.get_session(sid, info)) {
-            return print_error_and_return(req, action, "INVALID_TARGET", "failed to open fsdb: " + fsdb, elapsed_ms);
-        }
-        Json out = ok_out(&info);
-        out["summary"] = {{"session_id", sid}, {"fsdb", info.fsdb_file}};
-        out["data"]["session"] = session_info_json(info);
-        return emit(out);
-    }
-
-    if (action == "session.list") {
-        SessionManager manager;
-        Json out = ok_out();
-        Json arr = Json::array();
-        for (const auto& s : manager.list_sessions()) arr.push_back(session_info_json(s));
-        out["summary"] = {{"session_count", arr.size()}};
-        out["data"]["sessions"] = arr;
-        return emit(out);
-    }
-
-    if (action == "session.gc") {
-        SessionManager manager;
-        manager.gc_sessions();
-        Json out = ok_out();
-        out["summary"] = {{"status", "completed"}};
-        return emit(out);
-    }
-
-    if (action == "session.kill") {
-        SessionManager manager;
-        bool ok = false;
-        if (string_or(args, "id", "") == "all" || string_or(args, "session_id", "") == "all") {
-            ok = manager.kill_all_sessions();
-        } else {
-            std::string sid = string_or(target, "session_id", string_or(args, "session_id", string_or(args, "id", "")));
-            if (sid.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "session.kill requires target.session_id or args.id", elapsed_ms);
-            ok = manager.kill_session(sid);
-        }
-        if (!ok) return print_error_and_return(req, action, "SESSION_UNHEALTHY", "failed to kill session", elapsed_ms);
-        Json out = ok_out();
-        out["summary"] = {{"status", "removed"}};
-        return emit(out);
-    }
-
-    if (action == "session.doctor") {
-        std::string sid = string_or(target, "session_id", string_or(args, "session_id", ""));
-        if (sid.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "session.doctor requires session_id", elapsed_ms);
-        SessionManager manager;
-        SessionHealth h = manager.diagnose_session(sid);
-        Json out = base_response(req, action, h.healthy, elapsed_ms);
-        fill_session(out, h.info);
-        out["summary"] = {{"healthy", h.healthy}, {"status", session_health_status_name(h.status)}, {"message", h.message}};
-        out["data"]["health"] = out["summary"];
-        if (!h.healthy) {
-            out["error"] = {{"code", "SESSION_UNHEALTHY"}, {"message", h.message}, {"recoverable", true}, {"candidates", Json::array()}, {"suggested_actions", Json::array()}};
-        }
-        return emit(out, h.healthy ? 0 : 1);
-    }
+    bool handled = false;
+    int handler_rc = run_session_action(req, action, target, args, elapsed_ms, handled);
+    if (handled) return handler_rc;
 
     std::string sid;
     SessionInfo info;
@@ -214,9 +133,15 @@ int run_query(const Json& req, long long elapsed_ms) {
         out["summary"] = {{"signal", signal}, {"time", time}, {"known", !contains_xz(raw)}};
         out["data"]["signal"] = signal;
         out["data"]["time"] = time;
-        Json resolved = resolve_time_spec_json(sid, time, false, err);
-        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
-        out["data"]["value"] = make_value_object(raw);
+        bool compact = compact_mode(req) && !bool_or(args, "include_raw", false);
+        if (!compact) {
+            Json resolved = resolve_time_spec_json(sid, time, false, err);
+            if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+            out["data"]["value"] = make_value_object(raw);
+        } else {
+            out["data"]["value"] = trim(raw);
+            out["data"]["known"] = !contains_xz(raw);
+        }
         return emit(out);
     }
 
@@ -227,6 +152,7 @@ int run_query(const Json& req, long long elapsed_ms) {
             return print_error_and_return(req, action, "MISSING_FIELD", "value.batch_at requires args.time/args.at and args.signals[]", elapsed_ms);
         }
         Json arr = Json::array();
+        Json values = Json::object();
         int unknown = 0, missing = 0;
         for (const auto& s : args["signals"]) {
             if (!s.is_string()) continue;
@@ -238,20 +164,27 @@ int run_query(const Json& req, long long elapsed_ms) {
             if (query_value(sid, signal, time, fmt_char(args), raw, err)) {
                 item["status"] = "ok";
                 item["value"] = make_value_object(raw);
+                values[signal] = trim(raw);
                 if (contains_xz(raw)) unknown++;
             } else {
                 item["status"] = "not_found";
                 item["value"] = nullptr;
                 item["error"] = err;
+                values[signal] = nullptr;
                 missing++;
             }
             arr.push_back(item);
         }
         Json out = ok_out(&info);
-        out["summary"] = {{"time", time}, {"signal_count", arr.size()}, {"unknown_count", unknown}, {"missing_count", missing}};
-        Json resolved = resolve_time_spec_json(sid, time, false, err);
-        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
-        out["data"]["values"] = arr;
+        out["summary"] = {{"time", time}, {"signal_count", arr.size()}, {"x_or_z_count", unknown},
+                          {"unknown_count", unknown}, {"missing_count", missing}};
+        if (compact_mode(req) && !bool_or(args, "include_raw", false)) {
+            out["data"]["values"] = values;
+        } else {
+            Json resolved = resolve_time_spec_json(sid, time, false, err);
+            if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+            out["data"]["values"] = arr;
+        }
         return emit(out, missing == 0 ? 0 : 1);
     }
 
@@ -271,8 +204,21 @@ int run_query(const Json& req, long long elapsed_ms) {
         }
         Json out = ok_out(&info);
         out["summary"] = {{"path", path}, {"recursive", recursive}, {"signal_count", data.is_array() ? data.size() : 0}, {"truncated", truncated}};
-        out["data"]["signals"] = data;
-        out["meta"]["truncated"] = truncated;
+        if (compact_mode(req) && !bool_or(args, "include_all_signals", false)) {
+            Json preview = Json::array();
+            int max_preview = max_examples_arg(args, limits, 20);
+            if (data.is_array()) {
+                for (size_t i = 0; i < data.size() && i < static_cast<size_t>(max_preview); ++i) {
+                    preview.push_back(data[i]);
+                }
+                out["summary"]["truncated"] = truncated || data.size() > static_cast<size_t>(max_preview);
+                out["meta"]["truncated"] = out["summary"]["truncated"];
+            }
+            out["data"]["signals_preview"] = preview;
+        } else {
+            out["data"]["signals"] = data;
+            out["meta"]["truncated"] = truncated;
+        }
         return emit(out);
     }
 
@@ -325,9 +271,21 @@ int run_query(const Json& req, long long elapsed_ms) {
             } else if (data.is_object()) {
                 data = make_value_map(data);
             }
-            out["data"] = data;
-            Json resolved = resolve_time_spec_json(sid, time, false, err);
-            if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+            if (compact_mode(req) && !bool_or(args, "include_raw", false)) {
+                Json values = Json::object();
+                Json raw_values = data.contains("values") ? data["values"] : data;
+                if (raw_values.is_object()) {
+                    for (auto it = raw_values.begin(); it != raw_values.end(); ++it) {
+                        if (it.value().is_object() && it.value().contains("value")) values[it.key()] = it.value()["value"];
+                        else values[it.key()] = it.value();
+                    }
+                }
+                out["data"]["values"] = values;
+            } else {
+                out["data"] = data;
+                Json resolved = resolve_time_spec_json(sid, time, false, err);
+                if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+            }
             if (!ok) out["error"] = {{"code", "SIGNAL_NOT_FOUND"}, {"message", err}, {"recoverable", true}, {"candidates", Json::array()}, {"suggested_actions", Json::array()}};
             return emit(out, ok ? 0 : 1);
         }
@@ -359,147 +317,8 @@ int run_query(const Json& req, long long elapsed_ms) {
         }
     }
 
-    if (action.compare(0, 4, "apb.") == 0) {
-        ApbManager am;
-        std::string name = string_or(args, "name", "");
-        if (action == "apb.config.load") {
-            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "apb.config.load requires args.name", elapsed_ms);
-            Json cfg_json; if (!load_config_json_arg(args, cfg_json, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
-            ApbConfig cfg; if (!parse_apb_config(cfg_json, cfg, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
-            cfg.name = name;
-            if (!am.create_apb(sid, cfg)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to save APB config", elapsed_ms);
-            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "loaded"}}; out["data"]["config"] = apb_config_json(cfg); return emit(out);
-        }
-        if (name.empty()) am.get_latest_apb(sid, name);
-        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "APB action requires args.name or latest config", elapsed_ms);
-        if (action == "apb.config.list") {
-            ApbConfig cfg; if (!am.get_apb(sid, name, cfg)) return print_error_and_return(req, action, "INVALID_REQUEST", "APB config not found", elapsed_ms);
-            Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"]["config"] = apb_config_json(cfg); return emit(out);
-        }
-        std::string cmd;
-        if (action == "apb.query") {
-            std::string dir = string_or(args, "direction", "wr");
-            cmd = std::string(dir == "rd" ? CMD_APB_RD : CMD_APB_WR) + " " + name;
-            if (args.contains("address")) cmd += " addr " + arg_text(args["address"]);
-            if (args.contains("num")) cmd += " num " + std::to_string(args["num"].get<int>());
-            if (bool_or(args, "last", false)) cmd += " last";
-            cmd += " json";
-        } else {
-            std::string op = string_or(args, "op", "begin");
-            const char* pcmd = op == "next" ? CMD_APB_NEXT : op == "pre" ? CMD_APB_PREV : op == "last" ? CMD_APB_LAST : CMD_APB_BEGIN;
-            cmd = std::string(pcmd) + " " + name + " " + string_or(args, "direction", "all") + " json";
-        }
-        Json data; if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
-        Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"] = data; return emit(out);
-    }
-
-    if (action.compare(0, 4, "axi.") == 0) {
-        AxiManager am;
-        std::string name = string_or(args, "name", "");
-        if (action == "axi.config.load") {
-            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "axi.config.load requires args.name", elapsed_ms);
-            Json cfg_json; if (!load_config_json_arg(args, cfg_json, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
-            AxiConfig cfg; if (!parse_axi_config(cfg_json, cfg, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
-            cfg.name = name;
-            if (!am.create_axi(sid, cfg)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to save AXI config", elapsed_ms);
-            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "loaded"}}; out["data"]["config"] = axi_config_json(cfg); return emit(out);
-        }
-        if (name.empty()) am.get_latest_axi(sid, name);
-        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "AXI action requires args.name or latest config", elapsed_ms);
-        if (action == "axi.config.list") {
-            AxiConfig cfg; if (!am.get_axi(sid, name, cfg)) return print_error_and_return(req, action, "INVALID_REQUEST", "AXI config not found", elapsed_ms);
-            Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"]["config"] = axi_config_json(cfg); return emit(out);
-        }
-        std::string cmd;
-        if (action == "axi.query") {
-            std::string dir = string_or(args, "direction", "wr");
-            cmd = std::string(dir == "rd" ? CMD_AXI_RD : CMD_AXI_WR) + " " + name;
-            if (args.contains("address")) cmd += " addr " + arg_text(args["address"]);
-            if (args.contains("id")) cmd += " id " + arg_text(args["id"]);
-            if (args.contains("num")) cmd += " num " + std::to_string(args["num"].get<int>());
-            if (bool_or(args, "last", false)) cmd += " last";
-            cmd += " json";
-        } else if (action == "axi.analysis") {
-            std::string analysis = string_or(args, "analysis", "latency");
-            cmd = std::string(analysis == "osd" ? CMD_AXI_OSD : CMD_AXI_LATENCY) + " " + name + " " + string_or(args, "direction", "all");
-            if (args.contains("id")) cmd += " id " + arg_text(args["id"]);
-            cmd += " json";
-        } else {
-            std::string op = string_or(args, "op", "begin");
-            const char* pcmd = op == "next" ? CMD_AXI_NEXT : op == "pre" ? CMD_AXI_PREV : op == "last" ? CMD_AXI_LAST : CMD_AXI_BEGIN;
-            cmd = std::string(pcmd) + " " + name + " " + string_or(args, "direction", "all") + " json";
-        }
-        Json data; if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
-        Json out = ok_out(&info); out["summary"] = {{"name", name}}; out["data"] = data; return emit(out);
-    }
-
-    if (action.compare(0, 6, "event.") == 0) {
-        EventManager em;
-        std::string name = string_or(args, "name", "");
-        if (action == "event.config.load") {
-            if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "event.config.load requires args.name", elapsed_ms);
-            Json cfg_json; if (!load_config_json_arg(args, cfg_json, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
-            EventConfig cfg; if (!parse_event_config(cfg_json, cfg, err)) return print_error_and_return(req, action, "INVALID_REQUEST", err, elapsed_ms);
-            cfg.name = name;
-            if (!em.create_event(sid, info.fsdb_file, cfg)) return print_error_and_return(req, action, "INTERNAL_ERROR", "failed to save event config", elapsed_ms);
-            Json out = ok_out(&info); out["summary"] = {{"name", name}, {"status", "loaded"}}; out["data"]["config"] = event_config_json(cfg); return emit(out);
-        }
-        if (action == "event.config.list") {
-            Json out = ok_out(&info);
-            if (name.empty()) {
-                Json arr = em.list_events(sid, info.fsdb_file);
-                out["summary"] = {{"count", arr.size()}};
-                out["data"]["events"] = arr;
-            } else {
-                EventConfig cfg; if (!em.get_event(sid, info.fsdb_file, name, cfg)) return print_error_and_return(req, action, "INVALID_REQUEST", "event config not found", elapsed_ms);
-                out["summary"] = {{"name", name}};
-                out["data"]["config"] = event_config_json(cfg);
-            }
-            return emit(out);
-        }
-        if (name.empty()) em.get_latest_event(sid, info.fsdb_file, name);
-        if (name.empty()) return print_error_and_return(req, action, "MISSING_FIELD", "event action requires args.name or latest config", elapsed_ms);
-        std::string expr; if (!get_string(args, "expr", expr)) return print_error_and_return(req, action, "MISSING_FIELD", "event.find/export requires args.expr", elapsed_ms);
-        expr = compact_expr_ws(expr);
-        std::string begin, end;
-        bool around_window = false;
-        if (!build_range_specs(args, begin, end, around_window, err)) {
-            return print_error_and_return(req, action, "TIME_SPEC_INVALID", err, elapsed_ms);
-        }
-        int limit = action == "event.find" ? 1 : int_or(limits, "max_rows", int_or(args, "limit", 1000));
-        Json ctx = args.value("context", Json::object());
-        std::string mode = "json";
-        std::string cmd;
-        if (ctx.is_object() && ctx.contains("window")) {
-            std::string window = string_or(ctx, "window", "0ns");
-            std::string axi = string_or(ctx, "axi", "-"); if (axi.empty()) axi = "-";
-            std::string apb = string_or(ctx, "apb", "-"); if (apb.empty()) apb = "-";
-            cmd = std::string(action == "event.find" ? CMD_EVENT_FIND_CTX : CMD_EVENT_EXPORT_CTX) + " " + name + " " + begin + " " + end + " " + std::to_string(limit) + " " + mode + " " + window + " " + axi + " " + apb + " expr " + expr;
-        } else {
-            cmd = std::string(action == "event.find" ? CMD_EVENT_FIND : CMD_EVENT_EXPORT) + " " + name + " " + begin + " " + end + " " + std::to_string(limit) + " " + mode + " expr " + expr;
-        }
-        Json data; if (!capture_server_json(sid, cmd, data, err)) return print_error_and_return(req, action, "WAVE_QUERY_FAILED", err, elapsed_ms);
-        Json raw_events = data;
-        Json aggregate = Json::object();
-        bool has_aggregate = action == "event.export" && args.contains("aggregate") && args["aggregate"].is_object();
-        bool include_events = true;
-        if (has_aggregate) {
-            aggregate = aggregate_events(raw_events, args["aggregate"], limit);
-            include_events = args["aggregate"].value("events", true);
-        }
-        Json out = ok_out(&info);
-        out["summary"] = {{"name", name}, {"begin", begin}, {"end", end}};
-        if (data.is_array()) out["summary"]["event_count"] = data.size();
-        if (has_aggregate) {
-            out["summary"]["aggregate_count"] = aggregate.value("count", 0);
-            out["summary"]["limited"] = aggregate.value("limited", false);
-            if (aggregate.contains("group_count")) out["summary"]["group_count"] = aggregate["group_count"];
-            out["data"]["aggregate"] = aggregate;
-        }
-        if (include_events) out["data"]["events"] = simplify_event_value_objects(data);
-        fill_resolved_range(out, sid, begin, end, around_window, err);
-        return emit(out);
-    }
+    handler_rc = run_protocol_action(req, action, args, limits, sid, info, elapsed_ms, handled);
+    if (handled) return handler_rc;
 
     if (action == "verify.conditions") {
         std::string time;
@@ -529,10 +348,22 @@ int run_query(const Json& req, long long elapsed_ms) {
             checks.push_back(item);
         }
         Json out = ok_out(&info);
-        out["summary"] = {{"all_passed", failed == 0 && unknown == 0}, {"passed", passed}, {"failed", failed}, {"unknown", unknown}};
-        Json resolved = resolve_time_spec_json(sid, time, false, err);
-        if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
-        out["data"]["checks"] = checks;
+        out["summary"] = {{"verdict", failed == 0 && unknown == 0 ? "pass" : "fail"},
+                          {"condition_count", checks.size()},
+                          {"all_passed", failed == 0 && unknown == 0},
+                          {"passed", passed}, {"failed", failed}, {"unknown", unknown}};
+        if (!compact_mode(req) || failed > 0 || unknown > 0) {
+            Json filtered = Json::array();
+            for (const auto& check : checks) {
+                std::string status = check.value("status", std::string());
+                if (!compact_mode(req) || status != "pass") filtered.push_back(check);
+            }
+            out["data"]["checks"] = filtered;
+        }
+        if (!compact_mode(req)) {
+            Json resolved = resolve_time_spec_json(sid, time, false, err);
+            if (!resolved.is_null()) out["data"]["resolved_time"] = resolved;
+        }
         return emit(out);
     }
 

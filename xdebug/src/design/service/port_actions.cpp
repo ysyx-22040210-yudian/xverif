@@ -1,7 +1,5 @@
 #include "action_support.h"
 
-#include "../protocol/protocol.h"
-
 namespace xdebug_design {
 
 json run_port_like_action(const json& request, const std::string& action) {
@@ -15,13 +13,11 @@ json run_port_like_action(const json& request, const std::string& action) {
         return error_response(request, action, "MISSING_FIELD", "args.path, args.instance, args.signal, or args.interface is required");
     }
     int limit = request.value("limits", json::object()).value("max_results", args.value("limit", 0));
-    std::string cmd = action == "port.trace" ? CMD_PORT_TRACE_AI :
-                      action == "instance.map" ? CMD_INSTANCE_MAP_AI : CMD_INTERFACE_RESOLVE_AI;
-    cmd += " " + path;
-    if (limit > 0) cmd += " --limit " + std::to_string(limit);
+    json rpc_args = {{"path", path}};
+    if (limit > 0) rpc_args["limit"] = limit;
     json payload;
     std::string status, message;
-    if (!send_json_command(session_id, cmd, payload, status, message)) {
+    if (!send_json_command(session_id, action, rpc_args, payload, status, message)) {
         return error_response(request, action, "SESSION_UNHEALTHY", message.empty() ? status : message);
     }
     response["ok"] = payload.value("ok", true);

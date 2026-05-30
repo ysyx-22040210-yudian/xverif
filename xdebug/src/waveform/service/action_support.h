@@ -29,6 +29,9 @@ Json base_response(const Json& req, const std::string& action, bool ok, long lon
 Json error_response(const Json& req, const std::string& action, const std::string& code,
                     const std::string& message, bool recoverable, long long elapsed_ms);
 std::string response_verbosity(const Json& req, bool* valid = nullptr);
+bool compact_mode(const Json& req);
+int max_items_arg(const Json& args, const Json& limits, int def);
+int max_examples_arg(const Json& args, const Json& limits, int def);
 Json finalize_response(const Json& req, const Json& full);
 void print_json(const Json& j);
 bool get_string(const Json& obj, const char* key, std::string& out);

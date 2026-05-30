@@ -26,6 +26,10 @@ std::string next_token_after(const std::string& text, const std::string& key);
 json session_to_json(const SessionInfo& s);
 SessionTransportOptions request_transport_options(const json& request);
 json base_response(const json& request, const std::string& action);
+std::string response_verbosity(const json& request);
+bool compact_mode(const json& request);
+bool include_arg(const json& request, const std::string& key);
+int max_examples_arg(const json& request, int def);
 json error_response(const json& request,
                     const std::string& action,
                     const std::string& code,
@@ -44,7 +48,8 @@ bool ensure_target_session(const json& request,
                            bool allow_latest = false);
 std::string option_string_from_limits_args(const json& request);
 bool send_json_command(const std::string& session_id,
-                       const std::string& cmd,
+                       const std::string& action,
+                       const json& args,
                        json& parsed,
                        std::string& error_status,
                        std::string& error_message);

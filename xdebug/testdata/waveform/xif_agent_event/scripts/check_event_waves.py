@@ -14,7 +14,8 @@ REPO_ROOT = ROOT.parents[3]
 
 
 def query(binary, home, action, args=None, target=None, expect_ok=True):
-    request = {"api_version": "xdebug.v1", "action": action, "args": args or {}}
+    request = {"api_version": "xdebug.v1", "action": action, "args": args or {},
+               "output": {"verbosity": "full"}}
     if target is not None:
         request["target"] = target
     env = os.environ.copy()

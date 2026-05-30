@@ -52,7 +52,9 @@ json source_context(const json& request) {
     json args = request.value("args", json::object());
     std::string file = args.value("file", "");
     int line = args.value("line", 0);
-    int context_lines = args.value("context_lines", 8);
+    int context_lines = args.value("context_lines", compact_mode(request) ? 3 : 8);
+    bool include_source = include_arg(request, "include_source");
+    if (compact_mode(request) && context_lines > 3 && !include_source) context_lines = 3;
     if (file.empty() || line <= 0) {
         return error_response(request, request.value("action", ""), "MISSING_FIELD", "args.file and args.line are required");
     }
@@ -64,16 +66,24 @@ json source_context(const json& request) {
     if (line > static_cast<int>(lines.size())) return error_response(request, request.value("action", ""), "INVALID_REQUEST", "line is out of range");
     int begin = std::max(1, line - context_lines);
     int end = std::min(static_cast<int>(lines.size()), line + context_lines);
-    json ctx = json::array();
-    for (int i = begin; i <= end; ++i) ctx.push_back({{"line", i}, {"text", lines[i - 1]}, {"hit", i == line}});
+    json enclosing = infer_enclosing_block(lines, line);
     response["summary"] = {{"file", file}, {"line", line}};
-    response["data"] = {{"context", ctx}, {"enclosing", infer_enclosing_block(lines, line)}};
+    response["data"] = {{"file", file}, {"line", line},
+        {"symbol", args.value("symbol", std::string())},
+        {"context_kind", enclosing.value("type", std::string("unknown"))}};
+    response["data"]["enclosing"] = enclosing;
+    if (!compact_mode(request) || include_source) {
+        json ctx = json::array();
+        for (int i = begin; i <= end; ++i) ctx.push_back({{"line", i}, {"text", lines[i - 1]}, {"hit", i == line}});
+        response["data"]["context"] = ctx;
+    }
     return response;
 }
 
 json control_explain(const json& request) {
     json trace_req = request;
     trace_req["action"] = "trace.driver";
+    trace_req["args"]["include_trace"] = true;
     json trace_resp = run_trace_action(trace_req, "driver");
     if (!trace_resp.value("ok", false)) return trace_resp;
     json deps = trace_resp["data"].value("control_dependencies", json::array());
@@ -107,6 +117,8 @@ json run_expr_normalize_action(const json& request) {
         json trace_req = request;
         trace_req["action"] = "trace.driver";
         trace_req["args"]["signal"] = signal;
+        trace_req["args"]["include_trace"] = true;
+        trace_req["args"]["include_ast"] = true;
         json trace_resp = run_trace_action(trace_req, "driver");
         if (!trace_resp.value("ok", false)) return trace_resp;
         json assignment = trace_resp["data"].value("assignment", json::object());

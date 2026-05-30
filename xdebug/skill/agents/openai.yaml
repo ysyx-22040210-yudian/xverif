@@ -1,0 +1,6 @@
+interface:
+  display_name: "xdebug"
+  short_description: "用 JSON 查询 daidir、FSDB 与联合调试事实。"
+  default_prompt: "Use $xdebug to inspect daidir/FSDB facts with compact JSON and connect waveform evidence to RTL causality."
+policy:
+  allow_implicit_invocation: true

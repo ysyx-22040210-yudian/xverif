@@ -1,32 +1,14 @@
 #include "client.h"
+
 #include "../protocol/protocol.h"
 #include "../session/session_manager.h"
 #include "../session/session_transport.h"
-#include "json.hpp"
 
-#include <cstdio>
-#include <cstring>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 namespace xdebug_design {
-
-using json = nlohmann::json;
-
-static void print_json_error(const char* command_name,
-                             const std::string& session_id,
-                             const char* status,
-                             const std::string& message) {
-    json payload = {
-        {"ok", false},
-        {"command", command_name ? command_name : ""},
-        {"session_id", session_id}, {"id", session_id},
-        {"status", status ? status : "error"},
-        {"message", message}
-    };
-    fprintf(stderr, "%s\n", payload.dump(2).c_str());
-}
 
 int session_connect(const std::string& session_id) {
     SessionManager manager;
@@ -35,84 +17,45 @@ int session_connect(const std::string& session_id) {
     return connect_session_endpoint(session);
 }
 
-bool send_command_and_print(const std::string& session_id, const char* cmd) {
-    return send_command_and_print_ex(session_id, cmd, false, "");
+static bool write_json_line(int fd, const Json& request) {
+    std::string wire = request.dump() + "\n";
+    return write(fd, wire.c_str(), wire.size()) == static_cast<ssize_t>(wire.size());
 }
 
-bool send_command_and_print_ex(const std::string& session_id, const char* cmd, bool json_errors, const char* command_name) {
-    SessionManager manager;
-    int fd = session_connect(session_id);
-    if (fd < 0) {
-        SessionHealth health = manager.diagnose_session(session_id);
-        const char* status = session_health_status_name(health.status);
-        if (json_errors) {
-            print_json_error(command_name, session_id, status, health.message);
-        } else {
-            fprintf(stderr, "Error: Session %s unavailable: %s (status=%s)\n",
-                    session_id.c_str(),
-                    health.message.c_str(),
-                    status);
-        }
-        return false;
-    }
-
-    // Send command
-    std::string msg = std::string(cmd) + "\n";
-    if (write(fd, msg.c_str(), msg.length()) < 0) {
-        close(fd);
-        return false;
-    }
-
-    // Read response until END_MARKER
-    std::string buf;
-    const std::string end_marker(END_MARKER);
-    char tmp[4096];
-
-    bool saw_end_marker = false;
-    bool server_error = false;
-    while (true) {
-        ssize_t n = read(fd, tmp, sizeof(tmp));
-        if (n <= 0) break;
-        buf.append(tmp, n);
-
-        size_t pos = buf.find(end_marker);
-        if (pos != std::string::npos) {
-            std::string payload = buf.substr(0, pos);
-            server_error = payload.compare(0, strlen(ERROR_PREFIX), ERROR_PREFIX) == 0;
-            if (server_error && json_errors) {
-                std::string message = payload.substr(strlen(ERROR_PREFIX));
-                print_json_error(command_name, session_id, "server_error", message);
-            } else {
-                FILE* stream = server_error ? stderr : stdout;
-                fwrite(payload.c_str(), 1, payload.size(), stream);
+static bool read_json_line(int fd, Json& response) {
+    struct timeval tv = {2, 0};
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    std::string line;
+    char c = 0;
+    while (line.size() <= 1024 * 1024) {
+        ssize_t n = read(fd, &c, 1);
+        if (n <= 0) return false;
+        if (c == '\n') {
+            try {
+                response = Json::parse(line);
+                return true;
+            } catch (...) {
+                return false;
             }
-            saw_end_marker = true;
-            break;
         }
-
-        // Flush safe prefix if buffer grows large
-        if (buf.size() > sizeof(tmp) + end_marker.size()) {
-            size_t safe = buf.size() - end_marker.size();
-            fwrite(buf.c_str(), 1, safe, stdout);
-            buf.erase(0, safe);
-        }
+        line.push_back(c);
     }
-    fflush(stdout);
-    fflush(stderr);
-    close(fd);
-    if (saw_end_marker && !server_error) {
-        manager.touch_session(session_id);
-    }
-    return saw_end_marker && !server_error;
+    return false;
 }
 
-bool send_command_capture(const std::string& session_id,
-                          const char* cmd,
-                          std::string& payload,
+bool send_request_capture(const std::string& session_id,
+                          const Json& request,
+                          Json& data,
                           std::string& status,
                           std::string& message) {
     SessionManager manager;
-    int fd = session_connect(session_id);
+    SessionInfo session;
+    if (!manager.get_session(session_id, session)) {
+        status = "session_not_found";
+        message = "session not found";
+        return false;
+    }
+    int fd = connect_session_endpoint(session);
     if (fd < 0) {
         SessionHealth health = manager.diagnose_session(session_id);
         status = session_health_status_name(health.status);
@@ -120,42 +63,23 @@ bool send_command_capture(const std::string& session_id,
         return false;
     }
 
-    std::string msg = std::string(cmd) + "\n";
-    if (write(fd, msg.c_str(), msg.length()) < 0) {
-        close(fd);
-        status = "write_failed";
-        message = "Failed to write command to session";
-        return false;
-    }
-
-    std::string buf;
-    const std::string end_marker(END_MARKER);
-    char tmp[4096];
-    bool saw_end_marker = false;
-    while (true) {
-        ssize_t n = read(fd, tmp, sizeof(tmp));
-        if (n <= 0) break;
-        buf.append(tmp, n);
-        size_t pos = buf.find(end_marker);
-        if (pos != std::string::npos) {
-            payload = buf.substr(0, pos);
-            saw_end_marker = true;
-            break;
-        }
-    }
+    Json rpc = request;
+    rpc["api_version"] = INTERNAL_API_VERSION;
+    if (is_tcp_transport(session)) rpc["auth_token"] = session.auth_token;
+    Json response;
+    bool received = write_json_line(fd, rpc) && read_json_line(fd, response);
     close(fd);
-
-    if (!saw_end_marker) {
-        status = "read_failed";
-        message = "Failed to read complete response from session";
+    if (!received) {
+        status = "transport_failed";
+        message = "failed to exchange JSON request with session";
         return false;
     }
-    if (payload.compare(0, strlen(ERROR_PREFIX), ERROR_PREFIX) == 0) {
-        status = "server_error";
-        message = payload.substr(strlen(ERROR_PREFIX));
+    if (!response.value("ok", false)) {
+        status = response.value("status", std::string("server_error"));
+        message = response.value("error", Json::object()).value("message", std::string("server request failed"));
         return false;
     }
-
+    data = response.value("data", Json::object());
     manager.touch_session(session_id);
     status = "ok";
     message.clear();
@@ -163,33 +87,15 @@ bool send_command_capture(const std::string& session_id,
 }
 
 bool session_ping(const std::string& session_id) {
-    int fd = session_connect(session_id);
-    if (fd < 0) return false;
-
-    const char* ping = CMD_PING "\n";
-    if (write(fd, ping, strlen(ping)) < 0) {
-        close(fd);
-        return false;
-    }
-
-    // Wait for PONG with timeout
-    char buf[64];
-    struct timeval tv;
-    tv.tv_sec = 2;
-    tv.tv_usec = 0;
-    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
-    bool got_pong = false;
-    ssize_t n = read(fd, buf, sizeof(buf) - 1);
-    if (n > 0) {
-        buf[n] = '\0';
-        if (strstr(buf, "PONG")) {
-            got_pong = true;
-        }
-    }
-
-    close(fd);
-    return got_pong;
+    Json data;
+    std::string status;
+    std::string message;
+    return send_request_capture(session_id,
+                                {{"api_version", INTERNAL_API_VERSION},
+                                 {"action", "server.ping"},
+                                 {"args", Json::object()}},
+                                data, status, message) &&
+           data.value("pong", false);
 }
 
-} // namespace xdebug_design
+}  // namespace xdebug_design

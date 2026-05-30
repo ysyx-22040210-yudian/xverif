@@ -92,6 +92,24 @@ expect_ok wave_only
 query design_only "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.driver\",\"target\":{\"daidir\":\"$DBDIR\",\"auto_ensure\":true},\"args\":{\"name\":\"design_case\",\"signal\":\"active_driver_tb.u_dut.q\"},\"limits\":{\"max_results\":4}}"
 expect_ok design_only
 
+query compact_expand '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"design_case"},"args":{"signal":"active_driver_tb.u_dut.q","direction":"driver"},"limits":{"max_depth":1,"max_edges":8}}'
+query compact_verify '{"api_version":"xdebug.v1","action":"verify.conditions","target":{"session_id":"wave_case"},"args":{"signal":"active_driver_tb.u_dut.q","time":"26ns","conditions":[{"signal":"active_driver_tb.u_dut.q","op":"==","value":"0xb2"},{"signal":"active_driver_tb.u_dut.q","op":"==","value":"0x00"}]}}'
+python3 - "$TMP_HOME/wave_only.json" "$TMP_HOME/design_only.json" "$TMP_HOME/compact_expand.json" "$TMP_HOME/compact_verify.json" <<'PY'
+import json
+import sys
+
+wave, design, expand, verify = (json.load(open(path)) for path in sys.argv[1:])
+assert isinstance(wave["data"]["value"], str), wave
+assert "resolved_time" not in wave["data"], wave
+assert "drivers" in design["data"], design
+assert "dependency_edges" not in design["data"], design
+assert "graph" in expand["data"], expand
+assert "trace" not in expand["data"], expand
+assert "expanded_queries" not in expand["data"], expand
+assert verify["summary"]["verdict"] == "fail", verify
+assert all(item["status"] != "pass" for item in verify["data"]["checks"]), verify
+PY
+
 query active_assignment "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.active_driver\",\"target\":{\"daidir\":\"$DBDIR\",\"fsdb\":\"$FSDB\"},\"args\":{\"signal\":\"active_driver_tb.u_dut.q\",\"requested_time\":\"26ns\",\"include_control\":true,\"include_parity\":true}}"
 query active_force "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.active_driver\",\"target\":{\"daidir\":\"$DBDIR\",\"fsdb\":\"$FSDB\"},\"args\":{\"signal\":\"active_driver_tb.u_dut.q\",\"requested_time\":\"40ns\",\"include_control\":true}}"
 query active_default "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.active_driver\",\"target\":{\"daidir\":\"$DBDIR\",\"fsdb\":\"$FSDB\"},\"args\":{\"signal\":\"active_driver_tb.u_dut.comb_q\",\"requested_time\":\"51ns\",\"include_control\":true}}"

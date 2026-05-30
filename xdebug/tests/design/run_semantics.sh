@@ -87,19 +87,19 @@ assert "counter.explain" in d["implemented"]
 
 printf '%s\n' '{"api_version":"xdebug.v1","action":"schema"}' | "$XDEBUG" - | python3 -c 'import json,sys; assert json.load(sys.stdin)["ok"]'
 
-query "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.driver\",\"target\":{\"daidir\":\"$UART_DB\",\"auto_ensure\":true,\"name\":\"uart_ai\"},\"args\":{\"signal\":\"uart_16550.RXDin\"},\"limits\":{\"max_results\":10}}" \
+query "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.driver\",\"target\":{\"daidir\":\"$UART_DB\",\"auto_ensure\":true,\"name\":\"uart_ai\"},\"args\":{\"signal\":\"uart_16550.RXDin\"},\"limits\":{\"max_results\":10},\"output\":{\"verbosity\":\"full\"}}" \
   | check_json 'd["ok"] and d["data"]["assignment"]["rhs"]["op"] == "ternary" and len(d["data"]["dependency_edges"]) >= 2 and d["summary"]["confidence"] in ("high","medium")'
 
-query '{"api_version":"xdebug.v1","action":"trace.driver","target":{"session_id":"uart_ai"},"args":{"signal":"uart_16550.RXDin","include_statement_only":false},"limits":{"max_results":10}}' \
+query '{"api_version":"xdebug.v1","action":"trace.driver","target":{"session_id":"uart_ai"},"args":{"signal":"uart_16550.RXDin","include_statement_only":false},"limits":{"max_results":10},"output":{"verbosity":"full"}}' \
   | check_json 'd["ok"] and not any(e.get("type") == "statement_only" or e.get("resolution") == "statement_only" for e in d["data"]["dependency_edges"])'
 
-query '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.RXDin","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_edges":50}}' \
+query '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.RXDin","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_edges":50},"output":{"verbosity":"full"}}' \
   | check_json 'd["ok"] and d["summary"]["node_count"] >= 2 and d["summary"]["edge_count"] >= 1 and d["meta"]["truncated"] is False and "traces" not in d["data"] and "expanded_queries" in d["data"] and len(d["data"]["graph"]["edges"]) == len(d["data"]["trace"]["dependency_edges"]) and len({(e.get("from_signal"), e.get("to_signal"), e.get("type"), e.get("assignment_type")) for e in d["data"]["graph"]["edges"]}) == len(d["data"]["graph"]["edges"]) and all(e.get("evidence_count", 1) >= 1 and 0 <= len(e.get("evidence", [])) <= 3 and (e.get("evidence_count", 1) == 1 or len(e.get("evidence", [])) >= 1) for e in d["data"]["graph"]["edges"]) and d["summary"]["raw_edge_count"] >= d["summary"]["deduped_edge_count"] and d["summary"]["duplicate_edge_count"] == d["summary"]["raw_edge_count"] - d["summary"]["deduped_edge_count"] and d["summary"]["relation_group_count"] == d["summary"]["edge_count"] and d["summary"]["aggregated_edge_count"] == d["summary"]["deduped_edge_count"] - d["summary"]["relation_group_count"]'
 
-query '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.RXDin","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_edges":50,"max_evidence_per_edge":1}}' \
+query '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.RXDin","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_edges":50,"max_evidence_per_edge":1},"output":{"verbosity":"full"}}' \
   | check_json 'd["ok"] and d["summary"]["edge_count"] >= 1 and all(len(e.get("evidence", [])) <= 1 for e in d["data"]["graph"]["edges"])'
 
-query '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.RXDin","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_results":1}}' \
+query '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.RXDin","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_results":1},"output":{"verbosity":"full"}}' \
   | check_json 'd["ok"] and d["summary"]["edge_count"] == 1 and d["summary"]["deduped_edge_count"] == 1 and d["summary"]["truncated"] is True'
 
 query_any '{"api_version":"xdebug.v1","action":"trace.expand","target":{"session_id":"uart_ai"},"args":{"root_signal":"uart_16550.DOES_NOT_EXIST","direction":"driver"},"limits":{"max_depth":2,"max_nodes":20,"max_edges":50}}' \
@@ -111,7 +111,7 @@ query '{"api_version":"xdebug.v1","action":"trace.path","target":{"session_id":"
 query '{"api_version":"xdebug.v1","action":"signal.canonicalize","target":{"session_id":"uart_ai"},"args":{"signal":"uart_16550.RXDin"}}' \
   | check_json 'd["ok"] and d["data"]["canonical"].endswith("RXDin")'
 
-query '{"api_version":"xdebug.v1","action":"source.context","args":{"file":"'"$ROOT_DIR"'/testdata/design/uart/uart_16550.sv","line":164,"context_lines":2}}' \
+query '{"api_version":"xdebug.v1","action":"source.context","args":{"file":"'"$ROOT_DIR"'/testdata/design/uart/uart_16550.sv","line":164,"context_lines":2,"include_source":true}}' \
   | check_json 'd["ok"] and len(d["data"]["context"]) == 5 and any(x["hit"] for x in d["data"]["context"]) and d["data"]["enclosing"]["type"] != "unknown"'
 
 query '{"api_version":"xdebug.v1","action":"expr.normalize","target":{"session_id":"uart_ai"},"args":{"signal":"uart_16550.RXDin"},"limits":{"max_results":10}}' \

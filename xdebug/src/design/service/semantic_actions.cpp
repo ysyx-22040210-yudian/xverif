@@ -92,6 +92,9 @@ json normalize_assignments_with_conditions(const json& trace_data) {
 json run_procedural_assignment_action(const json& request) {
     json trace_req = request;
     trace_req["action"] = "trace.driver";
+    trace_req["args"]["include_trace"] = true;
+    trace_req["args"]["include_ast"] = true;
+    trace_req["args"]["include_source"] = true;
     json trace_resp = run_trace_action(trace_req, "driver");
     if (!trace_resp.value("ok", false)) return trace_resp;
     json response = base_response(request, request.value("action", ""));

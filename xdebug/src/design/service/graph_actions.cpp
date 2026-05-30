@@ -207,6 +207,7 @@ json trace_expand_like(const json& request, bool explain_only) {
         trace_req["action"] = direction == "load" ? "trace.load" : "trace.driver";
         trace_req["target"] = {{"session_id", session_id}};
         trace_req["args"]["signal"] = current;
+        trace_req["args"]["include_trace"] = true;
         json trace_resp = run_trace_action(trace_req, direction == "load" ? "load" : "driver");
         if (!trace_resp.value("ok", false)) {
             failed_query_count++;
@@ -258,6 +259,11 @@ json trace_expand_like(const json& request, bool explain_only) {
         {"duplicate_edge_count", duplicate_edge_count}, {"relation_group_count", relation_edges.size()},
         {"aggregated_edge_count", aggregated_edge_count}, {"failed_query_count", failed_query_count},
         {"truncated", truncated}};
+    if (compact_mode(request) && !include_arg(request, "include_debug")) {
+        response["summary"] = {{"root_signal", root}, {"direction", direction},
+            {"node_count", graph["nodes"].size()}, {"edge_count", graph["edges"].size()},
+            {"truncated", truncated}};
+    }
     response["meta"]["truncated"] = truncated;
     if (explain_only) {
         json explanations = json::array();
@@ -268,11 +274,15 @@ json trace_expand_like(const json& request, bool explain_only) {
         }
         response["summary"]["explanation_count"] = explanations.size();
         response["summary"]["skipped_empty_dependency_count"] = skipped_empty_dependency_count;
-        response["data"] = {{"explanations", explanations}, {"trace", trace}, {"expanded_queries", expanded_queries}};
+        response["data"] = {{"explanations", explanations}};
+        if (!compact_mode(request) || include_arg(request, "include_trace")) response["data"]["trace"] = trace;
+        if (!compact_mode(request) || include_arg(request, "include_expanded_queries")) response["data"]["expanded_queries"] = expanded_queries;
         response["suggested_next_actions"] = json::array({{{"tool", "xdebug"}, {"action", "value.at"},
             {"reason", "verify dependency signal value at the observed waveform time"}, {"args", {{"signal", root}}}}});
     } else {
-        response["data"] = {{"graph", graph}, {"trace", trace}, {"expanded_queries", expanded_queries}};
+        response["data"] = {{"graph", graph}};
+        if (!compact_mode(request) || include_arg(request, "include_trace")) response["data"]["trace"] = trace;
+        if (!compact_mode(request) || include_arg(request, "include_expanded_queries")) response["data"]["expanded_queries"] = expanded_queries;
     }
     return response;
 }
@@ -334,7 +344,12 @@ json trace_path(const json& request) {
     response["summary"]["to_signal"] = to;
     response["summary"]["path_count"] = paths.size();
     response["summary"]["found"] = found;
-    response["data"]["paths"] = paths;
+    if (compact_mode(request) && !include_arg(request, "include_graph")) {
+        response["data"] = {{"found", found}, {"paths", paths}};
+    } else {
+        response["data"]["paths"] = paths;
+        response["data"]["found"] = found;
+    }
     return response;
 }
 

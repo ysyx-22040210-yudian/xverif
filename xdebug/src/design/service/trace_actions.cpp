@@ -1,7 +1,5 @@
 #include "action_support.h"
 
-#include "../protocol/protocol.h"
-
 #include <cctype>
 #include <set>
 #include <utility>
@@ -95,6 +93,53 @@ std::string confidence_for_trace(const json& trace) {
         if (!r.value("source", "").empty()) return "high";
     }
     return "medium";
+}
+
+json compact_trace_payload(const json& request, const json& trace, const std::string& mode) {
+    json args = request.value("args", json::object());
+    std::string query = trace.value("query", args.value("signal", args.value("root_signal", "")));
+    json items = json::array();
+    json control_signals = json::array();
+    for (const auto& edge : trace.value("dependency_edges", json::array())) {
+        std::string type = edge.value("type", "");
+        std::string related = mode == "load" ? edge.value("to", "") : edge.value("from", "");
+        if (related.empty() && type != "statement_only") continue;
+        json item = {
+            {"signal", related.empty() ? query : related},
+            {"kind", type.empty() ? edge.value("resolution", "") : type},
+            {"rhs_signals", json::array()},
+            {"condition_signals", json::array()},
+            {"file", edge.value("file", "")},
+            {"line", edge.value("line", 0)},
+            {"confidence", edge.value("confidence", trace.value("confidence", "unknown"))}
+        };
+        if (type == "control_dependency") {
+            item["condition_signals"].push_back(related);
+            control_signals.push_back(related);
+        } else if (!related.empty() && mode != "load") {
+            item["rhs_signals"].push_back(related);
+        }
+        items.push_back(item);
+    }
+    if (items.empty()) {
+        for (const auto& r : trace.value("results", json::array())) {
+            items.push_back({
+                {"signal", r.value("signal", "")},
+                {"kind", r.value("resolution", r.value("role", ""))},
+                {"rhs_signals", json::array()},
+                {"condition_signals", json::array()},
+                {"file", r.value("file", "")},
+                {"line", r.value("line", 0)},
+                {"confidence", trace.value("confidence", "unknown")}
+            });
+        }
+    }
+    json out = json::object();
+    out[mode == "load" ? "loads" : "drivers"] = items;
+    out["signal"] = query;
+    out["mode"] = mode;
+    out["confidence"] = trace.value("confidence", "unknown");
+    return out;
 }
 
 } // namespace
@@ -220,17 +265,26 @@ json run_trace_action(const json& request, const std::string& mode) {
     json args = request.value("args", json::object());
     std::string signal = args.value("signal", args.value("root_signal", ""));
     if (signal.empty()) return error_response(request, request.value("action", ""), "MISSING_FIELD", "args.signal is required");
-    std::string cmd = (mode == "load" ? CMD_LOAD_AI : CMD_DRIVER_AI);
-    cmd += " " + signal + option_string_from_limits_args(request);
+    json rpc_args = args;
+    const json limits = request.value("limits", json::object());
+    if (limits.contains("max_results")) rpc_args["limit"] = limits["max_results"];
+    if (limits.contains("max_rows") && !rpc_args.contains("limit")) rpc_args["limit"] = limits["max_rows"];
     json trace;
     std::string status, message;
-    if (!send_json_command(session_id, cmd, trace, status, message)) {
+    if (!send_json_command(session_id, mode == "load" ? "trace.load" : "trace.driver",
+                           rpc_args, trace, status, message)) {
         return error_response(request, request.value("action", ""), "SESSION_UNHEALTHY", message.empty() ? status : message);
     }
     json enriched = trace.contains("dependency_edges") ? trace : enrich_trace_payload(request, trace);
     response["ok"] = enriched.value("ok", true);
     response["summary"] = make_trace_summary(enriched);
-    response["data"] = enriched;
+    if (compact_mode(request) && !include_arg(request, "include_trace") &&
+        !include_arg(request, "include_ast") && !include_arg(request, "include_source") &&
+        !include_arg(request, "include_candidates")) {
+        response["data"] = compact_trace_payload(request, enriched, mode);
+    } else {
+        response["data"] = enriched;
+    }
     response["meta"]["truncated"] = enriched.value("truncated", false);
     if (!response["ok"].get<bool>()) {
         response["error"] = {{"code", "SIGNAL_NOT_FOUND"}, {"message", enriched.value("error", "trace failed")},
@@ -252,7 +306,7 @@ json run_signal_resolve_action(const json& request) {
     if (query.empty()) return error_response(request, request.value("action", ""), "MISSING_FIELD", "args.signal or args.query is required");
     json payload;
     std::string status, message;
-    if (!send_json_command(session_id, std::string(CMD_SIGNAL_RESOLVE) + " " + query, payload, status, message)) {
+    if (!send_json_command(session_id, "signal.resolve", {{"signal", query}}, payload, status, message)) {
         return error_response(request, request.value("action", ""), "SESSION_UNHEALTHY", message.empty() ? status : message);
     }
     response["ok"] = payload.value("ok", true);

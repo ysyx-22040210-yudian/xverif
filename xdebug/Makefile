@@ -52,7 +52,12 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/client/client.cpp \
                 src/waveform/commands/cmd_ai.cpp \
                 src/waveform/service/action_support.cpp \
+                src/waveform/service/value_support.cpp \
+                src/waveform/service/response_support.cpp \
                 src/waveform/service/config_support.cpp \
+                src/waveform/service/query_expression_support.cpp \
+                src/waveform/service/session_actions.cpp \
+                src/waveform/service/protocol_actions.cpp \
                 src/waveform/service/router.cpp \
                 src/waveform/server/server.cpp \
                 src/waveform/server/service/context.cpp \

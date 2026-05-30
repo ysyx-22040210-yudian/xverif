@@ -6,6 +6,7 @@
 #include "../port/port_analyzer.h"
 #include "../session/session_registry.h"
 #include "../session/session_transport.h"
+#include "json.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -28,6 +29,8 @@
 #include "npi.h"
 
 namespace xdebug_design {
+
+using Json = nlohmann::ordered_json;
 
 // Global for cleanup
 static std::string g_session_id;
@@ -117,243 +120,97 @@ static bool read_command_line(int fd, char* line, size_t line_size) {
     return true;
 }
 
-static char* trim_command(char* cmd) {
-    while (*cmd == ' ' || *cmd == '\t') cmd++;
-    size_t len = strlen(cmd);
-    while (len > 0 && (cmd[len - 1] == '\n' || cmd[len - 1] == '\r' || cmd[len - 1] == ' ')) {
-        cmd[len - 1] = '\0';
-        len--;
-    }
-    return cmd;
-}
-
-static std::vector<std::string> split_tokens(const char* text) {
-    std::vector<std::string> tokens;
-    std::istringstream in(text ? text : "");
-    std::string token;
-    while (in >> token) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
-static TraceOptions parse_trace_options(const std::vector<std::string>& tokens,
-                                        size_t start_index) {
+static TraceOptions parse_trace_options(const Json& args) {
     TraceOptions options;
-    for (size_t i = start_index; i < tokens.size(); ++i) {
-        if (tokens[i] == "--limit" && i + 1 < tokens.size()) {
-            options.limit = atoi(tokens[++i].c_str());
-        } else if (tokens[i] == "--role" && i + 1 < tokens.size()) {
-            options.role = tokens[++i];
-        } else if (tokens[i] == "--no-statement-only") {
-            options.no_statement_only = true;
-        }
+    options.limit = args.value("limit", 0);
+    options.role = args.value("role", std::string());
+    options.no_statement_only = args.value("no_statement_only", false);
+    if (args.contains("include_statement_only") && args["include_statement_only"].is_boolean()) {
+        options.no_statement_only = !args["include_statement_only"].get<bool>();
     }
     return options;
 }
 
-static int parse_limit_option(const std::vector<std::string>& tokens, size_t start_index, int default_limit) {
-    int limit = default_limit;
-    for (size_t i = start_index; i < tokens.size(); ++i) {
-        if (tokens[i] == "--limit" && i + 1 < tokens.size()) {
-            limit = atoi(tokens[++i].c_str());
-        }
-    }
-    return limit;
+static Json ok_response(const Json& data = Json::object()) {
+    return {{"api_version", INTERNAL_API_VERSION}, {"ok", true}, {"data", data}, {"error", nullptr}};
 }
 
-static void handle_trace(int client_fd, const char* request, TraceMode mode, bool json_output, bool ai_output = false) {
-    std::vector<std::string> tokens = split_tokens(request);
-    if (tokens.empty()) {
-        const char* err = ERROR_PREFIX "Missing signal\n";
-        send_all(client_fd, err, strlen(err));
-        send_all(client_fd, END_MARKER, strlen(END_MARKER));
-        return;
-    }
+static Json error_response(const std::string& code, const std::string& message) {
+    return {{"api_version", INTERNAL_API_VERSION}, {"ok", false}, {"status", "server_error"},
+            {"data", nullptr}, {"error", {{"code", code}, {"message", message}}}};
+}
 
-    std::string signal = tokens[0];
-    TraceOptions options = parse_trace_options(tokens, 1);
+static bool send_response(int fd, const Json& response) {
+    std::string wire = response.dump() + "\n";
+    return send_all(fd, wire.c_str(), wire.size());
+}
+
+static Json trace_request(const Json& args, TraceMode mode) {
+    std::string signal = args.value("signal", std::string());
+    if (signal.empty()) return error_response("MISSING_FIELD", "args.signal is required");
     TraceEngine engine;
-    TraceResult result = engine.trace(signal, mode, options);
-    std::string payload = ai_output ? engine.render_ai_json(result) :
-                          json_output ? engine.render_json(result) : engine.render_text(result);
-    send_all(client_fd, payload.c_str(), payload.size());
-    send_all(client_fd, END_MARKER, strlen(END_MARKER));
+    TraceResult result = engine.trace(signal, mode, parse_trace_options(args));
+    return ok_response(Json::parse(engine.render_ai_json(result)));
 }
 
-static void handle_signal_resolve(int client_fd, const char* request, bool json_output) {
-    std::vector<std::string> tokens = split_tokens(request);
-    if (tokens.empty()) {
-        const char* err = ERROR_PREFIX "Missing signal\n";
-        send_all(client_fd, err, strlen(err));
-        send_all(client_fd, END_MARKER, strlen(END_MARKER));
-        return;
-    }
-
+static Json signal_resolve_request(const Json& args) {
+    std::string signal = args.value("signal", std::string());
+    if (signal.empty()) return error_response("MISSING_FIELD", "args.signal is required");
     SignalFinder finder;
-    SignalResolveResult result = finder.resolve(tokens[0]);
-    std::string payload = json_output ? finder.render_json(result) : finder.render_text(result);
-    send_all(client_fd, payload.c_str(), payload.size());
-    send_all(client_fd, END_MARKER, strlen(END_MARKER));
+    SignalResolveResult result = finder.resolve(signal);
+    return ok_response(Json::parse(finder.render_json(result)));
 }
 
-static void handle_port_command(int client_fd, const char* request, const std::string& action) {
-    std::vector<std::string> tokens = split_tokens(request);
-    if (tokens.empty()) {
-        const char* err = ERROR_PREFIX "Missing path\n";
-        send_all(client_fd, err, strlen(err));
-        send_all(client_fd, END_MARKER, strlen(END_MARKER));
-        return;
-    }
-    int limit = parse_limit_option(tokens, 1, 0);
+static Json port_request(const Json& args, const std::string& action) {
+    std::string path = args.value("path", std::string());
+    if (path.empty()) return error_response("MISSING_FIELD", "args.path is required");
+    int limit = args.value("limit", 0);
     PortAnalyzer analyzer;
     std::string payload;
     if (action == "port.trace") {
-        payload = analyzer.render_port_trace(tokens[0], limit);
+        payload = analyzer.render_port_trace(path, limit);
     } else if (action == "instance.map") {
-        payload = analyzer.render_instance_map(tokens[0]);
+        payload = analyzer.render_instance_map(path);
     } else {
-        payload = analyzer.render_interface_resolve(tokens[0]);
+        payload = analyzer.render_interface_resolve(path);
     }
-    send_all(client_fd, payload.c_str(), payload.size());
-    send_all(client_fd, END_MARKER, strlen(END_MARKER));
+    return ok_response(Json::parse(payload));
 }
 
 static bool handle_client(int client_fd, bool& should_quit) {
     should_quit = false;
-
-    // Read command line
-    char line[1024] = {};
+    char line[1024 * 1024] = {};
     if (!read_command_line(client_fd, line, sizeof(line))) return false;
-
-    // Trim whitespace
-    char* cmd = trim_command(line);
-
-    if (g_transport == "tcp") {
-        std::string expected = std::string(CMD_AUTH) + " " + g_auth_token;
-        if (strcmp(cmd, expected.c_str()) != 0) {
-            const char* err = ERROR_PREFIX "AUTH failed\n" END_MARKER;
-            send_all(client_fd, err, strlen(err));
-            return false;
-        }
-        const char* ok = "OK\n";
-        send_all(client_fd, ok, strlen(ok));
-        memset(line, 0, sizeof(line));
-        if (!read_command_line(client_fd, line, sizeof(line))) return false;
-        cmd = trim_command(line);
+    Json request;
+    try {
+        request = Json::parse(line);
+    } catch (...) {
+        return send_response(client_fd, error_response("INVALID_JSON", "request must be a JSON object"));
     }
-
-    // Handle QUIT
-    if (strcmp(cmd, CMD_QUIT) == 0) {
-        send_all(client_fd, END_MARKER, strlen(END_MARKER));
+    if (request.value("api_version", std::string()) != INTERNAL_API_VERSION) {
+        return send_response(client_fd, error_response("UNSUPPORTED_API_VERSION", "expected xdebug.internal.v1"));
+    }
+    if (g_transport == "tcp" && request.value("auth_token", std::string()) != g_auth_token) {
+        return send_response(client_fd, error_response("AUTH_FAILED", "authentication failed"));
+    }
+    const std::string action = request.value("action", std::string());
+    const Json args = request.value("args", Json::object());
+    if (action == "server.quit") {
+        send_response(client_fd, ok_response());
         should_quit = true;
         return true;
     }
-
-    // Handle PING
-    if (strcmp(cmd, CMD_PING) == 0) {
-        const char* pong = "PONG\n" END_MARKER;
-        send_all(client_fd, pong, strlen(pong));
-        return true;
+    if (action == "server.ping") return send_response(client_fd, ok_response({{"pong", true}}));
+    if (action == "server.version") {
+        return send_response(client_fd, ok_response({{"api_version", INTERNAL_API_VERSION}}));
     }
-
-    if (strcmp(cmd, CMD_VERSION) == 0) {
-        const char* version = PROTOCOL_VERSION "\n" END_MARKER;
-        send_all(client_fd, version, strlen(version));
-        return true;
+    if (action == "trace.driver") return send_response(client_fd, trace_request(args, TraceMode::Driver));
+    if (action == "trace.load") return send_response(client_fd, trace_request(args, TraceMode::Load));
+    if (action == "signal.resolve") return send_response(client_fd, signal_resolve_request(args));
+    if (action == "port.trace" || action == "instance.map" || action == "interface.resolve") {
+        return send_response(client_fd, port_request(args, action));
     }
-
-    if (strncmp(cmd, CMD_DRIVER_AI, strlen(CMD_DRIVER_AI)) == 0) {
-        const char* rest = cmd + strlen(CMD_DRIVER_AI);
-        while (*rest == ' ') rest++;
-
-        handle_trace(client_fd, rest, TraceMode::Driver, true, true);
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_LOAD_AI, strlen(CMD_LOAD_AI)) == 0) {
-        const char* rest = cmd + strlen(CMD_LOAD_AI);
-        while (*rest == ' ') rest++;
-
-        handle_trace(client_fd, rest, TraceMode::Load, true, true);
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_DRIVER_JSON, strlen(CMD_DRIVER_JSON)) == 0) {
-        const char* rest = cmd + strlen(CMD_DRIVER_JSON);
-        while (*rest == ' ') rest++;
-
-        handle_trace(client_fd, rest, TraceMode::Driver, true);
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_LOAD_JSON, strlen(CMD_LOAD_JSON)) == 0) {
-        const char* rest = cmd + strlen(CMD_LOAD_JSON);
-        while (*rest == ' ') rest++;
-
-        handle_trace(client_fd, rest, TraceMode::Load, true);
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_SIGNAL_RESOLVE_TEXT, strlen(CMD_SIGNAL_RESOLVE_TEXT)) == 0) {
-        const char* rest = cmd + strlen(CMD_SIGNAL_RESOLVE_TEXT);
-        while (*rest == ' ') rest++;
-
-        handle_signal_resolve(client_fd, rest, false);
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_SIGNAL_RESOLVE, strlen(CMD_SIGNAL_RESOLVE)) == 0) {
-        const char* rest = cmd + strlen(CMD_SIGNAL_RESOLVE);
-        while (*rest == ' ') rest++;
-
-        handle_signal_resolve(client_fd, rest, true);
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_PORT_TRACE_AI, strlen(CMD_PORT_TRACE_AI)) == 0) {
-        const char* rest = cmd + strlen(CMD_PORT_TRACE_AI);
-        while (*rest == ' ') rest++;
-        handle_port_command(client_fd, rest, "port.trace");
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_INSTANCE_MAP_AI, strlen(CMD_INSTANCE_MAP_AI)) == 0) {
-        const char* rest = cmd + strlen(CMD_INSTANCE_MAP_AI);
-        while (*rest == ' ') rest++;
-        handle_port_command(client_fd, rest, "instance.map");
-        return true;
-    }
-
-    if (strncmp(cmd, CMD_INTERFACE_RESOLVE_AI, strlen(CMD_INTERFACE_RESOLVE_AI)) == 0) {
-        const char* rest = cmd + strlen(CMD_INTERFACE_RESOLVE_AI);
-        while (*rest == ' ') rest++;
-        handle_port_command(client_fd, rest, "interface.resolve");
-        return true;
-    }
-
-    // Handle DRIVER
-    if (strncmp(cmd, CMD_DRIVER, strlen(CMD_DRIVER)) == 0) {
-        const char* rest = cmd + strlen(CMD_DRIVER);
-        while (*rest == ' ') rest++;
-
-        handle_trace(client_fd, rest, TraceMode::Driver, false);
-        return true;
-    }
-
-    // Handle LOAD
-    if (strncmp(cmd, CMD_LOAD, strlen(CMD_LOAD)) == 0) {
-        const char* rest = cmd + strlen(CMD_LOAD);
-        while (*rest == ' ') rest++;
-
-        handle_trace(client_fd, rest, TraceMode::Load, false);
-        return true;
-    }
-
-    // Unknown command
-    const char* err = ERROR_PREFIX "Unknown command\n" END_MARKER;
-    send_all(client_fd, err, strlen(err));
-    return true;
+    return send_response(client_fd, error_response("UNKNOWN_ACTION", "unknown internal action: " + action));
 }
 
 int server_main(int argc, char** argv) {

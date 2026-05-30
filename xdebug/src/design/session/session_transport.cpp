@@ -158,52 +158,51 @@ static bool read_line_timeout(int fd, std::string& line) {
     }
 }
 
-static bool authenticate_tcp(int fd, const std::string& token) {
-    std::string msg = std::string(CMD_AUTH) + " " + token + "\n";
-    if (write(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) return false;
-    std::string line;
-    return read_line_timeout(fd, line) && line == "OK";
-}
-
 int connect_session_endpoint(const SessionInfo& session) {
     if (is_tcp_transport(session)) {
-        int fd = connect_tcp(session.host, session.port);
-        if (fd < 0) return -1;
-        if (!authenticate_tcp(fd, session.auth_token)) {
-            close(fd);
-            return -1;
-        }
-        return fd;
+        return connect_tcp(session.host, session.port);
     }
     return connect_uds(session.socket_path.empty() ? xdebug_design_socket_path(session.session_id) : session.socket_path);
 }
 
-static bool request_simple(const SessionInfo& session, const char* cmd, const char* expect) {
+static bool request_simple(const SessionInfo& session, const std::string& action, Json& data) {
     int fd = connect_session_endpoint(session);
     if (fd < 0) return false;
-    std::string msg = std::string(cmd) + "\n";
+    Json request = {{"api_version", INTERNAL_API_VERSION}, {"action", action}, {"args", Json::object()}};
+    if (is_tcp_transport(session)) request["auth_token"] = session.auth_token;
+    std::string msg = request.dump() + "\n";
     bool ok = write(fd, msg.c_str(), msg.size()) == static_cast<ssize_t>(msg.size());
     std::string line;
-    if (ok) ok = read_line_timeout(fd, line) && line.find(expect) != std::string::npos;
+    if (ok) {
+        ok = read_line_timeout(fd, line);
+        if (ok) {
+            try {
+                Json response = Json::parse(line);
+                ok = response.value("ok", false);
+                data = response.value("data", Json::object());
+            } catch (...) {
+                ok = false;
+            }
+        }
+    }
     close(fd);
     return ok;
 }
 
 bool ping_session_endpoint(const SessionInfo& session) {
-    return request_simple(session, CMD_PING, "PONG");
+    Json data;
+    return request_simple(session, "server.ping", data) && data.value("pong", false);
 }
 
 bool protocol_version_matches_endpoint(const SessionInfo& session) {
-    return request_simple(session, CMD_VERSION, PROTOCOL_VERSION);
+    Json data;
+    return request_simple(session, "server.version", data) &&
+           data.value("api_version", std::string()) == INTERNAL_API_VERSION;
 }
 
 bool send_quit_to_endpoint(const SessionInfo& session) {
-    int fd = connect_session_endpoint(session);
-    if (fd < 0) return false;
-    const char* quit = CMD_QUIT "\n";
-    bool ok = write(fd, quit, strlen(quit)) == static_cast<ssize_t>(strlen(quit));
-    close(fd);
-    return ok;
+    Json data;
+    return request_simple(session, "server.quit", data);
 }
 
 } // namespace xdebug_design

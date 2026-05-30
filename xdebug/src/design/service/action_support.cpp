@@ -120,6 +120,34 @@ json base_response(const json& request, const std::string& action) {
     return response;
 }
 
+std::string response_verbosity(const json& request) {
+    json output = request.value("output", json::object());
+    if (!output.is_object()) return "compact";
+    std::string verbosity = output.value("verbosity", std::string("compact"));
+    verbosity = lower_copy(verbosity);
+    if (verbosity == "full" || verbosity == "debug") return verbosity;
+    return "compact";
+}
+
+bool compact_mode(const json& request) {
+    std::string verbosity = response_verbosity(request);
+    return verbosity != "full" && verbosity != "debug";
+}
+
+bool include_arg(const json& request, const std::string& key) {
+    json args = request.value("args", json::object());
+    if (args.is_object() && args.value(key, false)) return true;
+    json output = request.value("output", json::object());
+    return output.is_object() && output.value(key, false);
+}
+
+int max_examples_arg(const json& request, int def) {
+    json args = request.value("args", json::object());
+    json limits = request.value("limits", json::object());
+    int value = args.value("max_examples", limits.value("max_examples", def));
+    return value >= 0 ? value : def;
+}
+
 json error_response(const json& request,
                     const std::string& action,
                     const std::string& code,
@@ -235,20 +263,13 @@ std::string option_string_from_limits_args(const json& request) {
 }
 
 bool send_json_command(const std::string& session_id,
-                       const std::string& cmd,
+                       const std::string& action,
+                       const json& args,
                        json& parsed,
                        std::string& error_status,
                        std::string& error_message) {
-    std::string payload;
-    if (!send_command_capture(session_id, cmd.c_str(), payload, error_status, error_message)) return false;
-    try {
-        parsed = json::parse(payload);
-    } catch (const std::exception& e) {
-        error_status = "invalid_json";
-        error_message = e.what();
-        return false;
-    }
-    return true;
+    json request = {{"api_version", API_VERSION}, {"action", action}, {"args", args}};
+    return send_request_capture(session_id, request, parsed, error_status, error_message);
 }
 
 } // namespace xdebug_design
