@@ -19,11 +19,15 @@ xdebug 是原 xtrace 与 xwave 的统一入口。使用本 skill 时，把 xdebu
 优先使用 shell 中已安装的 `xdebug` 命令。`xdebug` 应指向仓库里的 `tools/xdebug-env` wrapper，由用户在 `~/.bashrc`、`~/.zshrc` 或 `~/.tcshrc` 中配置。skill 和回答里不要暴露本机绝对路径；需要描述路径时使用 `<xverif-root>`、`<repo-root>` 或 `$XVERIF_HOME` 这类占位符。
 
 ```bash
+xdebug -h
+xdebug -help
 xdebug -
 xdebug request.json
 ```
 
-如果当前 shell 尚未安装 `xdebug`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xdebug-env -`。不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
+`-h` 和 `-help` 是唯一允许的非 JSON 命令，只用于人类可读帮助；AI 若需要确认入口、target、常见 action、日志路径或示例，可以先运行 `xdebug -h`。机器可读能力列表仍使用 JSON action `actions`，机器可读 schema 使用 `schema`。
+
+如果当前 shell 尚未安装 `xdebug`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xdebug-env -h`、`tools/xdebug-env -help` 或 `tools/xdebug-env -`。不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
 
 stdin 单次请求：
 

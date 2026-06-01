@@ -4,7 +4,7 @@ include $(TOP)/mk/common_flags.mk
 include $(TOP)/mk/npi.mk
 
 CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -Isrc -Isrc/core -Isrc/design -Isrc/waveform -Ithird_party
-LDFLAGS  = $(NPI_LDFLAGS)
+LDFLAGS  = $(NPI_LDFLAGS) -Wl,-rpath,$(NPI_LIB)
 BUILD    = build
 LIBEXEC  = libexec
 EXE      = xdebug
@@ -18,6 +18,7 @@ CORE_SRCS = src/core/common/tool_config.cpp \
 APP_SRCS = src/main.cpp \
            src/api/request_parser.cpp \
            src/api/response.cpp \
+           src/api/help_text.cpp \
            src/api/action_catalog.cpp \
            src/api/dispatcher.cpp \
            src/session/session_store.cpp \

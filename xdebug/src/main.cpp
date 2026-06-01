@@ -1,4 +1,5 @@
 #include "api/dispatcher.h"
+#include "api/help_text.h"
 #include "api/request_parser.h"
 #include "api/response.h"
 #include "logging/action_log.h"
@@ -29,6 +30,14 @@ std::string executable_dir() {
 } // namespace
 
 int main(int argc, char** argv) {
+    if (argc == 2) {
+        std::string arg(argv[1]);
+        if (arg == "-h" || arg == "-help") {
+            std::cout << xdebug::help_text(executable_dir());
+            return 0;
+        }
+    }
+
     std::string input;
     if (argc == 1 || (argc == 2 && std::string(argv[1]) == "-")) {
         input = read_stream(std::cin);

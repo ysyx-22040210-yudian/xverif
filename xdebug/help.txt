@@ -1,0 +1,225 @@
+xdebug - unified JSON debug interface
+=====================================
+
+Usage
+-----
+  xdebug -h
+  xdebug -help
+      Print this human-readable help and exit with status 0.
+
+  xdebug -
+      Read one JSON request from stdin and print one JSON response.
+
+  xdebug request.json
+      Read one JSON request file and print one JSON response.
+
+JSON-only contract
+------------------
+  -h and -help are the only non-JSON commands.
+  All other xdebug capabilities are requested through JSON:
+
+    api_version / action / target / args / limits / output
+
+  Machine-readable help remains available through JSON actions:
+
+    {"api_version":"xdebug.v1","action":"actions"}
+    {"api_version":"xdebug.v1","action":"schema"}
+
+Shell setup
+-----------
+  Use <xverif-root> for your local repository root. Do not hard-code a
+  personal machine path in shared docs or scripts.
+
+  Bash (~/.bashrc):
+
+    export XVERIF_HOME=<xverif-root>
+    export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
+    xdebug() { "$XDEBUG_ENTRY" "$@"; }
+
+  Zsh (~/.zshrc):
+
+    export XVERIF_HOME=<xverif-root>
+    export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
+    xdebug() { "$XDEBUG_ENTRY" "$@"; }
+
+  Tcsh (~/.tcshrc):
+
+    setenv XVERIF_HOME <xverif-root>
+    setenv XDEBUG_ENTRY "$XVERIF_HOME/tools/xdebug-env"
+    alias xdebug '"$XDEBUG_ENTRY" \!*'
+
+Request envelope
+----------------
+  Minimal request:
+
+    {
+      "api_version": "xdebug.v1",
+      "action": "actions"
+    }
+
+  Typical request:
+
+    {
+      "api_version": "xdebug.v1",
+      "action": "trace.driver",
+      "target": {
+        "daidir": "simv.daidir",
+        "fsdb": "waves.fsdb"
+      },
+      "args": {},
+      "limits": {},
+      "output": {
+        "verbosity": "compact",
+        "pretty": false
+      }
+    }
+
+Target modes
+------------
+  target.daidir
+      Design-side facts. Use for driver/load/query, dependency graph,
+      source evidence, expression normalization, FSM/counter/sequential facts.
+
+  target.fsdb
+      Waveform-side facts. Use for scopes, values, events, APB/AXI,
+      verification windows, signal changes, handshake and anomaly checks.
+
+  target.daidir + target.fsdb
+      Combined/debug join mode. Use waveform time and design causality together,
+      especially trace.active_driver.
+
+  target.session_id
+      Reuse an already opened session. Prefer this for multi-step debug.
+
+Common actions
+--------------
+  Catalog:
+      actions, schema
+
+  Session:
+      session.open, session.ensure, session.list, session.doctor,
+      session.kill, session.close, session.gc
+
+  Design:
+      trace.driver, trace.load, trace.query, trace.graph, trace.path,
+      trace.explain, source.context, expr.normalize, fsm.explain,
+      counter.explain, sequential.update
+
+  Waveform:
+      scope.list, value.at, value.batch_at, list.value_at,
+      event.find, event.export, verify.conditions, expr.eval_at,
+      window.verify, signal.changes, signal.statistics, signal.trend,
+      signal.stability, handshake.inspect, detect_anomaly
+
+  Protocol:
+      apb.query, axi.query, axi.analysis
+
+  Combined:
+      trace.active_driver
+
+Output control
+--------------
+  output.verbosity:
+      compact  Default. Keep only information needed for the next AI decision.
+      full     Preserve larger user-facing payloads for compatibility.
+      debug    Include process/debug-oriented details.
+
+  Common args:
+      max_items, max_examples
+
+  Common limits:
+      limits.max_rows, limits.max_events, limits.max_samples,
+      limits.max_depth, limits.max_paths
+
+  Design include switches:
+      include_source, include_ast, include_candidates, include_trace,
+      include_expanded_queries, include_raw_edges, include_graph,
+      include_debug
+
+  Waveform include switches:
+      include_raw, include_signal_meta, include_rows, include_samples,
+      include_all_changes, include_transactions, include_beats,
+      include_accesses, include_debug
+
+Examples
+--------
+  List machine-readable actions:
+
+    printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
+
+  Query a design driver:
+
+    printf '%s\n' '{
+      "api_version":"xdebug.v1",
+      "action":"trace.driver",
+      "target":{"daidir":"simv.daidir"},
+      "args":{"signal":"top.u.ready"}
+    }' | xdebug -
+
+  Query one waveform value:
+
+    printf '%s\n' '{
+      "api_version":"xdebug.v1",
+      "action":"value.at",
+      "target":{"fsdb":"waves.fsdb","auto_open":true},
+      "args":{"signal":"top.clk","time":"10ns"}
+    }' | xdebug -
+
+  Open and reuse a session:
+
+    printf '%s\n' '{
+      "api_version":"xdebug.v1",
+      "action":"session.open",
+      "target":{"daidir":"simv.daidir","fsdb":"waves.fsdb"},
+      "args":{"name":"case_a"}
+    }' | xdebug -
+
+    printf '%s\n' '{
+      "api_version":"xdebug.v1",
+      "action":"value.at",
+      "target":{"session_id":"case_a"},
+      "args":{"signal":"top.clk","time":"10ns"}
+    }' | xdebug -
+
+  Join waveform time to active design driver:
+
+    printf '%s\n' '{
+      "api_version":"xdebug.v1",
+      "action":"trace.active_driver",
+      "target":{"daidir":"simv.daidir","fsdb":"waves.fsdb"},
+      "args":{"signal":"top.u.ready","requested_time":"100ns"}
+    }' | xdebug -
+
+Logs and troubleshooting
+------------------------
+  xdebug logs are silent and best-effort. They do not print to stdout/stderr
+  and do not change JSON responses.
+
+  Public action logs:
+      ~/.xdebug/sessions/<session_id>/logs/actions.ndjson
+      ~/.xdebug/sessions/adhoc/logs/actions.ndjson
+
+  Backend logs:
+      ~/.xdebug/design/sessions/<hashed-session>/logs/lifecycle.ndjson
+      ~/.xdebug/waveform/sessions/<hashed-session>/logs/lifecycle.ndjson
+      ~/.xdebug/{design,waveform}/sessions/<hashed-session>/logs/transport.ndjson
+      debug.log in the backend session directory
+
+  Troubleshooting order:
+      1. Check public actions.ndjson for action, routing, elapsed_ms and error.
+      2. Check lifecycle.ndjson for startup, NPI init, design load, FSDB open,
+         daemon ready, timeout, refresh and restart events.
+      3. Check transport.ndjson for connect, ping, write, read and timeout.
+      4. Check debug.log and Verdi/license environment for low-level failures.
+
+Docs
+----
+  README:
+      xdebug/README.md
+
+  Agent skill:
+      xdebug/skill/SKILL.md
+
+  JSON API reference:
+      xdebug/skill/references/json-api-reference.md
+

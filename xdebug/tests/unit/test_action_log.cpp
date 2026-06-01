@@ -16,6 +16,17 @@ static std::string read_file(const std::string& path) {
     return ss.str();
 }
 
+static Json read_last_json_line(const std::string& path) {
+    std::ifstream in(path.c_str());
+    std::string line;
+    std::string last;
+    while (std::getline(in, line)) {
+        if (!line.empty()) last = line;
+    }
+    assert(!last.empty());
+    return Json::parse(last);
+}
+
 int main() {
     std::string home = "/tmp/xdebug_action_log_test_" + std::to_string(getpid());
     setenv("HOME", home.c_str(), 1);
@@ -52,9 +63,7 @@ int main() {
                                    {"response", xdebug_core::response_summary_for_log(response)},
                                    {"request_compact", xdebug_core::sanitize_for_log(request)},
                                    {"response_compact", xdebug_core::sanitize_for_log(response)}});
-    std::string line = read_file(xdebug_core::public_action_log_path("case_a"));
-    assert(!line.empty());
-    Json event = Json::parse(line);
+    Json event = read_last_json_line(xdebug_core::public_action_log_path("case_a"));
     assert(event["layer"] == "public");
     assert(event["component"] == "xdebug");
     assert(event["session_id"] == "case_a");
@@ -65,9 +74,7 @@ int main() {
 
     xdebug_core::log_lifecycle_event("waveform", "case_a", "npi_fsdb_open.failed", false,
                                      {{"fsdb", "/tmp/a.fsdb"}});
-    std::string lifecycle = read_file(xdebug_core::component_log_path("waveform", "case_a", "lifecycle"));
-    assert(!lifecycle.empty());
-    Json lifecycle_event = Json::parse(lifecycle);
+    Json lifecycle_event = read_last_json_line(xdebug_core::component_log_path("waveform", "case_a", "lifecycle"));
     assert(lifecycle_event["component"] == "waveform");
     assert(lifecycle_event["phase"] == "npi_fsdb_open.failed");
 
