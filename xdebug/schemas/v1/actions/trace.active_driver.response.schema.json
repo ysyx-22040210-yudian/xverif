@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "xdebug.trace.active_driver.response.v1",
+  "title": "trace.active_driver response",
+  "type": "object",
+  "required": ["api_version", "ok", "action"],
+  "properties": {
+    "api_version": {"type": "string", "enum": ["xdebug.v1"]},
+    "ok": {"type": "boolean"},
+    "action": {"type": "string", "enum": ["trace.active_driver"]},
+    "summary": {"type": "object"},
+    "data": {"type": "object"},
+    "meta": {"type": "object"}
+  },
+  "additionalProperties": true
+}

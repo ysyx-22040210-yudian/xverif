@@ -1,10 +1,23 @@
 TOP ?= ..
 
 include $(TOP)/mk/common_flags.mk
+
+ifneq ($(MAKECMDGOALS),)
+ifeq ($(filter-out schema-test,$(MAKECMDGOALS)),)
+XDEBUG_SCHEMA_ONLY := 1
+endif
+endif
+
+ifeq ($(XDEBUG_SCHEMA_ONLY),)
 include $(TOP)/mk/npi.mk
+endif
+
+NPI_CXXFLAGS ?=
+NPI_LDFLAGS ?=
+NPI_LIB ?=
 
 CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -Isrc -Isrc/core -Isrc/design -Isrc/waveform -Ithird_party
-LDFLAGS  = $(NPI_LDFLAGS) -Wl,-rpath,$(NPI_LIB)
+LDFLAGS  = $(NPI_LDFLAGS) $(if $(NPI_LIB),-Wl,-rpath,$(NPI_LIB),)
 BUILD    = build
 LIBEXEC  = libexec
 EXE      = xdebug
@@ -89,7 +102,7 @@ APP_OBJS = $(APP_SRCS:%.cpp=$(BUILD)/%.o)
 DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
 WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
 
-.PHONY: all internal-engines unit-test clean
+.PHONY: all internal-engines unit-test schema-test clean
 
 all: $(EXE) internal-engines
 
@@ -116,6 +129,10 @@ unit-test: $(CORE_OBJS)
 	$(BUILD)/tests/test_core_types
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_action_log tests/unit/test_action_log.cpp $(CORE_OBJS)
 	$(BUILD)/tests/test_action_log
+
+schema-test:
+	python3 tools/validate_schema.py schemas/v1
+	python3 tools/validate_examples.py examples schemas/v1
 
 clean:
 	rm -rf $(BUILD) $(LIBEXEC) $(EXE)

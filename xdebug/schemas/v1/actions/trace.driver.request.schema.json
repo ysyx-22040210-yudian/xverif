@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "xdebug.trace.driver.request.v1",
+  "title": "trace.driver request",
+  "type": "object",
+  "required": ["api_version", "action", "target", "args"],
+  "properties": {
+    "api_version": {"type": "string", "enum": ["xdebug.v1"]},
+    "action": {"type": "string", "enum": ["trace.driver"]},
+    "target": {"type": "object"},
+    "args": {
+      "type": "object",
+      "required": ["signal"],
+      "properties": {
+        "signal": {"type": "string"},
+        "include_source": {"type": "boolean"},
+        "include_ast": {"type": "boolean"},
+        "include_candidates": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "limits": {"type": "object"},
+    "output": {"type": "object"}
+  },
+  "additionalProperties": true
+}

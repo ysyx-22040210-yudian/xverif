@@ -1,0 +1,24 @@
+{
+  "api_version": "xdebug.v1",
+  "ok": true,
+  "action": "trace.active_driver",
+  "summary": {
+    "signal": "top.u.state",
+    "requested_time": "100ns",
+    "active_time": "100ns",
+    "driver_status": "control_only",
+    "confidence": "medium"
+  },
+  "data": {
+    "control_context": [
+      {
+        "kind": "case_item",
+        "file": "rtl/foo.sv",
+        "line": 88
+      }
+    ]
+  },
+  "meta": {
+    "truncated": false
+  }
+}

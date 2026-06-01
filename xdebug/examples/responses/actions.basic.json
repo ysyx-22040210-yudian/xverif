@@ -1,0 +1,34 @@
+{
+  "api_version": "xdebug.v1",
+  "ok": true,
+  "action": "actions",
+  "summary": {
+    "action_count": 5
+  },
+  "data": {
+    "implemented": [
+      "actions",
+      "schema",
+      "trace.driver",
+      "value.at",
+      "trace.active_driver"
+    ],
+    "actions": [
+      {
+        "name": "trace.active_driver",
+        "category": "combined",
+        "status": "stable",
+        "requires": [
+          "design",
+          "waveform"
+        ]
+      }
+    ],
+    "removed": [
+      "signal.search"
+    ]
+  },
+  "meta": {
+    "truncated": false
+  }
+}

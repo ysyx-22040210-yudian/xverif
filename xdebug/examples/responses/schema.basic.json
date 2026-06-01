@@ -1,0 +1,18 @@
+{
+  "api_version": "xdebug.v1",
+  "ok": true,
+  "action": "schema",
+  "data": {
+    "api_version": "xdebug.v1",
+    "request": {
+      "required": [
+        "api_version",
+        "action"
+      ]
+    }
+  },
+  "summary": {},
+  "meta": {
+    "truncated": false
+  }
+}

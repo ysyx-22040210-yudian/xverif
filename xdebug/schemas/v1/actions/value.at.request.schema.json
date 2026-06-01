@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "xdebug.value.at.request.v1",
+  "title": "value.at request",
+  "type": "object",
+  "required": ["api_version", "action", "target", "args"],
+  "properties": {
+    "api_version": {"type": "string", "enum": ["xdebug.v1"]},
+    "action": {"type": "string", "enum": ["value.at"]},
+    "target": {"type": "object"},
+    "args": {
+      "type": "object",
+      "required": ["signal", "time"],
+      "properties": {
+        "signal": {"type": "string"},
+        "time": {"type": "string"},
+        "format": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "output": {"type": "object"}
+  },
+  "additionalProperties": true
+}

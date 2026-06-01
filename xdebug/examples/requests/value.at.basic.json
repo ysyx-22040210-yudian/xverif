@@ -1,0 +1,15 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "value.at",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "signal": "top.clk",
+    "time": "10ns"
+  },
+  "output": {
+    "verbosity": "compact"
+  }
+}

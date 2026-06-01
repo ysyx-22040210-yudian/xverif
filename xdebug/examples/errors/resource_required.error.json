@@ -1,0 +1,17 @@
+{
+  "api_version": "xdebug.v1",
+  "ok": false,
+  "action": "value.at",
+  "summary": {},
+  "data": null,
+  "error": {
+    "code": "RESOURCE_REQUIRED",
+    "message": "waveform action requires target.fsdb or a waveform session",
+    "recoverable": true,
+    "candidates": [],
+    "suggested_actions": []
+  },
+  "meta": {
+    "truncated": false
+  }
+}

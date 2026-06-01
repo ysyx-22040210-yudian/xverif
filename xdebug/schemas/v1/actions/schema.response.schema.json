@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "xdebug.schema.response.v1",
+  "title": "schema response",
+  "type": "object",
+  "required": ["api_version", "ok", "action", "data"],
+  "properties": {
+    "api_version": {"type": "string", "enum": ["xdebug.v1"]},
+    "ok": {"type": "boolean"},
+    "action": {"type": "string", "enum": ["schema"]},
+    "data": {"type": "object"}
+  },
+  "additionalProperties": true
+}

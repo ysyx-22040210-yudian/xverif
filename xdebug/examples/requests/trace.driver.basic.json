@@ -1,0 +1,13 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "trace.driver",
+  "target": {
+    "daidir": "simv.daidir"
+  },
+  "args": {
+    "signal": "top.u.ready"
+  },
+  "output": {
+    "verbosity": "compact"
+  }
+}
