@@ -87,6 +87,8 @@ xbit conv "8'shff" --json
 
 ```bash
 make -C xdebug
+make -C xdebug schema-test
+make -C xdebug contract-test
 make -C xdebug unit-test
 
 make -C xbit test
@@ -95,7 +97,7 @@ make test
 make full-test
 ```
 
-`make test` 覆盖仓库内常规单测和自带夹具；`make full-test` 会加入更多设计、波形和真实数据回归，要求本机具备相应 Synopsys 运行环境和 license。
+`schema-test` 校验 xdebug JSON schema 和 examples，不依赖 Synopsys 环境；`contract-test` 在 xdebug 构建后校验 ActionSpec 与 runtime `actions` 输出一致。`make test` 覆盖仓库内常规单测、contract test 和自带夹具；`make full-test` 会加入更多设计、波形和真实数据回归，要求本机具备相应 Synopsys 运行环境和 license。
 
 ## 文档入口
 
