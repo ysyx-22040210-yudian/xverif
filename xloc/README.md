@@ -160,6 +160,51 @@ end
 - 通过 static 关联数组去重：同一 file:line:msg_id 只生成一次
 - JSONL 逐行追加写入，仿真中断不丢数据
 
+## Vim gf 跳转
+
+`xloc` 提供一个 Vim 插件，让你在打开 `sim.log` 时把光标放在 `L_XXXXXXXX` 上直接按 `gf`，跳到 `sim.log.xloc.jsonl` 记录的源码 `file:line`。
+
+安装方式任选一种：
+
+```vim
+" 在 ~/.vimrc 中 source 仓库内插件
+source <xverif-root>/xloc/vim/plugin/xloc.vim
+```
+
+或复制到 Vim 插件目录：
+
+```bash
+mkdir -p ~/.vim/plugin
+cp <xverif-root>/xloc/vim/plugin/xloc.vim ~/.vim/plugin/xloc.vim
+```
+
+固定 map 规则：
+
+```text
+<run-dir>/sim.log
+<run-dir>/sim.log.xloc.jsonl
+```
+
+如果 JSONL 里的 `file` 是相对路径，建议在 `~/.vimrc` 设置工程根目录：
+
+```vim
+let g:xloc_repo_root = "<project-root>"
+```
+
+插件默认只在 `*.log` 且旁边存在 `<log>.xloc.jsonl` 时启用 buffer-local `gf`，不会全局覆盖普通源码文件里的 `gf`。如需关闭自动映射：
+
+```vim
+let g:xloc_auto_enable = 0
+```
+
+关闭自动映射后仍可手动执行：
+
+```vim
+:XlocGF
+```
+
+查找 map 时插件优先调用 `rg --color=never --max-count 1`，没有 `rg` 时 fallback 到 `grep`，最后才用 Vim `readfile()`。同一个 loc_id 会按 map mtime 缓存，适合几十 MB 以上的大 map 文件。
+
 ## 内建 UVM 测试环境
 
 ```bash
@@ -181,7 +226,7 @@ make -f Makefile.test   # 需要 VCS + UVM
 
 ```bash
 make -C xloc          # 语法检查
-make -C xloc test     # Python 单元测试
+make -C xloc test     # Python 单元测试 + Vim 插件 smoke test
 make -f Makefile.test # UVM 测试环境（需 VCS + UVM）
 ```
 
