@@ -17,7 +17,7 @@ NPI_LDFLAGS ?=
 NPI_LIB ?=
 
 CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -Isrc -Isrc/core -Isrc/design -Isrc/waveform -Ithird_party
-LDFLAGS  = $(NPI_LDFLAGS) $(if $(NPI_LIB),-Wl,-rpath,$(NPI_LIB),)
+LDFLAGS  = $(NPI_LDFLAGS) $(if $(NPI_LIB),-Xlinker -rpath -Xlinker $(NPI_LIB),)
 BUILD    = build
 LIBEXEC  = libexec
 EXE      = xdebug
@@ -28,12 +28,20 @@ CORE_SRCS = src/core/common/tool_config.cpp \
             src/core/session/session_types.cpp \
             src/core/ai/ai_response.cpp
 
+API_SUPPORT_SRCS = src/api/action_spec.cpp \
+                   src/api/action_registry.cpp \
+                   src/api/request_envelope.cpp \
+                   src/api/request_validator.cpp \
+                   src/api/resource_resolver.cpp \
+                   src/api/response_builder.cpp
+
 APP_SRCS = src/main.cpp \
            src/api/request_parser.cpp \
            src/api/response.cpp \
            src/api/help_text.cpp \
            src/api/action_catalog.cpp \
            src/api/dispatcher.cpp \
+           $(API_SUPPORT_SRCS) \
            src/session/session_store.cpp \
            src/backend/engine_adapter.cpp \
            src/runtime/work_dir.cpp \
@@ -98,6 +106,7 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/event/event_analyzer.cpp
 
 CORE_OBJS = $(CORE_SRCS:%.cpp=$(BUILD)/%.o)
+API_SUPPORT_OBJS = $(API_SUPPORT_SRCS:%.cpp=$(BUILD)/%.o)
 APP_OBJS = $(APP_SRCS:%.cpp=$(BUILD)/%.o)
 DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
 WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
@@ -123,12 +132,14 @@ $(BUILD)/%.o: %.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -DXDEBUG_INTERNAL_ENGINE -c -o $@ $<
 
-unit-test: $(CORE_OBJS)
+unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o
 	mkdir -p $(BUILD)/tests
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_core_types tests/unit/test_core_types.cpp $(CORE_OBJS)
 	$(BUILD)/tests/test_core_types
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_action_log tests/unit/test_action_log.cpp $(CORE_OBJS)
 	$(BUILD)/tests/test_action_log
+	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_action_registry tests/unit/test_action_registry.cpp $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o
+	$(BUILD)/tests/test_action_registry
 
 schema-test:
 	python3 tools/validate_schema.py schemas/v1

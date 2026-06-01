@@ -1,0 +1,17 @@
+#pragma once
+
+#include "api/json_types.h"
+
+namespace xdebug {
+
+struct ActionResult {
+    bool ok = true;
+    Json summary = Json::object();
+    Json data = Json::object();
+    Json warnings = Json::array();
+    Json meta = Json::object();
+    Json error = nullptr;
+};
+
+} // namespace xdebug
+
