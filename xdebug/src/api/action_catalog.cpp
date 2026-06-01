@@ -1,4 +1,5 @@
 #include "api/action_catalog.h"
+#include "api/action_registry_init.h"
 #include "api/response.h"
 
 namespace xdebug {
@@ -11,35 +12,35 @@ Json string_array(const std::set<std::string>& values) {
     return array;
 }
 
+std::set<std::string> actions_for_category(const std::string& category) {
+    std::set<std::string> out;
+    std::vector<ActionSpec> specs = default_action_registry().list_specs(false);
+    for (size_t i = 0; i < specs.size(); ++i) {
+        if (specs[i].category == category) out.insert(specs[i].name);
+    }
+    return out;
+}
+
+Json action_name_array(bool include_removed) {
+    Json out = Json::array();
+    std::vector<ActionSpec> specs = default_action_registry().list_specs(include_removed);
+    for (size_t i = 0; i < specs.size(); ++i) {
+        if (!include_removed && specs[i].status == ActionStatus::Removed) continue;
+        if (include_removed && specs[i].status != ActionStatus::Removed) continue;
+        out.push_back(specs[i].name);
+    }
+    return out;
+}
+
 } // namespace
 
 const std::set<std::string>& design_actions() {
-    static const std::set<std::string> actions = {
-        "trace.driver", "trace.load", "trace.query",
-        "signal.resolve", "signal.canonicalize",
-        "trace.expand", "trace.graph", "trace.path", "trace.explain",
-        "control.explain", "source.context", "expr.normalize",
-        "procedural.assignment", "sequential.update", "fsm.explain",
-        "counter.explain", "port.trace", "instance.map", "interface.resolve"
-    };
+    static const std::set<std::string> actions = actions_for_category("design");
     return actions;
 }
 
 const std::set<std::string>& waveform_actions() {
-    static const std::set<std::string> actions = {
-        "cursor.set", "cursor.get", "cursor.list", "cursor.delete", "cursor.use",
-        "scope.list", "value.at", "value.batch_at",
-        "list.create", "list.add", "list.delete", "list.show",
-        "list.value_at", "list.validate", "list.diff",
-        "apb.config.load", "apb.config.list", "apb.query", "apb.cursor",
-        "axi.config.load", "axi.config.list", "axi.query", "axi.cursor", "axi.analysis",
-        "event.config.load", "event.config.list", "event.find", "event.export",
-        "verify.conditions", "expr.eval_at", "window.verify",
-        "signal.changes", "signal.stability", "signal.trend", "signal.statistics",
-        "sampled_pulse.inspect", "inspect_signal", "detect_anomaly",
-        "handshake.inspect", "axi.channel_stall", "axi.outstanding_timeline",
-        "axi.request_response_pair", "axi.latency_outlier", "apb.transfer_window"
-    };
+    static const std::set<std::string> actions = actions_for_category("waveform");
     return actions;
 }
 
@@ -57,28 +58,36 @@ Json catalog_schema_response(const Json& request) {
             {"required_target", Json::array({"daidir", "fsdb"})},
             {"required_args", Json::array({"signal", "requested_time"})},
             {"optional_args", Json::array({"include_control", "include_parity"})}
+        }},
+        {"contract", {
+            {"source", "ActionRegistry"},
+            {"schema_root", "xdebug/schemas/v1"},
+            {"action_count", default_action_registry().list_specs(false).size()}
         }}
     };
     return response;
 }
 
 Json catalog_actions_response(const Json& request) {
-    Json implemented = Json::array({
-        "schema", "actions",
-        "session.open", "session.ensure", "session.list", "session.doctor",
-        "session.kill", "session.close", "session.gc",
-        "trace.active_driver", "batch"
-    });
-    for (const auto& action : design_actions()) implemented.push_back(action);
-    for (const auto& action : waveform_actions()) implemented.push_back(action);
     Json response = make_response(request, "actions");
+    Json descriptors = default_action_registry().list_descriptors(false);
+    Json implemented = action_name_array(false);
+    Json removed = action_name_array(true);
+    response["summary"] = {
+        {"action_count", implemented.size()},
+        {"removed_count", removed.size()}
+    };
     response["data"] = {
         {"implemented", implemented},
-        {"removed", Json::array({"signal.search"})},
+        {"actions", descriptors},
+        {"removed", removed},
         {"modes", {
             {"design", string_array(design_actions())},
             {"waveform", string_array(waveform_actions())},
-            {"combined", "all actions plus trace.active_driver"}
+            {"combined", Json::array({"trace.active_driver"})},
+            {"builtin", Json::array({"actions", "schema", "batch"})},
+            {"session", Json::array({"session.open", "session.ensure", "session.list", "session.doctor",
+                                      "session.kill", "session.close", "session.gc"})}
         }}
     };
     return response;

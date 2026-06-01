@@ -30,6 +30,7 @@ CORE_SRCS = src/core/common/tool_config.cpp \
 
 API_SUPPORT_SRCS = src/api/action_spec.cpp \
                    src/api/action_registry.cpp \
+                   src/api/action_registry_init.cpp \
                    src/api/request_envelope.cpp \
                    src/api/request_validator.cpp \
                    src/api/resource_resolver.cpp \
