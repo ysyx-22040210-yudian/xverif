@@ -4,6 +4,7 @@
 namespace xdebug {
 
 Json ResponseBuilder::success(const RequestEnvelope& request, const ActionSpec& spec, const ActionResult& result) const {
+    if (result.envelope.is_object()) return result.envelope;
     Json response = make_response(request.raw, spec.name, result.ok);
     response["summary"] = result.summary;
     response["data"] = result.data;
@@ -26,4 +27,3 @@ Json ResponseBuilder::error(const RequestEnvelope& request,
 }
 
 } // namespace xdebug
-

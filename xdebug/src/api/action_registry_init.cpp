@@ -65,7 +65,11 @@ void register_design(ActionRegistry& r) {
         "counter.explain", "port.trace", "instance.map", "interface.resolve"
     };
     for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
-        ActionSpec spec = stable_spec(names[i], "design", ResourceRequirement::Design, "engine_forward");
+        ResourceRequirement resource = ResourceRequirement::Design;
+        if (std::string(names[i]) == "source.context" || std::string(names[i]) == "expr.normalize") {
+            resource = ResourceRequirement::None;
+        }
+        ActionSpec spec = stable_spec(names[i], "design", resource, "engine_forward");
         if (spec.name == "trace.driver") {
             add_schema_refs(spec);
             spec.args.required.push_back("signal");
@@ -140,7 +144,7 @@ void register_waveform(ActionRegistry& r) {
 }
 
 void register_combined(ActionRegistry& r) {
-    ActionSpec active = stable_spec("trace.active_driver", "combined", ResourceRequirement::Combined, "native");
+    ActionSpec active = stable_spec("trace.active_driver", "combined", ResourceRequirement::Combined, "active_trace");
     add_schema_refs(active);
     active.args.required.push_back("signal");
     active.args.required.push_back("requested_time");
@@ -173,4 +177,3 @@ const ActionRegistry& default_action_registry() {
 }
 
 } // namespace xdebug
-

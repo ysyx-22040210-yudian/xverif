@@ -1,5 +1,9 @@
 #include "api/dispatcher.h"
 #include "api/action_catalog.h"
+#include "api/action_registry_init.h"
+#include "api/request_envelope.h"
+#include "api/request_validator.h"
+#include "api/resource_resolver.h"
 #include "api/response.h"
 #include "logging/action_log.h"
 
@@ -81,12 +85,6 @@ std::string target_mode_for_log(const Json& request, const Json& response = Json
 Dispatcher::Dispatcher(const std::string& executable_dir)
     : adapter_(executable_dir) {}
 
-bool Dispatcher::supports_action(EngineKind kind, const std::string& action) const {
-    return kind == EngineKind::Design
-        ? design_actions().count(action) != 0
-        : waveform_actions().count(action) != 0;
-}
-
 std::string Dispatcher::mode_for_target(const Json& target) const {
     const bool daidir = has_string(target, "daidir");
     const bool fsdb = has_string(target, "fsdb");
@@ -122,6 +120,40 @@ Json Dispatcher::forward_action(const Json& request, EngineKind kind) {
     std::string error;
     if (!adapter_.invoke(kind, forwarded, response, error)) {
         return engine_error(request, request.value("action", std::string()), error);
+    }
+    return response;
+}
+
+Json Dispatcher::resource_error(const Json& request, const ActionSpec& spec, const Json& target) const {
+    RequestEnvelope envelope = RequestEnvelope::from_json(request);
+    envelope.target = target;
+    ResourceResolver resolver;
+    ResourceResolution resolution = resolver.resolve(envelope, spec);
+    if (resolution.ok) return Json();
+    return make_error(request, spec.name, resolution.code, resolution.message);
+}
+
+Json Dispatcher::handle_engine_forward(const Json& request, const ActionSpec& spec, EngineKind kind) {
+    Json target = resolve_target(request);
+    Json error_response = resource_error(request, spec, target);
+    if (!error_response.is_null()) return error_response;
+    Json routed = request;
+    routed["target"] = target;
+    Json response = forward_action(routed, kind);
+    if (response.value("ok", false) && !has_string(target, "session_id") &&
+        !requested_name(request).empty()) {
+        const bool design = has_string(target, "daidir");
+        const bool waveform = has_string(target, "fsdb");
+        if ((kind == EngineKind::Design && design) || (kind == EngineKind::Waveform && waveform)) {
+            SessionRecord record;
+            record.id = requested_name(request);
+            record.mode = mode_for_target(target);
+            if (record.mode.empty()) record.mode = kind == EngineKind::Design ? "design" : "waveform";
+            record.daidir = target.value("daidir", std::string());
+            record.fsdb = target.value("fsdb", std::string());
+            sessions_.put(record);
+            xdebug_core::update_public_session_manifest(record.id, record.mode, record.daidir, record.fsdb);
+        }
     }
     return response;
 }
@@ -279,52 +311,31 @@ Json Dispatcher::handle_session(const Json& request, const std::string& action) 
 
 Json Dispatcher::dispatch_impl(const Json& request) {
     const std::string action = request.value("action", std::string());
-    if (action == "schema") return catalog_schema_response(request);
-    if (action == "actions") return catalog_actions_response(request);
-    if (action == "batch") return handle_batch(request);
-    if (action.compare(0, 8, "session.") == 0) return handle_session(request, action);
+    const ActionSpec* spec = default_action_registry().find_spec(action);
+    if (!spec || spec->status == ActionStatus::Removed) {
+        return make_error(request, action, "UNKNOWN_ACTION", "unknown action: " + action);
+    }
 
-    Json target = resolve_target(request);
-    Json routed = request;
-    routed["target"] = target;
-    const std::string mode = target.value("mode", mode_for_target(target));
-    if (action == "trace.active_driver") return active_trace_.run(request, target);
-    if (supports_action(EngineKind::Design, action)) {
-        if (action != "source.context" && action != "expr.normalize" &&
-            mode != "design" && mode != "combined" && !has_string(target, "session_id")) {
-            return make_error(request, action, "RESOURCE_REQUIRED", "design action requires target.daidir or a design session");
-        }
-        Json response = forward_action(routed, EngineKind::Design);
-        if (response.value("ok", false) && !has_string(target, "session_id") &&
-            has_string(target, "daidir") && !requested_name(request).empty()) {
-            SessionRecord record;
-            record.id = requested_name(request);
-            record.mode = mode.empty() ? "design" : mode;
-            record.daidir = target.value("daidir", std::string());
-            record.fsdb = target.value("fsdb", std::string());
-            sessions_.put(record);
-            xdebug_core::update_public_session_manifest(record.id, record.mode, record.daidir, record.fsdb);
-        }
-        return response;
+    RequestEnvelope envelope = RequestEnvelope::from_json(request);
+    RequestValidator validator;
+    ValidationResult validation = validator.validate(envelope, *spec);
+    if (!validation.ok) return make_error(request, action, validation.code, validation.message);
+
+    if (spec->handler_kind == "schema") return catalog_schema_response(request);
+    if (spec->handler_kind == "actions") return catalog_actions_response(request);
+    if (spec->handler_kind == "batch") return handle_batch(request);
+    if (spec->handler_kind == "session") return handle_session(request, action);
+    if (spec->handler_kind == "active_trace") {
+        Json target = resolve_target(request);
+        Json error_response = resource_error(request, *spec, target);
+        if (!error_response.is_null()) return error_response;
+        return active_trace_.run(request, target);
     }
-    if (supports_action(EngineKind::Waveform, action)) {
-        if (mode != "waveform" && mode != "combined" && !has_string(target, "session_id")) {
-            return make_error(request, action, "RESOURCE_REQUIRED", "waveform action requires target.fsdb or a waveform session");
-        }
-        Json response = forward_action(routed, EngineKind::Waveform);
-        if (response.value("ok", false) && !has_string(target, "session_id") &&
-            has_string(target, "fsdb") && !requested_name(request).empty()) {
-            SessionRecord record;
-            record.id = requested_name(request);
-            record.mode = mode.empty() ? "waveform" : mode;
-            record.daidir = target.value("daidir", std::string());
-            record.fsdb = target.value("fsdb", std::string());
-            sessions_.put(record);
-            xdebug_core::update_public_session_manifest(record.id, record.mode, record.daidir, record.fsdb);
-        }
-        return response;
+    if (spec->handler_kind == "engine_forward") {
+        if (spec->category == "design") return handle_engine_forward(request, *spec, EngineKind::Design);
+        if (spec->category == "waveform") return handle_engine_forward(request, *spec, EngineKind::Waveform);
     }
-    return make_error(request, action, "UNKNOWN_ACTION", "unknown action: " + action);
+    return make_error(request, action, "NOT_IMPLEMENTED", "no handler registered for action: " + action);
 }
 
 Json Dispatcher::dispatch(const Json& request) {

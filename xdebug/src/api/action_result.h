@@ -6,6 +6,7 @@ namespace xdebug {
 
 struct ActionResult {
     bool ok = true;
+    Json envelope = nullptr;
     Json summary = Json::object();
     Json data = Json::object();
     Json warnings = Json::array();
@@ -14,4 +15,3 @@ struct ActionResult {
 };
 
 } // namespace xdebug
-

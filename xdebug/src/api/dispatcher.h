@@ -1,6 +1,7 @@
 #pragma once
 
 #include "api/json_types.h"
+#include "api/action_spec.h"
 #include "backend/engine_adapter.h"
 #include "combined/active_trace_service.h"
 #include "session/session_store.h"
@@ -19,8 +20,9 @@ private:
     Json handle_session(const Json& request, const std::string& action);
     Json handle_batch(const Json& request);
     Json forward_action(const Json& request, EngineKind kind);
+    Json handle_engine_forward(const Json& request, const ActionSpec& spec, EngineKind kind);
+    Json resource_error(const Json& request, const ActionSpec& spec, const Json& target) const;
     Json resolve_target(const Json& request) const;
-    bool supports_action(EngineKind kind, const std::string& action) const;
     std::string mode_for_target(const Json& target) const;
 
     EngineAdapter adapter_;
