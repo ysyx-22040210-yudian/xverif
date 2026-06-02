@@ -2,6 +2,8 @@
 
 本文是 `xdebug.v1` JSON API 的响应字段手册，覆盖当前 action catalog 中的所有命令。它面向 AI agent 和脚本作者，目标是说明每个 action 成功响应里可能出现的 `summary`、`data`、`findings`、`meta`、`error` 字段，以及 compact/full/debug 下字段是否会被省略。
 
+机器可校验契约以 action-specific response schema 为准：`xdebug/schemas/v1/actions/<action>.response.schema.json`。本文负责解释字段含义；schema 和 `xdebug/examples/responses/<action>.basic.json` 负责约束 compact 主路径。
+
 规则优先级：
 
 1. 永远先检查顶层 `ok`。

@@ -1,0 +1,8 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "cursor.list",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  }
+}

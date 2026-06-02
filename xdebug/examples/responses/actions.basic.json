@@ -3,32 +3,16 @@
   "ok": true,
   "action": "actions",
   "summary": {
-    "action_count": 5
+    "action_count": 1,
+    "removed_count": 0
   },
   "data": {
     "implemented": [
-      "actions",
-      "schema",
-      "trace.driver",
-      "value.at",
-      "trace.active_driver"
+      "schema"
     ],
-    "actions": [
-      {
-        "name": "trace.active_driver",
-        "category": "combined",
-        "status": "stable",
-        "requires": [
-          "design",
-          "waveform"
-        ]
-      }
-    ],
-    "removed": [
-      "signal.search"
-    ]
+    "actions": [],
+    "removed": [],
+    "modes": {}
   },
-  "meta": {
-    "truncated": false
-  }
+  "warnings": []
 }

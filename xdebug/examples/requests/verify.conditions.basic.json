@@ -1,0 +1,18 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "verify.conditions",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "conditions": [
+      {
+        "signal": "top.u.valid",
+        "op": "==",
+        "value": "1"
+      }
+    ],
+    "time": "100ns"
+  }
+}

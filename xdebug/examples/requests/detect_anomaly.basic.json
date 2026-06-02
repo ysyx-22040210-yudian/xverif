@@ -1,0 +1,14 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "detect_anomaly",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "signals": [
+      "top.u.valid",
+      "top.u.ready"
+    ]
+  }
+}

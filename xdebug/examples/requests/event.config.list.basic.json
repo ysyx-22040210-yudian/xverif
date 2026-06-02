@@ -1,0 +1,11 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "event.config.list",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "max_examples": 5
+  }
+}

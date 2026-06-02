@@ -1,0 +1,12 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "handshake.inspect",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "valid": "top.u.valid",
+    "ready": "top.u.ready"
+  }
+}

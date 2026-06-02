@@ -6,10 +6,8 @@
     "auto_open": true
   },
   "args": {
-    "signal": "top.clk",
-    "time": "10ns"
-  },
-  "output": {
-    "verbosity": "compact"
+    "signal": "top.u.ready",
+    "time": "100ns",
+    "format": "hex"
   }
 }

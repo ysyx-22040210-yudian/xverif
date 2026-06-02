@@ -58,17 +58,22 @@ def check_spec_shape(specs, xdebug_root):
             fail("%s: invalid status %s" % (name, spec["status"]))
         if spec["requires"] not in valid_requires:
             fail("%s: invalid requires %s" % (name, spec["requires"]))
-        if spec["status"] == "stable":
+        if spec["status"] != "removed":
             schemas = spec.get("schemas", {})
             examples = spec.get("examples", {})
             for field in ("request", "response"):
                 ref = schemas.get(field)
                 if not isinstance(ref, str) or not ref:
-                    fail("%s: stable action missing %s schema" % (name, field))
+                    fail("%s: action missing %s schema" % (name, field))
+                if ref in ("schemas/v1/xdebug.request.schema.json", "schemas/v1/xdebug.response.schema.json"):
+                    fail("%s: action must not use generic %s schema" % (name, field))
+                expected = "schemas/v1/actions/%s.%s.schema.json" % (name, field)
+                if ref != expected:
+                    fail("%s: %s schema must be %s, got %s" % (name, field, expected, ref))
                 require_file(ref, xdebug_root)
                 refs = examples.get(field)
                 if not isinstance(refs, list) or not refs:
-                    fail("%s: stable action missing %s example" % (name, field))
+                    fail("%s: action missing %s example" % (name, field))
                 for example in refs:
                     require_file(example, xdebug_root)
 
@@ -109,6 +114,22 @@ def check_runtime(specs, runtime):
             if spec[field] != desc.get(runtime_field):
                 fail("%s: %s mismatch spec=%s runtime=%s" %
                      (name, field, spec[field], desc.get(runtime_field)))
+        schemas = spec.get("schemas", {})
+        if schemas.get("request") != desc.get("request_schema"):
+            fail("%s: request_schema mismatch spec=%s runtime=%s" %
+                 (name, schemas.get("request"), desc.get("request_schema")))
+        if schemas.get("response") != desc.get("response_schema"):
+            fail("%s: response_schema mismatch spec=%s runtime=%s" %
+                 (name, schemas.get("response"), desc.get("response_schema")))
+        examples = spec.get("examples", {})
+        if examples.get("request") != desc.get("request_examples"):
+            fail("%s: request_examples mismatch spec=%s runtime=%s" %
+                 (name, examples.get("request"), desc.get("request_examples")))
+        runtime_response_examples = desc.get("response_examples")
+        spec_response_examples = examples.get("response")
+        if spec_response_examples and not set(spec_response_examples).issubset(set(runtime_response_examples or [])):
+            fail("%s: response_examples spec must be subset of runtime spec=%s runtime=%s" %
+                 (name, spec_response_examples, runtime_response_examples))
 
 
 def main(argv):

@@ -1,0 +1,16 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "value.batch_at",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "signals": [
+      "top.u.valid",
+      "top.u.ready"
+    ],
+    "time": "100ns",
+    "format": "hex"
+  }
+}

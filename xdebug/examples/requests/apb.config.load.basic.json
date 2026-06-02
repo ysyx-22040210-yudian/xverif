@@ -1,0 +1,12 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "apb.config.load",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "name": "if0",
+    "include_accesses": false
+  }
+}

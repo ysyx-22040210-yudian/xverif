@@ -3,14 +3,49 @@
   "$id": "xdebug.actions.response.v1",
   "title": "actions response",
   "type": "object",
-  "required": ["api_version", "ok", "action", "data"],
+  "required": [
+    "api_version",
+    "ok",
+    "action",
+    "summary",
+    "data"
+  ],
   "properties": {
-    "api_version": {"type": "string", "enum": ["xdebug.v1"]},
-    "ok": {"type": "boolean"},
-    "action": {"type": "string", "enum": ["actions"]},
-    "summary": {"type": "object"},
-    "data": {"type": "object"},
-    "meta": {"type": "object"}
+    "api_version": {
+      "type": "string",
+      "enum": [
+        "xdebug.v1"
+      ]
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "actions"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "object"
+    },
+    "findings": {
+      "type": "array"
+    },
+    "warnings": {
+      "type": "array"
+    },
+    "error": {},
+    "meta": {
+      "type": "object"
+    }
   },
   "additionalProperties": true
 }

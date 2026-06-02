@@ -2,6 +2,8 @@
 
 xdebug 默认返回 compact JSON。compact 的目标不是保留所有中间过程，而是保留 AI 下一步调试决策需要的事实：结论、少量证据、异常摘要和可复查位置。
 
+每个 action 的 compact 主路径都由 action-specific response schema 和 compact example 固化。schema 位于 `schemas/v1/actions/<action>.response.schema.json`，示例位于 `examples/responses/<action>.basic.json`。full/debug 或 `include_*` 返回可以包含额外字段，但不应移除 compact schema 中的关键 `summary` / `data` 结构。
+
 ## 输出档位
 
 - `output.verbosity="compact"`：默认模式，只保留 summary、findings、examples、关键 graph/path 和 file/line evidence。

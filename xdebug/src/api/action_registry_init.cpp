@@ -29,30 +29,34 @@ void add_schema_refs(ActionSpec& spec) {
     spec.request_schema = "schemas/v1/actions/" + spec.name + ".request.schema.json";
     spec.response_schema = "schemas/v1/actions/" + spec.name + ".response.schema.json";
     spec.request_examples.push_back("examples/requests/" + spec.name + ".basic.json");
+    spec.response_examples.push_back("examples/responses/" + spec.name + ".basic.json");
+}
+
+void register_spec(ActionRegistry& r, ActionSpec spec) {
+    if (spec.status != ActionStatus::Removed) {
+        add_schema_refs(spec);
+    }
+    r.register_spec(spec);
 }
 
 void register_builtin(ActionRegistry& r) {
     ActionSpec actions = stable_spec("actions", "builtin", ResourceRequirement::None, "actions");
-    add_schema_refs(actions);
-    actions.response_examples.push_back("examples/responses/actions.basic.json");
-    r.register_spec(actions);
+    register_spec(r, actions);
 
     ActionSpec schema = stable_spec("schema", "builtin", ResourceRequirement::None, "schema");
-    add_schema_refs(schema);
-    schema.response_examples.push_back("examples/responses/schema.basic.json");
-    r.register_spec(schema);
+    register_spec(r, schema);
 
-    r.register_spec(stable_spec("batch", "builtin", ResourceRequirement::None, "batch"));
+    register_spec(r, stable_spec("batch", "builtin", ResourceRequirement::None, "batch"));
 }
 
 void register_session(ActionRegistry& r) {
-    r.register_spec(stable_spec("session.open", "session", ResourceRequirement::Any, "session"));
-    r.register_spec(stable_spec("session.ensure", "session", ResourceRequirement::Any, "session"));
-    r.register_spec(stable_spec("session.list", "session", ResourceRequirement::Session, "session"));
-    r.register_spec(stable_spec("session.doctor", "session", ResourceRequirement::Session, "session"));
-    r.register_spec(stable_spec("session.kill", "session", ResourceRequirement::Session, "session"));
-    r.register_spec(stable_spec("session.close", "session", ResourceRequirement::Session, "session"));
-    r.register_spec(stable_spec("session.gc", "session", ResourceRequirement::None, "session"));
+    register_spec(r, stable_spec("session.open", "session", ResourceRequirement::Any, "session"));
+    register_spec(r, stable_spec("session.ensure", "session", ResourceRequirement::Any, "session"));
+    register_spec(r, stable_spec("session.list", "session", ResourceRequirement::Session, "session"));
+    register_spec(r, stable_spec("session.doctor", "session", ResourceRequirement::Session, "session"));
+    register_spec(r, stable_spec("session.kill", "session", ResourceRequirement::Session, "session"));
+    register_spec(r, stable_spec("session.close", "session", ResourceRequirement::Session, "session"));
+    register_spec(r, stable_spec("session.gc", "session", ResourceRequirement::None, "session"));
 }
 
 void register_design(ActionRegistry& r) {
@@ -71,11 +75,9 @@ void register_design(ActionRegistry& r) {
         }
         ActionSpec spec = stable_spec(names[i], "design", resource, "engine_forward");
         if (spec.name == "trace.driver") {
-            add_schema_refs(spec);
             spec.args.required.push_back("signal");
-            spec.response_examples.push_back("examples/responses/trace.driver.basic.json");
         }
-        r.register_spec(spec);
+        register_spec(r, spec);
     }
 }
 
@@ -134,23 +136,20 @@ void register_waveform(ActionRegistry& r) {
         ActionSpec spec = make_spec(entries[i].name, "waveform", entries[i].status,
                                     ResourceRequirement::Waveform, "engine_forward");
         if (spec.name == "value.at") {
-            add_schema_refs(spec);
             spec.args.required.push_back("signal");
             spec.args.required.push_back("time");
-            spec.response_examples.push_back("examples/responses/value.at.basic.json");
         }
-        r.register_spec(spec);
+        register_spec(r, spec);
     }
 }
 
 void register_combined(ActionRegistry& r) {
     ActionSpec active = stable_spec("trace.active_driver", "combined", ResourceRequirement::Combined, "active_trace");
-    add_schema_refs(active);
     active.args.required.push_back("signal");
     active.args.required.push_back("requested_time");
     active.response_examples.push_back("examples/responses/trace.active_driver.exact_assignment.json");
     active.response_examples.push_back("examples/responses/trace.active_driver.control_only.json");
-    r.register_spec(active);
+    register_spec(r, active);
 }
 
 void register_removed(ActionRegistry& r) {

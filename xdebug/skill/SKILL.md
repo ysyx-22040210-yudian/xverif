@@ -27,7 +27,104 @@ xdebug request.json
 
 `-h` 和 `-help` 是唯一允许的非 JSON 命令，只用于人类可读帮助；AI 若需要确认入口、target、常见 action、日志路径或示例，可以先运行 `xdebug -h`。机器可读能力列表仍使用 JSON action `actions`，机器可读 schema 使用 `schema`。
 
+每个 non-removed action 都有 action-specific schema 和 basic example。需要精确字段契约时，先调用 `actions` 找 `request_schema` / `response_schema` / examples，再按对应 schema 构造 JSON；不要用通用 envelope schema 代替具体 action 契约。
+
 如果当前 shell 尚未安装 `xdebug`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xdebug-env -h`、`tools/xdebug-env -help` 或 `tools/xdebug-env -`。不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
+
+## 机器可读契约查询流程
+
+AI agent 不确定 action 参数或返回字段时，不要猜。按下面顺序查询机器可读契约：
+
+1. 先查 action catalog，确认 action 是否存在、需要什么资源、schema 和 example 路径是什么。
+
+```bash
+xdebug - <<'JSON'
+{
+  "api_version": "xdebug.v1",
+  "action": "actions"
+}
+JSON
+```
+
+重点读取 `data.actions[]`：
+
+```json
+{
+  "name": "trace.driver",
+  "status": "stable",
+  "requires": "design",
+  "request_schema": "schemas/v1/actions/trace.driver.request.schema.json",
+  "response_schema": "schemas/v1/actions/trace.driver.response.schema.json",
+  "request_examples": ["examples/requests/trace.driver.basic.json"],
+  "response_examples": ["examples/responses/trace.driver.basic.json"]
+}
+```
+
+2. 查具体 action 的 request schema，确认 `target` 和 `args` 怎么写。
+
+```bash
+xdebug - <<'JSON'
+{
+  "api_version": "xdebug.v1",
+  "action": "schema",
+  "args": {
+    "action": "trace.driver",
+    "kind": "request"
+  }
+}
+JSON
+```
+
+3. 查具体 action 的 response schema，确认 compact 响应里应该读哪些字段。
+
+```bash
+xdebug - <<'JSON'
+{
+  "api_version": "xdebug.v1",
+  "action": "schema",
+  "args": {
+    "action": "trace.driver",
+    "kind": "response"
+  }
+}
+JSON
+```
+
+4. 如果 schema 仍不直观，读取 catalog 给出的 basic example 文件。构造真实请求时优先从 request example 改 `target`、`args`，不要从零手写大 JSON。
+
+```bash
+python3 -m json.tool < xdebug/examples/requests/trace.driver.basic.json
+python3 -m json.tool < xdebug/examples/responses/trace.driver.basic.json
+```
+
+5. 发真实查询。默认使用 `output.verbosity:"compact"`，只在需要证明细节时打开具体 `include_*`。
+
+```bash
+xdebug - <<'JSON'
+{
+  "api_version": "xdebug.v1",
+  "action": "trace.driver",
+  "target": {
+    "daidir": "simv.daidir",
+    "auto_open": true
+  },
+  "args": {
+    "signal": "top.u.ready"
+  },
+  "output": {
+    "verbosity": "compact"
+  }
+}
+JSON
+```
+
+读取规则：
+
+- `actions` 用来发现能力，不负责真实调试查询。
+- `schema` 用来确认字段契约，不负责读取 daidir/fsdb。
+- request schema 决定怎么写请求；response schema 决定怎么读 `summary`、`data`、`findings`。
+- examples 是最稳的调用模板；字段名冲突时以 action-specific schema 为准。
+- 不要把 generic `xdebug.request.schema.json` / `xdebug.response.schema.json` 当作具体 action 的业务契约。
 
 stdin 单次请求：
 
@@ -295,7 +392,7 @@ xdebug - < request.json \
 
 ### `UNKNOWN_ACTION`
 
-检查 action 名是否属于 xdebug JSON API。不要回退到旧 xtrace/xwave CLI。常见拼写是 `trace.active_driver`，不是 `active.trace`。
+检查 action 名是否属于 xdebug JSON API。不要回退到旧 xtrace/xwave CLI。combined 生效驱动查询的完整拼写是 `trace.active_driver`。
 
 ### `INTERNAL_ENGINE_FAILED`
 

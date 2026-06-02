@@ -1,0 +1,11 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "sampled_pulse.inspect",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "signal": "top.u.ready"
+  }
+}

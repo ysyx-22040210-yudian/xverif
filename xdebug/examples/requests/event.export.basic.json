@@ -1,0 +1,12 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "event.export",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "expr": "valid && !ready",
+    "max_examples": 5
+  }
+}

@@ -2,6 +2,9 @@
   "api_version": "xdebug.v1",
   "ok": true,
   "action": "schema",
+  "summary": {
+    "status": "ok"
+  },
   "data": {
     "api_version": "xdebug.v1",
     "request": {
@@ -11,8 +14,5 @@
       ]
     }
   },
-  "summary": {},
-  "meta": {
-    "truncated": false
-  }
+  "warnings": []
 }

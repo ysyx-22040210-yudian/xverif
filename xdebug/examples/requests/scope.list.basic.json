@@ -1,0 +1,11 @@
+{
+  "api_version": "xdebug.v1",
+  "action": "scope.list",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "scope": "top.u"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "api_version": "xdebug.v1",
+  "ok": true,
+  "action": "batch",
+  "summary": {
+    "count": 1,
+    "all_ok": true
+  },
+  "data": {
+    "results": [
+      {
+        "api_version": "xdebug.v1",
+        "ok": true,
+        "action": "schema"
+      }
+    ]
+  },
+  "warnings": []
+}

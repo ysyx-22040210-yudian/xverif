@@ -5,9 +5,7 @@
     "daidir": "simv.daidir"
   },
   "args": {
-    "signal": "top.u.ready"
-  },
-  "output": {
-    "verbosity": "compact"
+    "signal": "top.u.ready",
+    "include_trace": false
   }
 }

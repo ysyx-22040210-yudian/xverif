@@ -99,7 +99,7 @@ def action_schema_path(schemas: Path, action: str, kind: str) -> Path:
     candidate = schemas / "actions" / f"{action}.{kind}.schema.json"
     if candidate.exists():
         return candidate
-    return schemas / "xdebug.response.schema.json"
+    fail(f"missing action-specific {kind} schema for {action}: {candidate}")
 
 
 def validate_file(path: Path, schemas: Path) -> None:

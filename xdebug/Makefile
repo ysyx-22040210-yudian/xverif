@@ -147,6 +147,7 @@ schema-test:
 	python3 tools/validate_examples.py examples schemas/v1
 
 contract-test: $(EXE) schema-test
+	python3 tools/audit_action_schema_coverage.py $(CURDIR)
 	python3 tools/check_action_contract.py specs/actions $(CURDIR)/$(EXE)
 
 clean:

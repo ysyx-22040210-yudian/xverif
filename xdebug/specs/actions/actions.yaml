@@ -27,15 +27,15 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/apb.config.list.request.schema.json",
+        "response": "schemas/v1/actions/apb.config.list.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/apb.config.list.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/apb.config.list.basic.json"
         ]
       }
     },
@@ -46,17 +46,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/apb.config.load.request.schema.json",
+        "response": "schemas/v1/actions/apb.config.load.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/apb.config.load.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/apb.config.load.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "apb.cursor",
@@ -65,17 +68,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/apb.cursor.request.schema.json",
+        "response": "schemas/v1/actions/apb.cursor.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/apb.cursor.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/apb.cursor.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name",
+        "op"
+      ]
     },
     {
       "name": "apb.query",
@@ -84,17 +91,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/apb.query.request.schema.json",
+        "response": "schemas/v1/actions/apb.query.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/apb.query.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/apb.query.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "apb.transfer_window",
@@ -103,17 +113,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/apb.transfer_window.request.schema.json",
+        "response": "schemas/v1/actions/apb.transfer_window.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/apb.transfer_window.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/apb.transfer_window.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.analysis",
@@ -122,17 +135,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.analysis.request.schema.json",
+        "response": "schemas/v1/actions/axi.analysis.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.analysis.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.analysis.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.channel_stall",
@@ -141,17 +157,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.channel_stall.request.schema.json",
+        "response": "schemas/v1/actions/axi.channel_stall.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.channel_stall.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.channel_stall.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.config.list",
@@ -160,15 +179,15 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.config.list.request.schema.json",
+        "response": "schemas/v1/actions/axi.config.list.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.config.list.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.config.list.basic.json"
         ]
       }
     },
@@ -179,17 +198,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.config.load.request.schema.json",
+        "response": "schemas/v1/actions/axi.config.load.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.config.load.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.config.load.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.cursor",
@@ -198,17 +220,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.cursor.request.schema.json",
+        "response": "schemas/v1/actions/axi.cursor.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.cursor.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.cursor.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name",
+        "op"
+      ]
     },
     {
       "name": "axi.latency_outlier",
@@ -217,17 +243,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.latency_outlier.request.schema.json",
+        "response": "schemas/v1/actions/axi.latency_outlier.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.latency_outlier.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.latency_outlier.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.outstanding_timeline",
@@ -236,17 +265,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.outstanding_timeline.request.schema.json",
+        "response": "schemas/v1/actions/axi.outstanding_timeline.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.outstanding_timeline.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.outstanding_timeline.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.query",
@@ -255,17 +287,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.query.request.schema.json",
+        "response": "schemas/v1/actions/axi.query.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.query.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.query.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "axi.request_response_pair",
@@ -274,17 +309,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/axi.request_response_pair.request.schema.json",
+        "response": "schemas/v1/actions/axi.request_response_pair.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/axi.request_response_pair.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/axi.request_response_pair.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "batch",
@@ -293,17 +331,20 @@
       "requires": "none",
       "handler_kind": "batch",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/batch.request.schema.json",
+        "response": "schemas/v1/actions/batch.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/batch.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/batch.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "requests"
+      ]
     },
     {
       "name": "control.explain",
@@ -312,17 +353,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/control.explain.request.schema.json",
+        "response": "schemas/v1/actions/control.explain.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/control.explain.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/control.explain.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "counter.explain",
@@ -331,17 +375,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/counter.explain.request.schema.json",
+        "response": "schemas/v1/actions/counter.explain.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/counter.explain.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/counter.explain.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "cursor.delete",
@@ -350,17 +397,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/cursor.delete.request.schema.json",
+        "response": "schemas/v1/actions/cursor.delete.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/cursor.delete.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/cursor.delete.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "cursor.get",
@@ -369,15 +419,15 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/cursor.get.request.schema.json",
+        "response": "schemas/v1/actions/cursor.get.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/cursor.get.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/cursor.get.basic.json"
         ]
       }
     },
@@ -388,15 +438,15 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/cursor.list.request.schema.json",
+        "response": "schemas/v1/actions/cursor.list.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/cursor.list.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/cursor.list.basic.json"
         ]
       }
     },
@@ -407,17 +457,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/cursor.set.request.schema.json",
+        "response": "schemas/v1/actions/cursor.set.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/cursor.set.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/cursor.set.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "time"
+      ]
     },
     {
       "name": "cursor.use",
@@ -426,17 +479,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/cursor.use.request.schema.json",
+        "response": "schemas/v1/actions/cursor.use.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/cursor.use.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/cursor.use.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "detect_anomaly",
@@ -445,17 +501,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/detect_anomaly.request.schema.json",
+        "response": "schemas/v1/actions/detect_anomaly.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/detect_anomaly.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/detect_anomaly.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signals"
+      ]
     },
     {
       "name": "event.config.list",
@@ -464,15 +523,15 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/event.config.list.request.schema.json",
+        "response": "schemas/v1/actions/event.config.list.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/event.config.list.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/event.config.list.basic.json"
         ]
       }
     },
@@ -483,17 +542,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/event.config.load.request.schema.json",
+        "response": "schemas/v1/actions/event.config.load.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/event.config.load.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/event.config.load.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "event.export",
@@ -502,17 +564,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/event.export.request.schema.json",
+        "response": "schemas/v1/actions/event.export.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/event.export.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/event.export.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "expr"
+      ]
     },
     {
       "name": "event.find",
@@ -521,17 +586,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/event.find.request.schema.json",
+        "response": "schemas/v1/actions/event.find.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/event.find.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/event.find.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "expr"
+      ]
     },
     {
       "name": "expr.eval_at",
@@ -540,17 +608,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/expr.eval_at.request.schema.json",
+        "response": "schemas/v1/actions/expr.eval_at.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/expr.eval_at.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/expr.eval_at.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "expr",
+        "time"
+      ]
     },
     {
       "name": "expr.normalize",
@@ -559,17 +631,20 @@
       "requires": "none",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/expr.normalize.request.schema.json",
+        "response": "schemas/v1/actions/expr.normalize.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/expr.normalize.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/expr.normalize.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "expr"
+      ]
     },
     {
       "name": "fsm.explain",
@@ -578,17 +653,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/fsm.explain.request.schema.json",
+        "response": "schemas/v1/actions/fsm.explain.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/fsm.explain.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/fsm.explain.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "handshake.inspect",
@@ -597,17 +675,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/handshake.inspect.request.schema.json",
+        "response": "schemas/v1/actions/handshake.inspect.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/handshake.inspect.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/handshake.inspect.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "valid",
+        "ready"
+      ]
     },
     {
       "name": "inspect_signal",
@@ -616,17 +698,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/inspect_signal.request.schema.json",
+        "response": "schemas/v1/actions/inspect_signal.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/inspect_signal.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/inspect_signal.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "instance.map",
@@ -635,17 +720,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/instance.map.request.schema.json",
+        "response": "schemas/v1/actions/instance.map.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/instance.map.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/instance.map.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "instance"
+      ]
     },
     {
       "name": "interface.resolve",
@@ -654,17 +742,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/interface.resolve.request.schema.json",
+        "response": "schemas/v1/actions/interface.resolve.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/interface.resolve.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/interface.resolve.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "interface"
+      ]
     },
     {
       "name": "list.add",
@@ -673,17 +764,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.add.request.schema.json",
+        "response": "schemas/v1/actions/list.add.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.add.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.add.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name",
+        "signals"
+      ]
     },
     {
       "name": "list.create",
@@ -692,17 +787,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.create.request.schema.json",
+        "response": "schemas/v1/actions/list.create.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.create.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.create.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name",
+        "signals"
+      ]
     },
     {
       "name": "list.delete",
@@ -711,17 +810,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.delete.request.schema.json",
+        "response": "schemas/v1/actions/list.delete.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.delete.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.delete.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "list.diff",
@@ -730,17 +832,22 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.diff.request.schema.json",
+        "response": "schemas/v1/actions/list.diff.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.diff.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.diff.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name",
+        "time_a",
+        "time_b"
+      ]
     },
     {
       "name": "list.show",
@@ -749,15 +856,15 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.show.request.schema.json",
+        "response": "schemas/v1/actions/list.show.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.show.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.show.basic.json"
         ]
       }
     },
@@ -768,17 +875,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.validate.request.schema.json",
+        "response": "schemas/v1/actions/list.validate.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.validate.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.validate.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name"
+      ]
     },
     {
       "name": "list.value_at",
@@ -787,17 +897,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/list.value_at.request.schema.json",
+        "response": "schemas/v1/actions/list.value_at.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/list.value_at.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/list.value_at.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "name",
+        "time"
+      ]
     },
     {
       "name": "port.trace",
@@ -806,17 +920,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/port.trace.request.schema.json",
+        "response": "schemas/v1/actions/port.trace.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/port.trace.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/port.trace.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "port"
+      ]
     },
     {
       "name": "procedural.assignment",
@@ -825,17 +942,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/procedural.assignment.request.schema.json",
+        "response": "schemas/v1/actions/procedural.assignment.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/procedural.assignment.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/procedural.assignment.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "sampled_pulse.inspect",
@@ -844,17 +964,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/sampled_pulse.inspect.request.schema.json",
+        "response": "schemas/v1/actions/sampled_pulse.inspect.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/sampled_pulse.inspect.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/sampled_pulse.inspect.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "schema",
@@ -882,17 +1005,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/scope.list.request.schema.json",
+        "response": "schemas/v1/actions/scope.list.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/scope.list.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/scope.list.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "scope"
+      ]
     },
     {
       "name": "sequential.update",
@@ -901,17 +1027,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/sequential.update.request.schema.json",
+        "response": "schemas/v1/actions/sequential.update.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/sequential.update.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/sequential.update.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "session.close",
@@ -920,17 +1049,20 @@
       "requires": "session",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.close.request.schema.json",
+        "response": "schemas/v1/actions/session.close.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.close.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.close.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "session_id"
+      ]
     },
     {
       "name": "session.doctor",
@@ -939,15 +1071,15 @@
       "requires": "session",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.doctor.request.schema.json",
+        "response": "schemas/v1/actions/session.doctor.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.doctor.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.doctor.basic.json"
         ]
       }
     },
@@ -958,15 +1090,15 @@
       "requires": "any",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.ensure.request.schema.json",
+        "response": "schemas/v1/actions/session.ensure.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.ensure.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.ensure.basic.json"
         ]
       }
     },
@@ -977,15 +1109,15 @@
       "requires": "none",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.gc.request.schema.json",
+        "response": "schemas/v1/actions/session.gc.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.gc.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.gc.basic.json"
         ]
       }
     },
@@ -996,17 +1128,20 @@
       "requires": "session",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.kill.request.schema.json",
+        "response": "schemas/v1/actions/session.kill.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.kill.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.kill.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "session_id"
+      ]
     },
     {
       "name": "session.list",
@@ -1015,15 +1150,15 @@
       "requires": "session",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.list.request.schema.json",
+        "response": "schemas/v1/actions/session.list.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.list.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.list.basic.json"
         ]
       }
     },
@@ -1034,15 +1169,15 @@
       "requires": "any",
       "handler_kind": "session",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/session.open.request.schema.json",
+        "response": "schemas/v1/actions/session.open.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/session.open.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/session.open.basic.json"
         ]
       }
     },
@@ -1053,17 +1188,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/signal.canonicalize.request.schema.json",
+        "response": "schemas/v1/actions/signal.canonicalize.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/signal.canonicalize.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/signal.canonicalize.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "signal.changes",
@@ -1072,17 +1210,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/signal.changes.request.schema.json",
+        "response": "schemas/v1/actions/signal.changes.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/signal.changes.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/signal.changes.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "signal.resolve",
@@ -1091,17 +1232,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/signal.resolve.request.schema.json",
+        "response": "schemas/v1/actions/signal.resolve.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/signal.resolve.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/signal.resolve.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "signal.stability",
@@ -1110,17 +1254,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/signal.stability.request.schema.json",
+        "response": "schemas/v1/actions/signal.stability.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/signal.stability.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/signal.stability.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "signal.statistics",
@@ -1129,17 +1276,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/signal.statistics.request.schema.json",
+        "response": "schemas/v1/actions/signal.statistics.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/signal.statistics.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/signal.statistics.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "signal.trend",
@@ -1148,17 +1298,20 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/signal.trend.request.schema.json",
+        "response": "schemas/v1/actions/signal.trend.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/signal.trend.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/signal.trend.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "source.context",
@@ -1167,17 +1320,21 @@
       "requires": "none",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/source.context.request.schema.json",
+        "response": "schemas/v1/actions/source.context.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/source.context.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/source.context.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "file",
+        "line"
+      ]
     },
     {
       "name": "trace.active_driver",
@@ -1194,10 +1351,13 @@
           "examples/requests/trace.active_driver.basic.json"
         ],
         "response": [
-          "examples/responses/trace.active_driver.exact_assignment.json",
-          "examples/responses/trace.active_driver.control_only.json"
+          "examples/responses/trace.active_driver.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal",
+        "requested_time"
+      ]
     },
     {
       "name": "trace.driver",
@@ -1216,7 +1376,10 @@
         "response": [
           "examples/responses/trace.driver.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "trace.expand",
@@ -1225,17 +1388,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/trace.expand.request.schema.json",
+        "response": "schemas/v1/actions/trace.expand.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/trace.expand.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/trace.expand.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "trace.explain",
@@ -1244,17 +1410,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/trace.explain.request.schema.json",
+        "response": "schemas/v1/actions/trace.explain.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/trace.explain.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/trace.explain.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "trace.graph",
@@ -1263,17 +1432,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/trace.graph.request.schema.json",
+        "response": "schemas/v1/actions/trace.graph.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/trace.graph.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/trace.graph.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "trace.load",
@@ -1282,17 +1454,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/trace.load.request.schema.json",
+        "response": "schemas/v1/actions/trace.load.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/trace.load.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/trace.load.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "trace.path",
@@ -1301,17 +1476,21 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/trace.path.request.schema.json",
+        "response": "schemas/v1/actions/trace.path.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/trace.path.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/trace.path.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "from_signal",
+        "to_signal"
+      ]
     },
     {
       "name": "trace.query",
@@ -1320,17 +1499,20 @@
       "requires": "design",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/trace.query.request.schema.json",
+        "response": "schemas/v1/actions/trace.query.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/trace.query.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/trace.query.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal"
+      ]
     },
     {
       "name": "value.at",
@@ -1349,7 +1531,11 @@
         "response": [
           "examples/responses/value.at.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signal",
+        "time"
+      ]
     },
     {
       "name": "value.batch_at",
@@ -1358,17 +1544,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/value.batch_at.request.schema.json",
+        "response": "schemas/v1/actions/value.batch_at.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/value.batch_at.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/value.batch_at.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "signals",
+        "time"
+      ]
     },
     {
       "name": "verify.conditions",
@@ -1377,17 +1567,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/verify.conditions.request.schema.json",
+        "response": "schemas/v1/actions/verify.conditions.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/verify.conditions.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/verify.conditions.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "conditions",
+        "time"
+      ]
     },
     {
       "name": "window.verify",
@@ -1396,17 +1590,21 @@
       "requires": "waveform",
       "handler_kind": "engine_forward",
       "schemas": {
-        "request": "schemas/v1/xdebug.request.schema.json",
-        "response": "schemas/v1/xdebug.response.schema.json"
+        "request": "schemas/v1/actions/window.verify.request.schema.json",
+        "response": "schemas/v1/actions/window.verify.response.schema.json"
       },
       "examples": {
         "request": [
-          "examples/requests/actions.basic.json"
+          "examples/requests/window.verify.basic.json"
         ],
         "response": [
-          "examples/responses/actions.basic.json"
+          "examples/responses/window.verify.basic.json"
         ]
-      }
+      },
+      "required_args": [
+        "conditions",
+        "time_range"
+      ]
     },
     {
       "name": "signal.search",
