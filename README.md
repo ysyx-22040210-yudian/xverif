@@ -1,12 +1,13 @@
 # xverif
 
-`xverif` 是面向芯片验证 debug agent 的本地工具仓库，当前包含三个互补工具：
+`xverif` 是面向芯片验证 debug agent 的本地工具仓库，当前包含四个互补工具：
 
 - [`xdebug`](xdebug/README.md)：查询设计数据库和波形数据库里的事实。
 - [`xbit`](xbit/README.md)：确定性计算 bit、literal、slice、表达式和 expected value。
+- [`xentry`](xentry/README.md)：按配置解析多拍 byte fragments，输出 raw entry 域段。
 - [`xloc`](xloc/README.md)：UVM 日志位置压缩与恢复，降低 LLM token 噪声。
 
-简单说：`xdebug` 负责“事实从哪里来、某时刻发生了什么”，`xbit` 负责“这些值按 SystemVerilog 规则算出来到底是多少”，`xloc` 负责“这条 log 在哪个文件的哪一行，但只在需要时才查”。
+简单说：`xdebug` 负责“事实从哪里来、某时刻发生了什么”，`xbit` 负责“这些值按 SystemVerilog 规则算出来到底是多少”，`xentry` 负责“这个 entry 的 bit 域段按配置切出来是什么”，`xloc` 负责“这条 log 在哪个文件的哪一行，但只在需要时才查”。
 
 ## 工具概览
 
@@ -51,6 +52,26 @@ xbit/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
 
 完整说明见 [`xbit/README.md`](xbit/README.md)。
 
+### xentry
+
+`xentry` 是 JSON-first 的多拍 entry 域段解析器。它接收 canonical byte fragments，由外部 config 定义字段布局，只输出 raw field slices 和 provenance，不做协议理解或字段类型语义解码。
+
+适合的问题：
+
+- 解析 descriptor、metadata、table entry、WQE、CQE 或 header field。
+- 把多拍 byte fragments 按有效 bit 拼成 entry。
+- 按配置切出 field raw hex/bin。
+- 查看跨拍 field 来自哪一拍、哪些 bit。
+
+入口示例：
+
+```bash
+printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"xentry/examples/entry.yaml","input_path":"xentry/examples/fragments.jsonl"}' | xentry/xentry -
+xentry/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+```
+
+完整说明见 [`xentry/README.md`](xentry/README.md)。
+
 ### xloc
 
 `xloc` 是 LLM-friendly 的 UVM 日志位置压缩与恢复工具。它将 UVM 仿真日志中冗长的文件路径替换为简短 `L_XXXXXXXX` ID，通过 sidecar JSONL 映射文件支持按需恢复源码上下文，降低 LLM 处理 log 的 token 噪声。
@@ -81,9 +102,11 @@ Bash / Zsh：
 export XVERIF_HOME=<xverif-root>
 export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
 export XBIT_ENTRY="$XVERIF_HOME/xbit/xbit"
+export XENTRY_ENTRY="$XVERIF_HOME/xentry/xentry"
 export XLOC_ENTRY="$XVERIF_HOME/xloc"
 xdebug() { "$XDEBUG_ENTRY" "$@"; }
 xbit() { "$XBIT_ENTRY" "$@"; }
+xentry() { "$XENTRY_ENTRY" "$@"; }
 xloc() { PYTHONPATH="$XLOC_ENTRY" python3 -m xloc "$@"; }
 ```
 
@@ -93,9 +116,11 @@ Tcsh：
 setenv XVERIF_HOME <xverif-root>
 setenv XDEBUG_ENTRY "$XVERIF_HOME/tools/xdebug-env"
 setenv XBIT_ENTRY "$XVERIF_HOME/xbit/xbit"
+setenv XENTRY_ENTRY "$XVERIF_HOME/xentry/xentry"
 setenv XLOC_ENTRY "$XVERIF_HOME/xloc"
 alias xdebug '"$XDEBUG_ENTRY" \!*'
 alias xbit '"$XBIT_ENTRY" \!*'
+alias xentry '"$XENTRY_ENTRY" \!*'
 alias xloc 'PYTHONPATH=$XLOC_ENTRY python3 -m xloc \!*'
 ```
 
@@ -104,6 +129,7 @@ alias xloc 'PYTHONPATH=$XLOC_ENTRY python3 -m xloc \!*'
 ```bash
 xdebug -h
 xbit conv "8'shff" --json
+xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
 xloc resolve L_00000001 --map out/sim.log.xloc.jsonl
 ```
 
@@ -118,6 +144,7 @@ make -C xdebug contract-test
 make -C xdebug unit-test
 
 make -C xbit test
+make -C xentry test
 make -C xloc test
 
 make test
@@ -133,5 +160,7 @@ make full-test
 - xdebug JSON API 速查：[`xdebug/skill/references/json-api-reference.md`](xdebug/skill/references/json-api-reference.md)
 - xbit 用户文档：[`xbit/README.md`](xbit/README.md)
 - xbit agent skill：[`xbit/skill/SKILL.md`](xbit/skill/SKILL.md)
+- xentry 用户文档：[`xentry/README.md`](xentry/README.md)
+- xentry agent skill：[`xentry/skill/SKILL.md`](xentry/skill/SKILL.md)
 - xloc 用户文档：[`xloc/README.md`](xloc/README.md)
 - xloc agent skill：[`xloc/skill/SKILL.md`](xloc/skill/SKILL.md)

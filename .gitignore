@@ -22,6 +22,8 @@ regression/*
 !xdebug/testdata/**
 !xbit/tests/
 !xbit/tests/**
+!xentry/tests/
+!xentry/tests/**
 xdebug/testdata/**/out/
 xdebug/testdata/**/csrc/
 xdebug/testdata/**/ucli.key

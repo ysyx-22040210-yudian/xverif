@@ -1,0 +1,12 @@
+name: demo_entry
+version: 1
+total_bits: 20
+fragment_byte_order: msb_first
+bit_numbering: byte_lsb0
+fields:
+  - name: opcode
+    bits: "[3:0]"
+  - name: route
+    bits: "[11:4]"
+  - name: payload
+    bits: "[19:12]"
