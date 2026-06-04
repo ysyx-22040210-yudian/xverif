@@ -116,7 +116,21 @@
           "type": "string"
         },
         "mode": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "head",
+            "tail"
+          ],
+          "description": "Select which rows are returned when include_rows/include_all_changes is true."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum number of head/tail rows to return when rows are requested."
+        },
+        "aggregate_only": {
+          "type": "boolean",
+          "description": "Return only counts, first/last/final values, and warnings; omit data.changes rows."
         },
         "include_source": {
           "type": "boolean"

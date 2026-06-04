@@ -30,14 +30,16 @@ description: >
 首选 JSON request：
 
 ```bash
-xentry/xentry '{"api_version":"xentry.v1","action":"decode","config":{...},"fragments":[...]}'
+tools/xentry '{"api_version":"xentry.v1","action":"decode","config":{...},"fragments":[...]}'
 ```
 
 也可从 stdin：
 
 ```bash
-printf '%s\n' '<json-request>' | xentry/xentry -
+printf '%s\n' '<json-request>' | tools/xentry -
 ```
+
+优先使用 shell 中已安装的 `xentry` 命令；该命令应来自仓库 `tools/xentry` wrapper，推荐通过把 `$XVERIF_HOME/tools` 加入 `PATH` 安装。若当前目录是 xverif 仓库根目录，临时入口用 `tools/xentry`。兼容入口 `xentry/xentry` 仍保留为转发 wrapper。
 
 ## Agent 规则
 

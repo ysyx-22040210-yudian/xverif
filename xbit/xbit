@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="${PYTHON:-}"
-if [[ -z "${PYTHON_BIN}" ]]; then
-  if [[ -x "${HOME}/miniconda3/bin/python" ]]; then
-    PYTHON_BIN="${HOME}/miniconda3/bin/python"
-  else
-    PYTHON_BIN="python3"
-  fi
-fi
-
-export PYTHONPATH="${SCRIPT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
-exec "${PYTHON_BIN}" -m xbit.cli "$@"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$script_dir/../tools/xbit" "$@"

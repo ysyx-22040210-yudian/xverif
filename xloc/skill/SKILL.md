@@ -37,7 +37,7 @@ xloc <command> ...
 如果当前 shell 没有 `xloc` 函数，而当前目录是 xverif 仓库根目录，可用临时入口：
 
 ```bash
-PYTHONPATH=xloc python3 -m xloc <command> ...
+tools/xloc <command> ...
 ```
 
 回答和文档里不要暴露本机绝对路径；需要说明路径时用 `<xverif-root>`、`<project-root>`、`$XVERIF_HOME`。
@@ -102,4 +102,4 @@ msg_id:  PKT_MISMATCH
 
 - `not found in <map>`：loc_id 不在该 map 中。检查是否拿错了 `sim.log.xloc.jsonl`。
 - 找不到源码文件：map 仍能证明原始 `file/line`，但当前机器缺少源码；回答时说明只能定位，不能展示上下文。
-- 命令不存在：在 xverif 仓库根目录用 `PYTHONPATH=xloc python3 -m xloc ...` 临时调用。
+- 命令不存在：在 xverif 仓库根目录用 `tools/xloc ...` 临时调用；推荐把 `$XVERIF_HOME/tools` 加入 `PATH`。

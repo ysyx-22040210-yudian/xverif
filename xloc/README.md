@@ -40,27 +40,25 @@ make -C xloc test
 
 # 用一个手动构造的 JSONL 试一下
 echo '{"loc_id":"L_00000001","file":"tb/test.sv","line":42,"msg_id":"ERROR_TEST"}' > /tmp/test.xloc.jsonl
-PYTHONPATH=xloc python3 -m xloc resolve L_00000001 --map /tmp/test.xloc.jsonl
+tools/xloc resolve L_00000001 --map /tmp/test.xloc.jsonl
 ```
 
 ### Shell 命令入口
 
-为了在任意目录调用，建议把 `xloc` 安装成 shell function。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换。
+为了在任意目录和非交互 shell 中稳定调用，建议把仓库 `tools/` 加入 `PATH`。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换。
 
 Bash / Zsh：
 
 ```bash
 export XVERIF_HOME=<xverif-root>
-export XLOC_ENTRY="$XVERIF_HOME/xloc"
-xloc() { PYTHONPATH="$XLOC_ENTRY" python3 -m xloc "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
 ```
 
 Tcsh：
 
 ```tcsh
 setenv XVERIF_HOME <xverif-root>
-setenv XLOC_ENTRY "$XVERIF_HOME/xloc"
-alias xloc 'PYTHONPATH=$XLOC_ENTRY python3 -m xloc \!*'
+setenv PATH "$XVERIF_HOME/tools:$PATH"
 ```
 
 配置后可以直接使用：

@@ -23,7 +23,7 @@ JSON-only contract
   Machine-readable help remains available through JSON actions:
 
     {"api_version":"xdebug.v1","action":"actions"}
-    {"api_version":"xdebug.v1","action":"schema"}
+    {"api_version":"xdebug.v1","action":"schema","args":{"action":"signal.statistics","kind":"request"}}
 
 Shell setup
 -----------
@@ -33,20 +33,17 @@ Shell setup
   Bash (~/.bashrc):
 
     export XVERIF_HOME=<xverif-root>
-    export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
-    xdebug() { "$XDEBUG_ENTRY" "$@"; }
+    export PATH="$XVERIF_HOME/tools:$PATH"
 
   Zsh (~/.zshrc):
 
     export XVERIF_HOME=<xverif-root>
-    export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
-    xdebug() { "$XDEBUG_ENTRY" "$@"; }
+    export PATH="$XVERIF_HOME/tools:$PATH"
 
   Tcsh (~/.tcshrc):
 
     setenv XVERIF_HOME <xverif-root>
-    setenv XDEBUG_ENTRY "$XVERIF_HOME/tools/xdebug-env"
-    alias xdebug '"$XDEBUG_ENTRY" \!*'
+    setenv PATH "$XVERIF_HOME/tools:$PATH"
 
 Request envelope
 ----------------
@@ -116,6 +113,25 @@ Common actions
 
   Combined:
       trace.active_driver
+
+Action choice guidance
+----------------------
+  active/high cycles:
+      Use signal.statistics. With args.clock it returns clock-sampled
+      high_cycles/low_cycles/activity; without args.clock it returns raw
+      value-change statistics and sampling_mode explains that behavior.
+
+  transition timeline:
+      Use signal.changes. Compact output omits data.changes rows by default;
+      set include_rows:true or include_all_changes:true when rows are needed.
+      Use mode:"head" or mode:"tail" plus limit to inspect either end.
+
+  window holds 0/1:
+      Use window.verify, or signal.statistics for sampled activity. Do not use
+      signal.changes row counts as cycle counts.
+
+  first/last occurrence:
+      Use event.find, or signal.changes with mode:"head"/"tail".
 
 Output control
 --------------
@@ -222,4 +238,3 @@ Docs
 
   JSON API reference:
       xdebug/skill/references/json-api-reference.md
-

@@ -70,6 +70,10 @@
         "scope": {
           "type": "string"
         },
+        "path": {
+          "type": "string",
+          "description": "Scope path to list. Empty string or '.' returns top-level scopes."
+        },
         "name": {
           "type": "string"
         },
@@ -185,10 +189,7 @@
           "type": "boolean"
         }
       },
-      "additionalProperties": true,
-      "required": [
-        "scope"
-      ]
+      "additionalProperties": true
     },
     "limits": {
       "type": "object"

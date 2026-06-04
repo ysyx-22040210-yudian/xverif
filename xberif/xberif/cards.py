@@ -23,6 +23,7 @@ from .errors import (
     KIND_MISMATCH,
     MANIFEST_MISSING,
     RUNTIME_AI_DISABLED,
+    VALIDATION_FAILED,
     XberifError,
 )
 from .io import read_json, read_toml, read_text, write_json, write_text
@@ -40,6 +41,7 @@ DETAIL_SECTIONS = (
     "Evidence",
 )
 EVIDENCE_RE = re.compile(r"^-\s+([^:\n]+):(\d+)-(\d+)(?:\s+-\s+.*)?$", re.MULTILINE)
+EVIDENCE_STRING_RE = re.compile(r"^(.+):(\d+)-(\d+)(?:\s+-\s+.*)?$")
 
 
 def empty_catalog(kind: str) -> dict:
@@ -74,7 +76,44 @@ def _manifest_files(root: Path) -> dict[str, dict]:
     return {f["path"]: f for f in _manifest(root).get("files", [])}
 
 
-def _validate_evidence(root: Path, evidence: list[dict[str, Any]]) -> None:
+def _normalize_evidence(evidence: list[Any]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for ev in evidence:
+        if isinstance(ev, dict):
+            normalized.append(ev)
+            continue
+        if isinstance(ev, str):
+            match = EVIDENCE_STRING_RE.match(ev.strip())
+            if match:
+                normalized.append(
+                    {
+                        "path": match.group(1),
+                        "line_start": int(match.group(2)),
+                        "line_end": int(match.group(3)),
+                    }
+                )
+                continue
+        raise XberifError(CARD_SCHEMA_INVALID, "evidence must be objects or path:start-end strings")
+    return normalized
+
+
+def normalize_card_evidence(card: dict[str, Any]) -> bool:
+    changed = False
+    for item in card.get("key_items", []):
+        if not isinstance(item, dict):
+            continue
+        evidence = item.get("evidence", [])
+        if not isinstance(evidence, list):
+            raise XberifError(CARD_SCHEMA_INVALID, "key_item evidence must be a list")
+        normalized = _normalize_evidence(evidence)
+        if normalized != evidence:
+            item["evidence"] = normalized
+            changed = True
+    return changed
+
+
+def _validate_evidence(root: Path, evidence: list[Any]) -> None:
+    evidence = _normalize_evidence(evidence)
     files = _manifest_files(root)
     deny_paths = load_kind_config(root).get("safety", {}).get("deny_paths", [])
     for ev in evidence:
@@ -115,6 +154,7 @@ def validate_card(root: Path, card: dict[str, Any]) -> None:
         raise XberifError(CARD_SCHEMA_INVALID, "required card must contain key_items")
     if len(key_items) > 8:
         raise XberifError(CARD_SCHEMA_INVALID, "card key_items must contain no more than 8 entries")
+    normalize_card_evidence(card)
     for item in key_items:
         if not isinstance(item, dict) or not item.get("name") or not item.get("one_line"):
             raise XberifError(CARD_SCHEMA_INVALID, "each key_item requires name and one_line")
@@ -203,6 +243,8 @@ def reconcile_detail_metadata(root: Path) -> None:
         if not cpath.exists() or not dpath.exists():
             continue
         card = read_json(cpath)
+        if normalize_card_evidence(card):
+            write_json(cpath, card)
         stats = validate_detail(root, topic, read_text(dpath), path=dpath)
         card["detail"] = {
             "available": True,
@@ -240,6 +282,15 @@ def update_catalog(root: Path) -> dict:
         )
     catalog = {"schema_version": "xberif.cards_catalog.v1", "env_kind": kind, "cards": cards}
     write_json(state_dir(root) / "cards.json", catalog)
+    return catalog
+
+
+def repair_catalog(root: Path) -> dict:
+    reconcile_detail_metadata(root)
+    catalog = update_catalog(root)
+    errors = validate_all(root)
+    if errors:
+        raise XberifError(VALIDATION_FAILED, "; ".join(errors))
     return catalog
 
 

@@ -11,15 +11,15 @@ Action 协议由 `ActionSpec` / `ActionRegistry` 约束。`actions` 输出来自
 `-h` 和 `-help` 是 xdebug 唯一的非 JSON 命令，用于查看详尽的人类可读帮助：
 
 ```bash
-tools/xdebug-env -h
-tools/xdebug-env -help
+tools/xdebug -h
+tools/xdebug -help
 ```
 
 机器可读帮助仍通过 JSON action 获取：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug-env -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"schema"}' | tools/xdebug-env -
+printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
+printf '%s\n' '{"api_version":"xdebug.v1","action":"schema","args":{"action":"signal.statistics","kind":"request"}}' | tools/xdebug -
 ```
 
 每个 action 的机器可读契约位于：
@@ -36,48 +36,45 @@ xdebug/examples/responses/<action>.basic.json
 推荐通过仓库根目录的 wrapper 调用，它会设置 Verdi/NPI 运行所需环境：
 
 ```bash
-tools/xdebug-env -
+tools/xdebug -
 ```
 
 从 stdin 传入 JSON：
 
 ```bash
 printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"fsdb":"waves.fsdb","auto_open":true},"args":{"signal":"top.clk","time":"10ns"}}' \
-  | tools/xdebug-env -
+  | tools/xdebug -
 ```
 
 也可以使用请求文件：
 
 ```bash
-tools/xdebug-env request.json
+tools/xdebug request.json
 ```
 
 ### Shell 命令入口
 
-为了在任意目录调用，建议把 `xdebug` 安装成 shell function。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换；文档和 skill 中不固定记录个人机器路径。
+为了在任意目录和 Claude Code 这类非交互 shell 中稳定调用，建议把仓库 `tools/` 加入 `PATH`。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换；文档和 skill 中不固定记录个人机器路径。
 
 Bash：加入 `~/.bashrc`。
 
 ```bash
 export XVERIF_HOME=<xverif-root>
-export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
-xdebug() { "$XDEBUG_ENTRY" "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
 ```
 
 Zsh：加入 `~/.zshrc`。
 
 ```zsh
 export XVERIF_HOME=<xverif-root>
-export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
-xdebug() { "$XDEBUG_ENTRY" "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
 ```
 
 Tcsh：加入 `~/.tcshrc`。
 
 ```tcsh
 setenv XVERIF_HOME <xverif-root>
-setenv XDEBUG_ENTRY "$XVERIF_HOME/tools/xdebug-env"
-alias xdebug '"$XDEBUG_ENTRY" \!*'
+setenv PATH "$XVERIF_HOME/tools:$PATH"
 ```
 
 配置后可以直接使用：
@@ -87,6 +84,8 @@ xdebug -h
 printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
 xdebug request.json
 ```
+
+兼容入口 `tools/xdebug-env` 仍保留为转发 wrapper，但新文档和 skill 推荐 `tools/xdebug` 或 `PATH` 中的 `xdebug`。
 
 重复调试建议先打开 session，再用 `target.session_id` 访问：
 
@@ -103,6 +102,8 @@ xdebug request.json
   }
 }
 ```
+
+同名 `session.open` 默认会复用现有 session，适合多步调试避免重复打开 daidir/FSDB；如果确实需要覆盖旧 session，显式在 `args` 中传入 `"reopen": true`。
 
 ## Core Concepts
 
@@ -154,6 +155,17 @@ xdebug 当前只支持两类输入资源：
 | `debug` | 诊断 session、daemon、内部过程和截断原因 |
 
 compact 默认不返回大字段，例如 `expanded_queries`、`raw_edges`、`all_samples`、`all_events`、`all_changes`、`normal_transactions`、`timeline`、`source_text`、`module_body`。需要时用精确 `include_*` 开关，不要一开始请求 `debug`。
+
+### 常见意图到 action
+
+| 意图 | 推荐 action | 说明 |
+| --- | --- | --- |
+| 统计 high/active cycles | `signal.statistics` | 有 `clock` 时做 clock-sampled 统计；无 `clock` 时做 raw value-change 统计，并返回 `sampling_mode`。 |
+| 看跳变时间线 | `signal.changes` | compact 默认只返回 summary；需要行时设置 `include_rows:true`，用 `mode:"head"` 或 `"tail"` 控制方向。 |
+| 判断窗口内保持 0/1 | `window.verify` 或 `signal.statistics` | 不要用 `signal.changes` 的 row count 当周期数。 |
+| 找 first/last occurrence | `event.find`，或 `signal.changes` + `mode:"head"/"tail"` | `signal.changes aggregate_only:true` 适合先看首末值和跳变总数。 |
+
+`signal.changes.summary.transition_count` 为兼容保留；新代码同时返回 `returned_change_rows`、`includes_initial_value`、`actual_transition_count` 和 `semantic_note`，优先读这些字段判断语义。
 
 ### include 开关与限制
 

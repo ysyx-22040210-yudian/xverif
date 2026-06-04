@@ -103,23 +103,49 @@ Json ai_signal_changes(const Json& args, std::string& error) {
     npiFsdbTime begin = 0, end = 0;
     if (!json_time_range(args, begin, end, error)) return Json();
     int limit = args.value("limit", args.value("max_events", 1000));
+    std::string mode = args.value("mode", std::string("head"));
+    bool aggregate_only = args.value("aggregate_only", false);
+    bool include_rows = args.value("include_rows", args.value("include_all_changes", false));
     npiFsdbValType fmt = json_value_format(args);
     fsdbTimeValPairVec_t changes;
     bool truncated = false;
-    int read_limit = limit >= 0 ? limit + 1 : -1;
-    if (!read_signal_changes(signal, begin, end, fmt, changes, error, read_limit, &truncated)) return Json();
+    if (!read_signal_changes(signal, begin, end, fmt, changes, error, -1, &truncated)) return Json();
+    size_t row_count = changes.size();
+    bool includes_initial = row_count > 0;
+    size_t actual_transitions = includes_initial ? row_count - 1 : 0;
     Json data;
     data["signal"] = signal;
     data["begin"] = format_time(begin);
     data["end"] = format_time(end);
-    data["changes"] = changes_to_json(changes, json_value_prefix(fmt), limit, truncated);
-    data["transition_count"] = changes.size();
+    data["returned_change_rows"] = row_count;
+    data["includes_initial_value"] = includes_initial;
+    data["actual_transition_count"] = actual_transitions;
+    data["semantic_note"] = "signal.changes returns value-change rows for timeline inspection. Do not use row counts as sampled high cycles; use signal.statistics.high_cycles for clock-sampled activity.";
+    data["transition_count"] = actual_transitions;
     data["truncated"] = truncated;
     if (!changes.empty()) {
         data["initial_value"] = wave_value_json(changes.front().second, json_value_prefix(fmt));
         data["final_value"] = wave_value_json(changes.back().second, json_value_prefix(fmt));
         data["first_change"] = format_time(changes.front().first);
         data["last_change"] = format_time(changes.back().first);
+    }
+    if (row_count > 1000 && !include_rows && !aggregate_only) {
+        data["warnings"] = Json::array({
+            "signal.changes matched more than 1000 change rows. Compact output omits rows by default; use aggregate_only:true, mode:head/tail, or narrow time_range unless timeline rows are required."
+        });
+    }
+    if (include_rows && !aggregate_only) {
+        fsdbTimeValPairVec_t selected = changes;
+        if (limit >= 0 && selected.size() > static_cast<size_t>(limit)) {
+            if (mode == "tail") {
+                selected.erase(selected.begin(), selected.end() - limit);
+            } else {
+                selected.erase(selected.begin() + limit, selected.end());
+            }
+            data["truncated"] = true;
+        }
+        data["mode"] = mode == "tail" ? "tail" : "head";
+        data["changes"] = changes_to_json(selected, json_value_prefix(fmt), -1, false);
     }
     return data;
 }
@@ -472,12 +498,58 @@ Json ai_signal_trend(const Json& args, std::string& error) {
 Json ai_signal_statistics(const Json& args, std::string& error) {
     std::string signal = args.value("signal", std::string());
     std::string clock = args.value("clock", std::string());
-    if (signal.empty() || clock.empty()) {
-        error = "signal.statistics requires args.signal and args.clock";
+    if (signal.empty()) {
+        error = "signal.statistics requires args.signal";
         return Json();
     }
     npiFsdbTime begin = 0, end = 0;
     if (!json_time_range(args, begin, end, error)) return Json();
+
+    if (clock.empty()) {
+        npiFsdbValType fmt = json_value_format(args);
+        fsdbTimeValPairVec_t changes;
+        bool truncated = false;
+        if (!read_signal_changes(signal, begin, end, fmt, changes, error, -1, &truncated)) return Json();
+        Json data;
+        data["signal"] = signal;
+        data["sampling_mode"] = "raw_value_changes";
+        data["begin"] = format_time(begin);
+        data["end"] = format_time(end);
+        data["sample_count"] = changes.size();
+        data["returned_change_rows"] = changes.size();
+        data["includes_initial_value"] = !changes.empty();
+        data["transition_count"] = changes.empty() ? 0 : changes.size() - 1;
+        data["truncated"] = truncated;
+        int high_bursts = 0;
+        npiFsdbTime first_high = 0, last_high = 0, last_fall = 0;
+        bool prev_high = false;
+        for (const auto& item : changes) {
+            bool high = !contains_xz_value(item.second) && xdebug_waveform::expr_bits_only(item.second).find('1') != std::string::npos;
+            if (high) {
+                if (!prev_high) high_bursts++;
+                if (first_high == 0) first_high = item.first;
+                last_high = item.first;
+            } else if (prev_high) {
+                last_fall = item.first;
+            }
+            prev_high = high;
+        }
+        data["activity"] = {
+            {"high_burst_count", high_bursts},
+            {"first_high_time", first_high ? Json(format_time(first_high)) : Json(nullptr)},
+            {"last_high_time", last_high ? Json(format_time(last_high)) : Json(nullptr)},
+            {"last_fall_time", last_fall ? Json(format_time(last_fall)) : Json(nullptr)},
+            {"max_high_cycles", nullptr}
+        };
+        if (!changes.empty()) {
+            data["initial_value"] = wave_value_json(changes.front().second, json_value_prefix(fmt));
+            data["final_value"] = wave_value_json(changes.back().second, json_value_prefix(fmt));
+            data["first_change_time"] = format_time(changes.front().first);
+            data["last_change_time"] = format_time(changes.back().first);
+        }
+        return data;
+    }
+
     Json signals = {{"sig", signal}};
     std::vector<std::string> aliases, paths;
     fsdbSigVec_t handles;
@@ -487,25 +559,49 @@ Json ai_signal_statistics(const Json& args, std::string& error) {
     int max_samples = args.value("max_samples", 1000000);
     int samples = 0, known = 0, unknown = 0;
     int high_cycles = 0, low_cycles = 0;
+    int high_bursts = 0, current_high = 0, max_high_cycles = 0;
     int transitions = 0;
     bool truncated = false;
     bool have_known = false;
     unsigned long long first = 0, final = 0, minv = 0, maxv = 0, prev = 0;
     npiFsdbTime first_change_time = 0, last_change_time = 0;
+    npiFsdbTime first_high_time = 0, last_high_time = 0, last_fall_time = 0;
+    bool prev_high = false;
 
     if (!sample_on_clock(clock, posedge, aliases, handles, begin, end, max_samples,
         [&](npiFsdbTime t, const std::map<std::string, std::string>& values) -> bool {
             auto it = values.find("sig");
             if (it == values.end() || contains_xz_value(it->second)) {
                 unknown++;
+                if (prev_high) {
+                    if (current_high > max_high_cycles) max_high_cycles = current_high;
+                    current_high = 0;
+                    last_fall_time = t;
+                    prev_high = false;
+                }
                 return true;
             }
             std::string bits = xdebug_waveform::expr_bits_only(it->second);
             unsigned long long v = 0;
             for (char c : bits) v = (v << 1) | (c == '1' ? 1ULL : 0ULL);
             known++;
+            bool high = (v != 0 && bits.size() == 1);
             if (v == 0) low_cycles++;
-            else if (bits.size() == 1) high_cycles++;
+            else if (high) high_cycles++;
+            if (high) {
+                if (!prev_high) {
+                    high_bursts++;
+                    current_high = 0;
+                    if (first_high_time == 0) first_high_time = t;
+                }
+                current_high++;
+                last_high_time = t;
+            } else if (prev_high) {
+                if (current_high > max_high_cycles) max_high_cycles = current_high;
+                current_high = 0;
+                last_fall_time = t;
+            }
+            prev_high = high;
             if (!have_known) {
                 first = final = minv = maxv = prev = v;
                 have_known = true;
@@ -521,11 +617,13 @@ Json ai_signal_statistics(const Json& args, std::string& error) {
             }
             return true;
         }, error, samples, truncated)) return Json();
+    if (prev_high && current_high > max_high_cycles) max_high_cycles = current_high;
 
     Json data;
     data["signal"] = signal;
     data["clock"] = clock;
     data["sampling"] = posedge ? "posedge" : "negedge";
+    data["sampling_mode"] = "clock";
     data["begin"] = format_time(begin);
     data["end"] = format_time(end);
     data["sample_count"] = samples;
@@ -543,6 +641,13 @@ Json ai_signal_statistics(const Json& args, std::string& error) {
         data["high_ratio"] = known > 0 ? static_cast<double>(high_cycles) / static_cast<double>(known) : 0.0;
         if (first_change_time != 0) data["first_change_time"] = format_time(first_change_time);
         if (last_change_time != 0) data["last_change_time"] = format_time(last_change_time);
+        data["activity"] = {
+            {"high_burst_count", high_bursts},
+            {"first_high_time", first_high_time ? Json(format_time(first_high_time)) : Json(nullptr)},
+            {"last_high_time", last_high_time ? Json(format_time(last_high_time)) : Json(nullptr)},
+            {"last_fall_time", last_fall_time ? Json(format_time(last_fall_time)) : Json(nullptr)},
+            {"max_high_cycles", max_high_cycles}
+        };
     }
     return data;
 }

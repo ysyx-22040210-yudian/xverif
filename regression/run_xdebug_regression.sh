@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-XDEBUG="$ROOT/tools/xdebug-env"
+XDEBUG="$ROOT/tools/xdebug"
 DBDIR="$ROOT/xdebug/testdata/combined/active_driver/out/simv.daidir"
 FSDB="$ROOT/xdebug/testdata/combined/active_driver/out/waves.fsdb"
 NPI_LIB="$VERDI_HOME/share/NPI/lib/LINUX64"

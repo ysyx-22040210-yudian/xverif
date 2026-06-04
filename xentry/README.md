@@ -20,21 +20,21 @@ printf '%s\n' '{
   "action": "decode",
   "config_path": "xentry/examples/entry.yaml",
   "input_path": "xentry/examples/fragments.jsonl"
-}' | xentry/xentry -
+}' | tools/xentry -
 ```
 
 也可以直接传入单个 JSON 字符串：
 
 ```bash
-xentry/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
 ```
 
 或使用兼容的人类 CLI：
 
 ```bash
-xentry/xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
-xentry/xentry explain --config xentry/examples/entry.yaml --json
-xentry/xentry validate --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
+tools/xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
+tools/xentry explain --config xentry/examples/entry.yaml --json
+tools/xentry validate --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
 ```
 
 ## JSON Request
@@ -140,6 +140,17 @@ fields:
 ## Agent 使用原则
 
 当你需要解释 entry、descriptor、context、metadata、table entry、WQE、CQE 或 header field 时，不要手工拼接 bit，也不要自己做 hex slicing。构造 JSON request 调用 `xentry`，只基于 `fields/raw_hex/raw_bin/source/errors/warnings` 做分析。
+
+## Shell 命令入口
+
+为了在任意目录和非交互 shell 中稳定调用，建议把仓库 `tools/` 加入 `PATH`：
+
+```bash
+export XVERIF_HOME=<xverif-root>
+export PATH="$XVERIF_HOME/tools:$PATH"
+```
+
+兼容入口 `xentry/xentry` 仍保留为转发 wrapper，但新文档和 skill 推荐 `tools/xentry` 或 `PATH` 中的 `xentry`。
 
 ## 构建与测试
 

@@ -7,6 +7,10 @@
   },
   "args": {
     "signal": "top.u.ready",
-    "max_items": 20
+    "clock": "top.clk",
+    "time_range": {
+      "start": "100ns",
+      "end": "200ns"
+    }
   }
 }

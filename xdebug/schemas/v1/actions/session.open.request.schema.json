@@ -182,6 +182,10 @@
         },
         "auto_ensure": {
           "type": "boolean"
+        },
+        "reopen": {
+          "type": "boolean",
+          "description": "When true, explicitly reopen/replace an existing same-name session; otherwise same-name open may reuse the current session."
         }
       },
       "additionalProperties": true

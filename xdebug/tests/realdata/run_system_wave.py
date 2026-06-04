@@ -8,7 +8,7 @@ import tempfile
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-XDEBUG = os.path.join(ROOT, "tools", "xdebug-env")
+XDEBUG = os.path.join(ROOT, "tools", "xdebug")
 FSDB = os.environ.get("XDEBUG_SYSTEM_FSDB", "/home/yian/wave_tmp/waves.fsdb")
 
 

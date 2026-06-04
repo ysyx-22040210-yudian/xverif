@@ -3,14 +3,40 @@
   "ok": true,
   "action": "signal.changes",
   "summary": {
-    "truncated": false
+    "transition_count": 2,
+    "returned_change_rows": 3,
+    "includes_initial_value": true,
+    "actual_transition_count": 2,
+    "first_change": {
+      "time": "100ns",
+      "value": "0"
+    },
+    "last_change": {
+      "time": "180ns",
+      "value": "0"
+    },
+    "semantic_note": "signal.changes rows are value-change timeline rows; use signal.statistics for sampled high cycles."
   },
   "data": {
-    "examples": [
-      {
-        "time": "100ns"
-      }
-    ]
+    "signal": "top.u.ready",
+    "time_range": {
+      "start": "100ns",
+      "end": "200ns"
+    },
+    "returned_change_rows": 3,
+    "includes_initial_value": true,
+    "actual_transition_count": 2,
+    "transition_count": 2,
+    "first_change": {
+      "time": "100ns",
+      "value": "0"
+    },
+    "last_change": {
+      "time": "180ns",
+      "value": "0"
+    },
+    "final_value": "0",
+    "semantic_note": "signal.changes rows are value-change timeline rows; use signal.statistics for sampled high cycles."
   },
   "warnings": []
 }

@@ -42,8 +42,10 @@ xberif detail backpressure
 如果 shell 没有安装 `xberif`，在 xverif 仓库根目录可临时使用：
 
 ```bash
-PYTHONPATH=xberif "$HOME/miniconda3/bin/python" -m xberif <command> ...
+tools/xberif <command> ...
 ```
+
+`xberif` 应来自仓库 `tools/xberif` wrapper，推荐通过把 `$XVERIF_HOME/tools` 加入 `PATH` 安装。`tools/xberif` 的 Python 选择顺序是：`XBERIF_PYTHON`、`~/miniconda3/envs/xberif-py311/bin/python`、`~/miniconda3/bin/python`、`python3`。Claude hook settings 应使用稳定的 `tools/xberif hook ...` 入口，不依赖 shell function 或 console script。
 
 回答和文档里不要暴露本机绝对路径；需要描述路径时使用 `<xverif-root>`、`<project-root>`、`$XVERIF_HOME`。
 
@@ -69,11 +71,22 @@ xberif init --model opus
 
 ```bash
 xberif validate
+xberif status
 xberif list-topics
 xberif brief --mode debug
 ```
 
 `.xberif/cards.json` 是 card catalog；`.xberif/details/*.md` 是展开说明；`.xberif/manifest.json` 是项目扫描和 topic manifest。
+
+如果 `.xberif/cards/*.json` 和 details 已存在，但 `list-topics`/`brief` 查不到 topic，先运行：
+
+```bash
+xberif status
+xberif repair-catalog
+xberif validate
+```
+
+`status` 会区分 `not_configured`、`configured_only`、`generated_raw`、`ready`、`invalid`。当状态是 `generated_raw` 时，通常说明 raw cards/details 已生成但 catalog 缺失或为空，优先用 `repair-catalog` 重建 catalog。
 
 ## 查询流程
 
@@ -122,6 +135,8 @@ xberif validate
 - headless agent 运行时 stdout 可能很安静；不要仅凭终端无输出判断卡住。
 - 需要确认 Claude Code 是否在跑时，查看对应 project transcript JSONL。
 - Stop hook 失败常见原因是 card/detail schema、detail title、metadata 或 required section 不匹配。
+- Claude 常把 evidence 写成 `"path:start-end"` 字符串；xberif 会 normalize 成 `{"path","line_start","line_end"}`，但仍应优先鼓励严格 object 格式。
+- `brief/list-topics/get/detail` 如果提示 catalog 为空且 raw cards 存在，按提示运行 `xberif repair-catalog`。
 - 如果 `init` 报 agent command 里已有 `--model`，应从 `kind.toml` 的 `agent.command` 移除模型参数，继续通过 `xberif init --model <model>` 传入。
 
 ## 依赖和测试

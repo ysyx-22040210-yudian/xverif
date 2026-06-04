@@ -2,6 +2,10 @@
 #include "api/action_registry_init.h"
 #include "api/response.h"
 
+#include <cstdlib>
+#include <fstream>
+#include <sstream>
+
 namespace xdebug {
 
 namespace {
@@ -32,6 +36,23 @@ Json action_name_array(bool include_removed) {
     return out;
 }
 
+std::string schema_root() {
+    const char* home = std::getenv("XVERIF_HOME");
+    if (home && *home) return std::string(home) + "/xdebug/schemas/v1/actions/";
+    return "xdebug/schemas/v1/actions/";
+}
+
+bool read_json_file(const std::string& path, Json& out) {
+    std::ifstream input(path.c_str());
+    if (!input.good()) return false;
+    try {
+        input >> out;
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 const std::set<std::string>& design_actions() {
@@ -46,6 +67,30 @@ const std::set<std::string>& waveform_actions() {
 
 Json catalog_schema_response(const Json& request) {
     Json response = make_response(request, "schema");
+    Json args = request.value("args", Json::object());
+    std::string action = args.value("action", std::string());
+    std::string kind = args.value("kind", std::string());
+    if (!action.empty()) {
+        if (kind.empty()) kind = "request";
+        const ActionSpec* spec = default_action_registry().find_spec(action);
+        if (!spec) {
+            return make_error(request, "schema", "UNKNOWN_ACTION", "unknown action: " + action);
+        }
+        std::string rel;
+        if (kind == "request") rel = spec->request_schema;
+        else if (kind == "response") rel = spec->response_schema;
+        else return make_error(request, "schema", "INVALID_REQUEST", "schema args.kind must be request or response");
+        const std::string prefix = "schemas/v1/actions/";
+        std::string path = rel;
+        if (path.compare(0, prefix.size(), prefix) == 0) path = schema_root() + path.substr(prefix.size());
+        Json schema;
+        if (rel.empty() || !read_json_file(path, schema)) {
+            return make_error(request, "schema", "ACTION_SCHEMA_NOT_FOUND", "schema not found for " + action + " " + kind);
+        }
+        response["summary"] = {{"action", action}, {"kind", kind}};
+        response["data"] = {{"action", action}, {"kind", kind}, {"schema", schema}, {"schema_path", rel}};
+        return response;
+    }
     response["data"] = {
         {"api_version", kApiVersion},
         {"request", {

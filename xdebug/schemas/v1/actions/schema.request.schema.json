@@ -71,6 +71,18 @@
         "name": {
           "type": "string"
         },
+        "action": {
+          "type": "string",
+          "description": "Action name whose action-specific schema should be returned."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "request",
+            "response"
+          ],
+          "description": "Return the request or response schema for args.action."
+        },
         "op": {
           "type": "string"
         },

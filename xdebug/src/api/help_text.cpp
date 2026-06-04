@@ -38,6 +38,12 @@ const char* fallback_help_text() {
         "  trace.graph, trace.path, value.at, value.batch_at, event.export,\n"
         "  verify.conditions, apb.query, axi.query, axi.analysis,\n"
         "  trace.active_driver.\n\n"
+        "Action choice guidance\n"
+        "----------------------\n"
+        "  Use signal.statistics for active/high cycles, signal.changes for\n"
+        "  transition timelines, window.verify for holds, and event.find for\n"
+        "  first/last occurrence queries. signal.changes compact output omits\n"
+        "  rows unless include_rows/include_all_changes is set.\n\n"
         "Output control\n"
         "--------------\n"
         "  output.verbosity=compact/full/debug; use include_* switches and limits\n"
@@ -69,4 +75,3 @@ std::string help_text(const std::string& executable_dir) {
 }
 
 } // namespace xdebug
-

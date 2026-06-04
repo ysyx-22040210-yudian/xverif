@@ -26,8 +26,8 @@
 入口示例：
 
 ```bash
-tools/xdebug-env -h
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug-env -
+tools/xdebug -h
+printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
 ```
 
 完整说明见 [`xdebug/README.md`](xdebug/README.md)。
@@ -47,8 +47,8 @@ printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug-en
 入口示例：
 
 ```bash
-xbit/xbit conv "8'shff" --json
-xbit/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
+tools/xbit conv "8'shff" --json
+tools/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
 ```
 
 完整说明见 [`xbit/README.md`](xbit/README.md)。
@@ -67,8 +67,8 @@ xbit/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
 入口示例：
 
 ```bash
-printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"xentry/examples/entry.yaml","input_path":"xentry/examples/fragments.jsonl"}' | xentry/xentry -
-xentry/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"xentry/examples/entry.yaml","input_path":"xentry/examples/fragments.jsonl"}' | tools/xentry -
+tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
 ```
 
 完整说明见 [`xentry/README.md`](xentry/README.md)。
@@ -87,8 +87,8 @@ xentry/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xent
 入口示例：
 
 ```bash
-PYTHONPATH=xloc python3 -m xloc resolve L_00000001 --map out/sim.log.xloc.jsonl
-PYTHONPATH=xloc python3 -m xloc stats out/sim.log
+tools/xloc resolve L_00000001 --map out/sim.log.xloc.jsonl
+tools/xloc stats out/sim.log
 ```
 
 完整说明见 [`xloc/README.md`](xloc/README.md)。
@@ -107,49 +107,32 @@ PYTHONPATH=xloc python3 -m xloc stats out/sim.log
 入口示例：
 
 ```bash
-PYTHONPATH=xberif ~/miniconda3/bin/python -m xberif config init --kind bt
-PYTHONPATH=xberif ~/miniconda3/bin/python -m xberif init --model opus
-PYTHONPATH=xberif ~/miniconda3/bin/python -m xberif brief --mode debug
+tools/xberif config init --kind bt
+tools/xberif init --model opus
+tools/xberif brief --mode debug
 ```
 
 完整说明见 [`xberif/README.md`](xberif/README.md)。
 
 ## 推荐 Shell 入口
 
-为了在任意目录调用，建议在 shell rc 文件中配置统一入口。示例中的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换。
+为了在任意目录和非交互 shell 中稳定调用，建议把统一 wrapper 目录加入 `PATH`。示例中的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换。
 
 Bash / Zsh：
 
 ```bash
 export XVERIF_HOME=<xverif-root>
-export XDEBUG_ENTRY="$XVERIF_HOME/tools/xdebug-env"
-export XBIT_ENTRY="$XVERIF_HOME/xbit/xbit"
-export XENTRY_ENTRY="$XVERIF_HOME/xentry/xentry"
-export XLOC_ENTRY="$XVERIF_HOME/xloc"
-export XBERIF_ENTRY="$XVERIF_HOME/xberif"
-export XVERIF_PYTHON="$HOME/miniconda3/bin/python"
-xdebug() { "$XDEBUG_ENTRY" "$@"; }
-xbit() { "$XBIT_ENTRY" "$@"; }
-xentry() { "$XENTRY_ENTRY" "$@"; }
-xloc() { PYTHONPATH="$XLOC_ENTRY" python3 -m xloc "$@"; }
-xberif() { PYTHONPATH="$XBERIF_ENTRY" "$XVERIF_PYTHON" -m xberif "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
+# 可选：指定 xberif Python；未设置时 tools/xberif 会优先找 ~/miniconda3/envs/xberif-py311/bin/python。
+export XBERIF_PYTHON="$HOME/miniconda3/envs/xberif-py311/bin/python"
 ```
 
 Tcsh：
 
 ```tcsh
 setenv XVERIF_HOME <xverif-root>
-setenv XDEBUG_ENTRY "$XVERIF_HOME/tools/xdebug-env"
-setenv XBIT_ENTRY "$XVERIF_HOME/xbit/xbit"
-setenv XENTRY_ENTRY "$XVERIF_HOME/xentry/xentry"
-setenv XLOC_ENTRY "$XVERIF_HOME/xloc"
-setenv XBERIF_ENTRY "$XVERIF_HOME/xberif"
-setenv XVERIF_PYTHON "$HOME/miniconda3/bin/python"
-alias xdebug '"$XDEBUG_ENTRY" \!*'
-alias xbit '"$XBIT_ENTRY" \!*'
-alias xentry '"$XENTRY_ENTRY" \!*'
-alias xloc 'PYTHONPATH=$XLOC_ENTRY python3 -m xloc \!*'
-alias xberif 'PYTHONPATH=$XBERIF_ENTRY "$XVERIF_PYTHON" -m xberif \!*'
+setenv PATH "$XVERIF_HOME/tools:$PATH"
+setenv XBERIF_PYTHON "$HOME/miniconda3/envs/xberif-py311/bin/python"
 ```
 
 配置后：
@@ -161,6 +144,8 @@ xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/exam
 xloc resolve L_00000001 --map out/sim.log.xloc.jsonl
 xberif config init --kind bt
 ```
+
+兼容旧入口仍保留转发：`tools/xdebug-env`、`xbit/xbit`、`xentry/xentry` 都会转到新的 `tools/<tool>`。
 
 ## 构建与测试
 

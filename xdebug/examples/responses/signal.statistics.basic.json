@@ -3,14 +3,27 @@
   "ok": true,
   "action": "signal.statistics",
   "summary": {
-    "truncated": false
+    "sampling_mode": "clock",
+    "sample_count": 10,
+    "transition_count": 2,
+    "high_cycles": 4,
+    "low_cycles": 6
   },
   "data": {
-    "examples": [
-      {
-        "time": "100ns"
-      }
-    ]
+    "signal": "top.u.ready",
+    "clock": "top.clk",
+    "sampling_mode": "clock",
+    "sample_count": 10,
+    "high_cycles": 4,
+    "low_cycles": 6,
+    "transition_count": 2,
+    "activity": {
+      "high_burst_count": 1,
+      "first_high_time": "120ns",
+      "last_high_time": "150ns",
+      "last_fall_time": "160ns",
+      "max_high_cycles": 4
+    }
   },
   "warnings": []
 }

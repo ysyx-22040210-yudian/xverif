@@ -7,6 +7,10 @@
   },
   "args": {
     "signal": "top.u.ready",
-    "max_items": 20
+    "time_range": {
+      "start": "100ns",
+      "end": "200ns"
+    },
+    "aggregate_only": true
   }
 }

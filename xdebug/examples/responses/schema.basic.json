@@ -3,14 +3,21 @@
   "ok": true,
   "action": "schema",
   "summary": {
-    "status": "ok"
+    "action": "signal.statistics",
+    "kind": "request"
   },
   "data": {
-    "api_version": "xdebug.v1",
-    "request": {
+    "action": "signal.statistics",
+    "kind": "request",
+    "schema_path": "schemas/v1/actions/signal.statistics.request.schema.json",
+    "schema": {
+      "$id": "xdebug.signal.statistics.request.v1",
+      "title": "signal.statistics request",
       "required": [
         "api_version",
-        "action"
+        "action",
+        "target",
+        "args"
       ]
     }
   },

@@ -7,7 +7,7 @@ from typing import Any
 
 from .cards import append_key_items, upsert_card, upsert_detail
 from .errors import WRITE_DISABLED, XberifError
-from .query import brief_result, get_topic, get_topic_detail, list_topics
+from .query import brief_result, get_topic, get_topic_detail, list_topics, status
 
 
 def _result(req_id: Any, result: Any) -> dict:
@@ -23,7 +23,7 @@ def handle(root: Path, request: dict, write: bool = False) -> dict:
     params = request.get("params") or {}
     req_id = request.get("id")
     if method == "xberif.status":
-        return _result(req_id, {"ok": True})
+        return _result(req_id, status(root))
     if method == "xberif.list_topics":
         return _result(req_id, list_topics(root))
     if method in {"xberif.get_topic", "xberif.card.get"}:

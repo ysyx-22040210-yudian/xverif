@@ -3,14 +3,79 @@ from __future__ import annotations
 from pathlib import Path
 
 from .cards import validate_detail
-from .errors import DETAIL_REQUIRED_MISSING, KIND_MISMATCH, TOPIC_NOT_FOUND, XberifError
+from .errors import CARDS_CATALOG_INVALID, DETAIL_REQUIRED_MISSING, KIND_MISMATCH, TOPIC_NOT_FOUND, XberifError
 from .io import read_json, read_text, read_toml
 from .paths import config_dir, state_dir
 from .topics import env_kind, topic_def
 
 
+def status(root: Path) -> dict:
+    cfg_path = config_dir(root) / "kind.toml"
+    topics_path = config_dir(root) / "topics.toml"
+    sdir = state_dir(root)
+    catalog_path = sdir / "cards.json"
+    raw_cards = sorted((sdir / "cards").glob("*.json")) if (sdir / "cards").is_dir() else []
+    raw_details = sorted((sdir / "details").glob("*.md")) if (sdir / "details").is_dir() else []
+    if not cfg_path.exists() or not topics_path.exists():
+        state = "not_configured"
+    elif not sdir.exists():
+        state = "configured_only"
+    else:
+        catalog_count = 0
+        if catalog_path.exists():
+            try:
+                catalog_count = len(read_json(catalog_path).get("cards", []))
+            except Exception:
+                catalog_count = 0
+        if catalog_count > 0:
+            state = "ready"
+        elif raw_cards or raw_details:
+            state = "generated_raw"
+        else:
+            state = "configured_only"
+    return {
+        "schema_version": "xberif.status.v1",
+        "state": state,
+        "configured": cfg_path.exists() and topics_path.exists(),
+        "state_dir_exists": sdir.exists(),
+        "catalog_exists": catalog_path.exists(),
+        "catalog_card_count": len(read_json(catalog_path).get("cards", [])) if catalog_path.exists() else 0,
+        "raw_card_count": len(raw_cards),
+        "raw_detail_count": len(raw_details),
+        "next_action": _next_action_for_state(state),
+    }
+
+
+def _next_action_for_state(state: str) -> str:
+    if state == "not_configured":
+        return "run xberif config init --kind <bt|it|st|soc>"
+    if state == "configured_only":
+        return "run xberif init --model <model>"
+    if state == "generated_raw":
+        return "run xberif repair-catalog"
+    if state == "invalid":
+        return "run xberif validate and fix reported cards/details"
+    return "use xberif brief/get/detail"
+
+
+def _catalog_or_error(root: Path) -> dict:
+    catalog_path = state_dir(root) / "cards.json"
+    if not catalog_path.exists():
+        raise XberifError(CARDS_CATALOG_INVALID, ".xberif/cards.json is missing; run xberif status")
+    catalog = read_json(catalog_path)
+    if not catalog.get("cards"):
+        st = status(root)
+        if st["state"] == "generated_raw":
+            raise XberifError(
+                CARDS_CATALOG_INVALID,
+                ".xberif/cards.json is empty but raw cards/details exist; run xberif repair-catalog",
+            )
+        raise XberifError(CARDS_CATALOG_INVALID, ".xberif/cards.json has no cards; run xberif status")
+    return catalog
+
+
 def list_topics(root: Path) -> dict:
-    catalog = read_json(state_dir(root) / "cards.json")
+    catalog = _catalog_or_error(root)
     topics_cfg = read_toml(config_dir(root) / "topics.toml").get("topics", {})
     generated = {card["topic"]: card for card in catalog.get("cards", [])}
     return {
@@ -31,7 +96,7 @@ def list_topics(root: Path) -> dict:
 
 def get_topic(root: Path, topic: str) -> dict:
     kind = env_kind(root)
-    catalog = read_json(state_dir(root) / "cards.json")
+    catalog = _catalog_or_error(root)
     entry = next((c for c in catalog.get("cards", []) if c.get("topic") == topic), None)
     if not entry:
         raise XberifError(TOPIC_NOT_FOUND, f"topic {topic} is not available for env_kind {kind}")

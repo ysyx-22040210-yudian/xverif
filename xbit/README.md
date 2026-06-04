@@ -19,7 +19,7 @@
 
 ## Quick Start
 
-`xbit` wrapper 默认优先使用已配置的 Miniconda Python；没有可用配置时回退到 `python3`。如果已经按下面的 Shell 命令入口配置过，可以直接运行 `xbit ...`；否则在仓库根目录临时使用 `xbit/xbit ...`。
+`xbit` wrapper 默认优先使用已配置的 Miniconda Python；没有可用配置时回退到 `python3`。如果已经按下面的 Shell 命令入口配置过，可以直接运行 `xbit ...`；否则在仓库根目录临时使用 `tools/xbit ...`。
 
 ```bash
 make -C xbit test
@@ -33,35 +33,32 @@ xbit check --expr "valid && ready" --var valid=1'b1 --var ready=1'b0 --json
 未安装 shell 命令时的仓库内临时入口：
 
 ```bash
-xbit/xbit conv "8'shff" --json
+tools/xbit conv "8'shff" --json
 ```
 
 ### Shell 命令入口
 
-为了在任意目录调用，建议把 `xbit` 安装成 shell function 或 alias。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换；文档和 skill 中不固定记录个人机器路径。
+为了在任意目录和非交互 shell 中稳定调用，建议把仓库 `tools/` 加入 `PATH`。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换；文档和 skill 中不固定记录个人机器路径。
 
 Bash：加入 `~/.bashrc`。
 
 ```bash
 export XVERIF_HOME=<xverif-root>
-export XBIT_ENTRY="$XVERIF_HOME/xbit/xbit"
-xbit() { "$XBIT_ENTRY" "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
 ```
 
 Zsh：加入 `~/.zshrc`。
 
 ```zsh
 export XVERIF_HOME=<xverif-root>
-export XBIT_ENTRY="$XVERIF_HOME/xbit/xbit"
-xbit() { "$XBIT_ENTRY" "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
 ```
 
 Tcsh：加入 `~/.tcshrc`。
 
 ```tcsh
 setenv XVERIF_HOME <xverif-root>
-setenv XBIT_ENTRY "$XVERIF_HOME/xbit/xbit"
-alias xbit '"$XBIT_ENTRY" \!*'
+setenv PATH "$XVERIF_HOME/tools:$PATH"
 ```
 
 配置后可以直接使用：
@@ -70,6 +67,8 @@ alias xbit '"$XBIT_ENTRY" \!*'
 xbit conv "8'shff" --json
 xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
 ```
+
+兼容入口 `xbit/xbit` 仍保留为转发 wrapper，但新文档和 skill 推荐 `tools/xbit` 或 `PATH` 中的 `xbit`。
 
 JSON 成功响应：
 

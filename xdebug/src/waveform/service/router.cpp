@@ -97,6 +97,7 @@ int run_query(const Json& req, long long elapsed_ms) {
         }
         if (data.contains("truncated")) out["meta"]["truncated"] = data["truncated"];
         if (data.contains("findings")) out["findings"] = data["findings"];
+        if (data.contains("warnings")) out["warnings"] = data["warnings"];
         if (action == "sampled_pulse.inspect") {
             out["summary"] = {{"sample_count", data.value("sample_count", 0)},
                               {"sampled_high_cycles", data.value("sampled_high_cycles", 0)},
@@ -113,6 +114,24 @@ int run_query(const Json& req, long long elapsed_ms) {
                               {"max_stall_cycles", data.value("max_stall_cycles", 0)}};
         } else if (action == "detect_anomaly") {
             out["summary"] = {{"finding_count", data.value("finding_count", 0)}};
+        } else if (action == "signal.changes") {
+            out["summary"] = {
+                {"transition_count", data.value("transition_count", 0)},
+                {"returned_change_rows", data.value("returned_change_rows", 0)},
+                {"includes_initial_value", data.value("includes_initial_value", false)},
+                {"actual_transition_count", data.value("actual_transition_count", 0)},
+                {"first_change", data.value("first_change", Json(nullptr))},
+                {"last_change", data.value("last_change", Json(nullptr))},
+                {"semantic_note", data.value("semantic_note", "")}
+            };
+        } else if (action == "signal.statistics") {
+            out["summary"] = {
+                {"sampling_mode", data.value("sampling_mode", "")},
+                {"sample_count", data.value("sample_count", 0)},
+                {"transition_count", data.value("transition_count", 0)},
+                {"high_cycles", data.value("high_cycles", 0)},
+                {"low_cycles", data.value("low_cycles", 0)}
+            };
         } else if (data.contains("transaction_count")) {
             out["summary"] = {{"transaction_count", data["transaction_count"]}};
         } else if (data.contains("sample_count")) {
@@ -208,7 +227,8 @@ int run_query(const Json& req, long long elapsed_ms) {
 
     if (action == "scope.list") {
         std::string path;
-        if (!get_string(args, "path", path)) return print_error_and_return(req, action, "MISSING_FIELD", "scope.list requires args.path", elapsed_ms);
+        if (!get_string(args, "path", path)) path = "";
+        if (path.empty() || path == ".") path = "/";
         bool recursive = bool_or(args, "recursive", false);
         Json data;
         std::string cmd = std::string(CMD_SCOPE) + " " + path + " " + (recursive ? "1" : "0") + " json";

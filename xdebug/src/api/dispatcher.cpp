@@ -209,14 +209,24 @@ Json Dispatcher::handle_session(const Json& request, const std::string& action) 
         if (mode.empty()) return make_error(request, action, "RESOURCE_REQUIRED", "target.daidir or target.fsdb is required");
         SessionRecord existing;
         if (sessions_.get(name, existing)) {
+            const bool reopen = action == "session.open" && args.value("reopen", false);
+            if (reopen) {
+                Json kill_req = request;
+                kill_req["action"] = "session.kill";
+                kill_req["target"] = {{"session_id", name}};
+                kill_req["args"] = Json::object();
+                Json kill_result = handle_session(kill_req, "session.kill");
+                if (!kill_result.value("ok", false)) return kill_result;
+            } else
             if (action == "session.ensure" && existing.mode == mode) {
                 xdebug_core::update_public_session_manifest(existing.id, existing.mode, existing.daidir, existing.fsdb);
                 Json response = make_response(request, action);
                 response["session"] = session_record_json(existing);
                 response["summary"] = {{"session_id", name}, {"mode", mode}, {"reused", true}};
                 return response;
+            } else {
+                return make_error(request, action, "SESSION_ID_EXISTS", "session id already exists: " + name);
             }
-            return make_error(request, action, "SESSION_ID_EXISTS", "session id already exists: " + name);
         }
         Json open_request = request;
         open_request["action"] = "session.open";

@@ -1,7 +1,7 @@
 VCS        ?= vcs
 VERDI_HOME ?= /home/yian/Synopsys/verdi/V-2023.12-SP2
 XIF_AGENT  ?= /home/yian/xif_agent
-XDEBUG     ?= ../../../../tools/xdebug-env
+XDEBUG     ?= ../../../../tools/xdebug
 
 OUT        := out
 SIMV       := $(OUT)/simv

@@ -328,7 +328,7 @@ def print_rows(rows):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--xdebug", default=os.path.join(REPO_ROOT, "tools", "xdebug-env"))
+    parser.add_argument("--xdebug", default=os.path.join(REPO_ROOT, "tools", "xdebug"))
     parser.add_argument("--fsdb", default=NONAXI_FSDB)
     parser.add_argument("--axi-fsdb", default=AXI_FSDB)
     parser.add_argument("--mode", choices=["all", "nonaxi", "axi"], default="all")

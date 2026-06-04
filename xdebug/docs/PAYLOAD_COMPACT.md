@@ -228,7 +228,9 @@ compact 默认返回 error/slow access findings。完整 access rows 需要 `inc
 
 ### signal.changes / statistics / trend / stability
 
-compact 默认返回 summary 加 top changes/key intervals。完整 samples 和 all changes 需要 `include_samples=true` 或 `include_all_changes=true`。
+`signal.changes` compact 默认返回 summary、row count、first/last/final value，不返回大量 `data.changes[]`；需要 rows 时显式传 `include_rows=true` 或 `include_all_changes=true`，并用 `mode:"head"|"tail"` 与 `limit` 控制方向和规模。只需要聚合信息时用 `aggregate_only=true`。
+
+`signal.statistics` 有 `clock` 时返回 clock-sampled high/low cycles 和 activity；无 `clock` 时返回 raw value-change 统计，并通过 `sampling_mode` 标清语义。完整 samples 需要 `include_samples=true`。
 
 ### verify.conditions / expr.eval_at / window.verify
 

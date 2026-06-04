@@ -39,7 +39,7 @@ def query(binary, home, action, args=None, target=None, expect_ok=True):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--xdebug", default=str(REPO_ROOT / "tools" / "xdebug-env"))
+    parser.add_argument("--xdebug", default=str(REPO_ROOT / "tools" / "xdebug"))
     parser.add_argument("--fsdb", default=str(ROOT / "out" / "waves" / "xif_event_multi_if_test.fsdb"))
     args = parser.parse_args()
     fsdb = Path(args.fsdb).resolve()

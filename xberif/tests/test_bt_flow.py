@@ -8,12 +8,13 @@ import pytest
 from typer.testing import CliRunner
 
 from xberif.agent import handle
-from xberif.cards import reconcile_detail_metadata, update_catalog, validate_all
+from xberif.cards import reconcile_detail_metadata, repair_catalog, update_catalog, validate_all
 from xberif.cli import app
 from xberif.errors import WRITE_DISABLED, XberifError
 from xberif.hooks import validate_card_write
 from xberif.init_flow import _write_claude_hook_settings, initialize
 from xberif.io import read_json, read_toml, write_json, write_toml
+from xberif.query import status
 from xberif.templates import KINDS, template_prompt_path, topics_for
 
 runner = CliRunner()
@@ -57,6 +58,12 @@ def sample_card() -> dict:
         "unknowns": [],
         "generated_by": {"tool": "test", "xberif_version": "0.3.0"},
     }
+
+
+def sample_card_with_string_evidence() -> dict:
+    card = sample_card()
+    card["key_items"][0]["evidence"] = ["rtl/req_arb.sv:1-3"]
+    return card
 
 
 def sample_detail(topic: str = "backpressure", card_id: str = "bt.backpressure") -> str:
@@ -166,6 +173,57 @@ def test_bt_card_detail_query_brief_rpc_and_namespace(tmp_path: Path, monkeypatc
     soc_result = runner.invoke(app, ["soc", "boot-flow"], catch_exceptions=False)
     assert soc_result.exit_code == 1
     assert 'current env_kind is "bt"; command namespace "soc" is unavailable' in soc_result.output
+
+
+def test_status_repair_catalog_and_string_evidence(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert runner.invoke(app, ["config", "init", "--kind", "bt"], catch_exceptions=False).exit_code == 0
+    write_toml(
+        tmp_path / "xberif" / "topics.toml",
+        {
+            "schema_version": "xberif.topics.v1",
+            "env_kind": "bt",
+            "topics": {
+                "backpressure": {
+                    "card_id": "bt.backpressure",
+                    "title": "Backpressure Points",
+                    "prompt": "xberif/prompts/backpressure.md",
+                    "required": True,
+                }
+            },
+        },
+    )
+    write_toml(
+        tmp_path / "xberif" / "views" / "debug.toml",
+        {"schema_version": "xberif.view.v1", "env_kind": "bt", "mode": "debug", "topics": ["backpressure"]},
+    )
+    assert status(tmp_path)["state"] == "configured_only"
+    (tmp_path / "rtl").mkdir()
+    (tmp_path / "rtl" / "req_arb.sv").write_text(
+        "module req_arb;\nassign req_ready = !req_fifo_full;\nendmodule\n",
+        encoding="utf-8",
+    )
+    assert runner.invoke(app, ["bootstrap-state"], catch_exceptions=False).exit_code == 0
+    assert status(tmp_path)["state"] == "configured_only"
+
+    card_path = tmp_path / ".xberif" / "cards" / "bt.backpressure.json"
+    detail_path = tmp_path / ".xberif" / "details" / "bt.backpressure.md"
+    write_json(card_path, sample_card_with_string_evidence())
+    detail_path.write_text(sample_detail(), encoding="utf-8")
+    write_json(tmp_path / ".xberif" / "cards.json", {"schema_version": "xberif.cards_catalog.v1", "env_kind": "bt", "cards": []})
+
+    st = status(tmp_path)
+    assert st["state"] == "generated_raw"
+    assert st["next_action"] == "run xberif repair-catalog"
+    brief = runner.invoke(app, ["brief", "--mode", "debug"], catch_exceptions=False)
+    assert brief.exit_code == 1
+    assert "repair-catalog" in brief.output
+
+    catalog = repair_catalog(tmp_path)
+    assert len(catalog["cards"]) == 1
+    assert status(tmp_path)["state"] == "ready"
+    repaired = read_json(card_path)
+    assert repaired["key_items"][0]["evidence"] == [{"path": "rtl/req_arb.sv", "line_start": 1, "line_end": 3}]
 
 
 def test_invalid_card_and_detail_errors(tmp_path: Path, monkeypatch):

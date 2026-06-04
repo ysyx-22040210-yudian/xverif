@@ -8,16 +8,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from .agent import serve_stdio
-from .cards import append_key_items, init_state, upsert_card, upsert_detail, validate_all
-from .config import init_config
 from .errors import VALIDATION_FAILED, XberifError
-from .init_flow import initialize
-from .io import read_toml, write_json
-from .manifest import write_manifest
-from .paths import state_dir
-from .query import brief as render_brief
-from .query import check_namespace, get_topic, get_topic_detail, list_topics
 
 app = typer.Typer(no_args_is_help=True)
 config_app = typer.Typer(no_args_is_help=True)
@@ -49,6 +40,8 @@ def config_init(
     dry_run: bool = typer.Option(False, "--dry-run"),
     output: Optional[Path] = typer.Option(None, "--output"),
 ) -> None:
+    from .config import init_config
+
     def work():
         files = init_config(_root(output), kind, force=force, merge=merge, dry_run=dry_run)
         for path in files:
@@ -59,11 +52,15 @@ def config_init(
 
 @app.command("init")
 def init_cmd(model: str = typer.Option(..., "--model")) -> None:
+    from .init_flow import initialize
+
     _run(lambda: initialize(Path.cwd(), model))
 
 
 @app.command("validate")
 def validate_cmd(all_: bool = typer.Option(False, "--all")) -> None:
+    from .cards import validate_all
+
     del all_
 
     def work():
@@ -77,13 +74,35 @@ def validate_cmd(all_: bool = typer.Option(False, "--all")) -> None:
     _run(work)
 
 
+@app.command("status")
+def status_cmd() -> None:
+    from .query import status
+
+    _run(lambda: console.print_json(data=status(Path.cwd())))
+
+
+@app.command("repair-catalog")
+def repair_catalog_cmd() -> None:
+    from .cards import repair_catalog
+
+    def work():
+        catalog = repair_catalog(Path.cwd())
+        console.print_json(data={"ok": True, "catalog_card_count": len(catalog.get("cards", []))})
+
+    _run(work)
+
+
 @app.command("list-topics")
 def list_topics_cmd() -> None:
+    from .query import list_topics
+
     _run(lambda: console.print_json(data=list_topics(Path.cwd())))
 
 
 @app.command("get")
 def get_cmd(topic: str, detail: bool = typer.Option(False, "--detail")) -> None:
+    from .query import get_topic, get_topic_detail
+
     if detail:
         _run(lambda: console.print(get_topic_detail(Path.cwd(), topic)["content"], end=""))
     else:
@@ -96,6 +115,9 @@ def detail_cmd(
     topic: Optional[str] = typer.Argument(None),
     stdin: bool = typer.Option(False, "--stdin"),
 ) -> None:
+    from .cards import upsert_detail
+    from .query import get_topic_detail
+
     if topic_or_action == "upsert":
         if topic is None or not stdin:
             raise typer.BadParameter("detail upsert requires <topic> --stdin")
@@ -108,11 +130,15 @@ def detail_cmd(
 
 @app.command("brief")
 def brief_cmd(mode: str = typer.Option(..., "--mode")) -> None:
+    from .query import brief as render_brief
+
     _run(lambda: console.print(render_brief(Path.cwd(), mode), end=""))
 
 
 @card_app.command("upsert")
 def card_upsert(stdin: bool = typer.Option(False, "--stdin")) -> None:
+    from .cards import upsert_card
+
     if not stdin:
         raise typer.BadParameter("only --stdin is supported")
 
@@ -124,6 +150,8 @@ def card_upsert(stdin: bool = typer.Option(False, "--stdin")) -> None:
 
 @card_app.command("append-key-items")
 def card_append_key_items(card_id: str, stdin: bool = typer.Option(False, "--stdin")) -> None:
+    from .cards import append_key_items
+
     if not stdin:
         raise typer.BadParameter("only --stdin is supported")
 
@@ -138,6 +166,8 @@ def card_append_key_items(card_id: str, stdin: bool = typer.Option(False, "--std
 
 @agent_app.command("serve")
 def agent_serve(stdio: bool = typer.Option(False, "--stdio"), write: bool = typer.Option(False, "--write")) -> None:
+    from .agent import serve_stdio
+
     if not stdio:
         raise typer.BadParameter("only --stdio is supported")
     serve_stdio(Path.cwd(), write=write)
@@ -155,6 +185,8 @@ def hook_cmd(action: str) -> None:
 
 
 def _shortcut(namespace: str, topic: str) -> None:
+    from .query import check_namespace, get_topic
+
     def work():
         root = Path.cwd()
         check_namespace(root, namespace)
@@ -186,6 +218,11 @@ def soc_cmd(topic: str) -> None:
 @app.command("bootstrap-state", hidden=True)
 def bootstrap_state() -> None:
     """Testing helper: scan manifest and initialize empty state without invoking AI."""
+
+    from .cards import init_state
+    from .io import read_toml, write_json
+    from .manifest import write_manifest
+    from .paths import state_dir
 
     def work():
         root = Path.cwd()

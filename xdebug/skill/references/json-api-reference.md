@@ -280,7 +280,7 @@ xdebug/examples/responses/<action>.basic.json
 脚本必须先检查 `ok`：
 
 ```bash
-tools/xdebug-env - < request.json \
+tools/xdebug - < request.json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["ok"], d.get("error"))'
 ```
 

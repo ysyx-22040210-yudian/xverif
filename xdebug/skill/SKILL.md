@@ -16,7 +16,7 @@ xdebug 是原 xtrace 与 xwave 的统一入口。使用本 skill 时，把 xdebu
 
 ## 入口和基本调用
 
-优先使用 shell 中已安装的 `xdebug` 命令。`xdebug` 应指向仓库里的 `tools/xdebug-env` wrapper，由用户在 `~/.bashrc`、`~/.zshrc` 或 `~/.tcshrc` 中配置。skill 和回答里不要暴露本机绝对路径；需要描述路径时使用 `<xverif-root>`、`<repo-root>` 或 `$XVERIF_HOME` 这类占位符。
+优先使用 shell 中已安装的 `xdebug` 命令。`xdebug` 应来自仓库里的 `tools/xdebug` wrapper，推荐通过把 `$XVERIF_HOME/tools` 加入 `PATH` 安装；skill 和回答里不要暴露本机绝对路径，需要描述路径时使用 `<xverif-root>`、`<repo-root>` 或 `$XVERIF_HOME` 这类占位符。
 
 ```bash
 xdebug -h
@@ -29,7 +29,18 @@ xdebug request.json
 
 每个 non-removed action 都有 action-specific schema 和 basic example。需要精确字段契约时，先调用 `actions` 找 `request_schema` / `response_schema` / examples，再按对应 schema 构造 JSON；不要用通用 envelope schema 代替具体 action 契约。
 
-如果当前 shell 尚未安装 `xdebug`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xdebug-env -h`、`tools/xdebug-env -help` 或 `tools/xdebug-env -`。不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
+如果当前 shell 尚未安装 `xdebug`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xdebug -h`、`tools/xdebug -help` 或 `tools/xdebug -`。兼容入口 `tools/xdebug-env` 只作为旧脚本转发，不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
+
+## Action 选择速查
+
+| 调试意图 | 首选 action | 不要误用 |
+| --- | --- | --- |
+| 统计 active/high cycles | `signal.statistics` | 不要用 `signal.changes` 的 row count 当周期数。 |
+| 看跳变时间线 | `signal.changes` | compact 默认不返回大量 rows；需要行时显式 `include_rows:true`。 |
+| 判断窗口内保持 0/1 | `window.verify` 或 `signal.statistics` | 不要先拉全量 changes。 |
+| 找 first/last occurrence | `event.find`，或 `signal.changes` 的 `mode:"head"/"tail"` | 不要靠 agent 自己扫长 payload。 |
+
+`actions` 输出中关键波形 action 带 `use_for`、`do_not_use_for`、`preferred_alternative`。不确定时先查 `actions`，再查 `schema` 的 action-specific request/response 契约。
 
 ## 机器可读契约查询流程
 
@@ -1140,7 +1151,7 @@ xdebug 默认写结构化日志，不打印到 stdout/stderr，也不影响 JSON
 
 ### `signal.changes`
 
-查看变化点。compact 默认只返回 top changes，不返回全量变化列表。
+查看变化点。compact 默认只返回 summary/count/first/last/final value，不返回全量变化列表。`summary.transition_count` 为兼容字段，优先读取 `returned_change_rows`、`includes_initial_value`、`actual_transition_count` 和 `semantic_note`。
 
 ```json
 {
@@ -1156,6 +1167,7 @@ xdebug 默认写结构化日志，不打印到 stdout/stderr，也不影响 JSON
       "begin": "0ns",
       "end": "10us"
     },
+    "aggregate_only": true,
     "format": "hex"
   },
   "limits": {
@@ -1164,7 +1176,7 @@ xdebug 默认写结构化日志，不打印到 stdout/stderr，也不影响 JSON
 }
 ```
 
-需要全量变化：
+需要时间线行：
 
 ```json
 {
@@ -1179,7 +1191,9 @@ xdebug 默认写结构化日志，不打印到 stdout/stderr，也不影响 JSON
       "begin": "0ns",
       "end": "10us"
     },
-    "include_all_changes": true
+    "include_rows": true,
+    "mode": "tail",
+    "limit": 20
   },
   "limits": {
     "max_rows": 1000
@@ -1189,7 +1203,7 @@ xdebug 默认写结构化日志，不打印到 stdout/stderr，也不影响 JSON
 
 ### `signal.statistics`
 
-统计 signal 的变化、X/Z、稳定性等摘要。
+统计 signal 的变化、X/Z、稳定性、clock-sampled high/low cycles 等摘要。有 `clock` 时返回 `sampling_mode:"clock"`；无 `clock` 时返回 `sampling_mode:"raw_value_changes"`，只表示原始 value-change 统计。
 
 ```json
 {
@@ -1201,6 +1215,7 @@ xdebug 默认写结构化日志，不打印到 stdout/stderr，也不影响 JSON
   },
   "args": {
     "signal": "top.u.ready",
+    "clock": "top.clk",
     "time_range": {
       "begin": "0ns",
       "end": "10us"

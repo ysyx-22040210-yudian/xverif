@@ -22,32 +22,31 @@
 make -C xberif test
 
 # 在一个项目目录里初始化 BT 模板配置
-PYTHONPATH=<xverif-root>/xberif ~/miniconda3/bin/python -m xberif config init --kind bt
+<xverif-root>/tools/xberif config init --kind bt
 
 # 真实生成 cards/details 时必须显式指定模型
-PYTHONPATH=<xverif-root>/xberif ~/miniconda3/bin/python -m xberif init --model opus
+<xverif-root>/tools/xberif init --model opus
 ```
 
 ### Shell 命令入口
 
-为了在任意目录调用，建议把 `xberif` 安装成 shell function。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换。
+为了在任意目录和 Claude Code 这类非交互 shell 中稳定调用，建议把仓库 `tools/` 加入 `PATH`。下面示例里的 `<xverif-root>` 表示本仓库根目录，请按本机实际路径替换。
 
 Bash / Zsh：
 
 ```bash
 export XVERIF_HOME=<xverif-root>
-export XBERIF_ENTRY="$XVERIF_HOME/xberif"
-export XVERIF_PYTHON="$HOME/miniconda3/bin/python"
-xberif() { PYTHONPATH="$XBERIF_ENTRY" "$XVERIF_PYTHON" -m xberif "$@"; }
+export PATH="$XVERIF_HOME/tools:$PATH"
+# 可选：未设置时 tools/xberif 会优先找 ~/miniconda3/envs/xberif-py311/bin/python。
+export XBERIF_PYTHON="$HOME/miniconda3/envs/xberif-py311/bin/python"
 ```
 
 Tcsh：
 
 ```tcsh
 setenv XVERIF_HOME <xverif-root>
-setenv XBERIF_ENTRY "$XVERIF_HOME/xberif"
-setenv XVERIF_PYTHON "$HOME/miniconda3/bin/python"
-alias xberif 'PYTHONPATH=$XBERIF_ENTRY "$XVERIF_PYTHON" -m xberif \!*'
+setenv PATH "$XVERIF_HOME/tools:$PATH"
+setenv XBERIF_PYTHON "$HOME/miniconda3/envs/xberif-py311/bin/python"
 ```
 
 配置后可以直接使用：
@@ -59,6 +58,8 @@ xberif brief --mode debug
 xberif get backpressure
 xberif detail backpressure
 ```
+
+`tools/xberif` 的 Python 选择顺序是：`XBERIF_PYTHON`、`~/miniconda3/envs/xberif-py311/bin/python`、`~/miniconda3/bin/python`、`python3`。
 
 ## 工作流
 
@@ -97,6 +98,7 @@ xberif init --model opus
 
 ```bash
 xberif list-topics
+xberif status
 xberif brief --mode debug
 xberif get backpressure
 xberif get backpressure --detail
@@ -106,10 +108,12 @@ xberif detail backpressure
 常用命令：
 
 - `list-topics`：列出当前项目已有 topic。
+- `status`：区分 `not_configured`、`configured_only`、`generated_raw`、`ready`、`invalid`，用于诊断 cards/detail/catalog 是否一致。
 - `brief --mode <mode>`：按 view 输出短 context。
 - `get <topic>`：输出 topic card JSON。
 - `get <topic> --detail`：直接输出 detail markdown。
 - `detail <topic>`：输出 detail markdown。
+- `repair-catalog`：当 `.xberif/cards/*.json` 和 details 已存在但 `.xberif/cards.json` 为空或不同步时，重新 reconcile/update/validate。
 
 ### 4. Agent/RPC 入口
 

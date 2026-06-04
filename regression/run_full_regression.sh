@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_ROOT="${XDEBUG_REGRESSION_LOG_DIR:-/tmp/xdebug_full_regression_${STAMP}}"
 SUMMARY="$LOG_ROOT/summary.txt"
-XDEBUG="$ROOT/tools/xdebug-env"
+XDEBUG="$ROOT/tools/xdebug"
 
 mkdir -p "$LOG_ROOT"
 : >"$SUMMARY"

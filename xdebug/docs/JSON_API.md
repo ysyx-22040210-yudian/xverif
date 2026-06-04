@@ -35,6 +35,14 @@ examples/responses/<action>.basic.json
 
 不要把 `schemas/v1/xdebug.request.schema.json` 或 `schemas/v1/xdebug.response.schema.json` 当作具体 action 的主契约；它们只描述通用 envelope。`actions` 返回的 `request_schema`、`response_schema`、`request_examples`、`response_examples` 是 agent 和脚本查找具体契约的入口。
 
+`schema` action 支持直接按 action 查询具体契约：
+
+```json
+{"api_version":"xdebug.v1","action":"schema","args":{"action":"signal.statistics","kind":"request"}}
+```
+
+若缺少对应 action-specific schema，会返回 `ACTION_SCHEMA_NOT_FOUND`，不会用 generic envelope 冒充成功。
+
 `target` 决定路由：
 
 | target | 行为 |
@@ -42,6 +50,15 @@ examples/responses/<action>.basic.json
 | 仅 `daidir` | 使用设计数据库能力，即原 xtrace 能力 |
 | 仅 `fsdb` | 使用波形数据库能力，即原 xwave 能力 |
 | 同时有 `daidir` 与 `fsdb` | 使用 combined/debug join 能力 |
+
+常见波形意图选择：
+
+| 意图 | 推荐 action |
+| --- | --- |
+| active/high cycles | `signal.statistics` |
+| 跳变时间线 | `signal.changes` |
+| 窗口保持 0/1 | `window.verify` 或 `signal.statistics` |
+| first/last occurrence | `event.find` 或 `signal.changes` 的 head/tail |
 
 ## 输出档位
 

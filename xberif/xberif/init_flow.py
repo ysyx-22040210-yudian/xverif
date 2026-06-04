@@ -16,7 +16,12 @@ from .prompt import render_prompt
 
 def _write_claude_hook_settings(root: Path) -> Path:
     settings_path = state_dir(root) / "raw" / "claude-settings.json"
-    xberif = shlex.quote(str(Path(sys.executable).with_name("xberif")))
+    repo_root = Path(__file__).resolve().parents[2]
+    wrapper = repo_root / "tools" / "xberif"
+    if wrapper.exists():
+        xberif = shlex.quote(str(wrapper))
+    else:
+        xberif = f"{shlex.quote(sys.executable)} -m xberif"
     write_json(
         settings_path,
         {
