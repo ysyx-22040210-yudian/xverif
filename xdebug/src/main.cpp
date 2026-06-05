@@ -2,9 +2,11 @@
 #include "api/help_text.h"
 #include "api/request_parser.h"
 #include "api/response.h"
+#include "api/xout_renderer.h"
 #include "logging/action_log.h"
 
 #include <fstream>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -16,6 +18,32 @@ std::string read_stream(std::istream& input) {
     std::ostringstream text;
     text << input.rdbuf();
     return text.str();
+}
+
+enum class OutputFormat { Xout, Json };
+
+struct CliOptions {
+    OutputFormat format = OutputFormat::Xout;
+    std::string input_arg;
+};
+
+bool env_wants_json() {
+    const char* value = std::getenv("XVERIF_OUTPUT");
+    return value != nullptr && std::string(value) == "json";
+}
+
+bool request_wants_json(const xdebug::Json& request) {
+    if (!request.contains("output") || !request["output"].is_object()) return false;
+    if (!request["output"].contains("format") || !request["output"]["format"].is_string()) return false;
+    return request["output"]["format"].get<std::string>() == "json";
+}
+
+void print_response(const xdebug::Json& response, OutputFormat format) {
+    if (format == OutputFormat::Json) {
+        std::cout << response.dump(2) << "\n";
+    } else {
+        std::cout << xdebug::render_xout_response(response);
+    }
 }
 
 std::string executable_dir() {
@@ -38,23 +66,38 @@ int main(int argc, char** argv) {
         }
     }
 
+    CliOptions options;
+    options.format = env_wants_json() ? OutputFormat::Json : OutputFormat::Xout;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--json") {
+            options.format = OutputFormat::Json;
+        } else if (arg == "--text" || arg == "--xout") {
+            options.format = OutputFormat::Xout;
+        } else if (options.input_arg.empty()) {
+            options.input_arg = arg;
+        } else {
+            xdebug::Json request = xdebug::Json::object();
+            xdebug::Json response = xdebug::make_error(request, "", "JSON_ONLY",
+                                                       "usage: xdebug [--json|--text] [request.json|-]");
+            print_response(response, options.format);
+            return 1;
+        }
+    }
+
     std::string input;
-    if (argc == 1 || (argc == 2 && std::string(argv[1]) == "-")) {
+    if (options.input_arg.empty() || options.input_arg == "-") {
         input = read_stream(std::cin);
-    } else if (argc == 2) {
-        std::ifstream file(argv[1]);
+    } else {
+        std::ifstream file(options.input_arg);
         if (!file) {
             xdebug::Json request = xdebug::Json::object();
-            std::cout << xdebug::make_error(request, "", "INVALID_INPUT",
-                                             "failed to open JSON request file").dump(2) << "\n";
+            xdebug::Json response = xdebug::make_error(request, "", "INVALID_INPUT",
+                                                       "failed to open JSON request file");
+            print_response(response, options.format);
             return 1;
         }
         input = read_stream(file);
-    } else {
-        xdebug::Json request = xdebug::Json::object();
-        std::cout << xdebug::make_error(request, "", "JSON_ONLY",
-                                         "usage: xdebug [request.json|-]").dump(2) << "\n";
-        return 1;
     }
 
     xdebug::Json request;
@@ -63,9 +106,10 @@ int main(int argc, char** argv) {
         xdebug::Json response = xdebug::make_error(xdebug::Json::object(), "", "INVALID_JSON", error);
         xdebug_core::log_action_event("public", "xdebug", "adhoc", "", "parse_failed", false, 0,
                                       {{"error", response["error"]}});
-        std::cout << response.dump(2) << "\n";
+        print_response(response, options.format);
         return 1;
     }
+    if (request_wants_json(request)) options.format = OutputFormat::Json;
     std::string action;
     if (!xdebug::validate_request(request, action, error)) {
         const std::string code = request.value("api_version", std::string()) == xdebug::kApiVersion
@@ -75,12 +119,12 @@ int main(int argc, char** argv) {
         xdebug_core::log_action_event("public", "xdebug", "adhoc", request.value("action", std::string()),
                                       "validate_failed", false, 0,
                                       {{"request", xdebug_core::sanitize_for_log(request)}, {"error", response["error"]}});
-        std::cout << response.dump(2) << "\n";
+        print_response(response, options.format);
         return 1;
     }
 
     xdebug::Dispatcher dispatcher(executable_dir());
     xdebug::Json response = dispatcher.dispatch(request);
-    std::cout << response.dump(2) << "\n";
+    print_response(response, options.format);
     return response.value("ok", false) ? 0 : 1;
 }

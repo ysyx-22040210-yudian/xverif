@@ -1,6 +1,6 @@
 # xdebug
 
-xdebug 是 xtrace 与 xwave 合并后的统一调试工具。公开入口只支持 JSON 请求，面向 AI agent、自动化脚本和可复现调试流程；旧的 xtrace/xwave 人类 CLI 不再作为主路径维护。
+xdebug 是 xtrace 与 xwave 合并后的统一调试工具。公开入口使用 JSON request 描述动作，默认输出 `xout` 结构化文本；需要机器解析、schema 校验或回归兼容时显式加 `--json` 获取原 JSON response。旧的 xtrace/xwave 人类 CLI 不再作为主路径维护。
 
 仓库内 skill source-of-truth 位于 [skill/SKILL.md](skill/SKILL.md)。更细的字段字典和 API 速查位于 [skill/references](skill/references)。
 
@@ -15,11 +15,12 @@ tools/xdebug -h
 tools/xdebug -help
 ```
 
-机器可读帮助仍通过 JSON action 获取：
+默认输出是 `xout`，机器可读帮助仍通过 JSON action 获取；如果要让脚本读取完整字段，使用 `--json`：
 
 ```bash
 printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"schema","args":{"action":"signal.statistics","kind":"request"}}' | tools/xdebug -
+printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug --json -
+printf '%s\n' '{"api_version":"xdebug.v1","action":"schema","args":{"action":"signal.statistics","kind":"request"}}' | tools/xdebug --json -
 ```
 
 每个 action 的机器可读契约位于：
@@ -39,11 +40,32 @@ xdebug/examples/responses/<action>.basic.json
 tools/xdebug -
 ```
 
-从 stdin 传入 JSON：
+从 stdin 传入 JSON request，默认返回 xout：
 
 ```bash
 printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"fsdb":"waves.fsdb","auto_open":true},"args":{"signal":"top.clk","time":"10ns"}}' \
   | tools/xdebug -
+```
+
+同一请求需要 JSON response 时：
+
+```bash
+printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"fsdb":"waves.fsdb","auto_open":true},"args":{"signal":"top.clk","time":"10ns"}}' \
+  | tools/xdebug --json -
+```
+
+典型 xout 输出：
+
+```text
+@xdebug.value.at.v1
+
+target:
+  signal: top.clk
+  time: 10ns
+
+summary:
+  value: 1
+  known: true
 ```
 
 也可以使用请求文件：
@@ -82,6 +104,7 @@ setenv PATH "$XVERIF_HOME/tools:$PATH"
 ```bash
 xdebug -h
 printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
+printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
 xdebug request.json
 ```
 

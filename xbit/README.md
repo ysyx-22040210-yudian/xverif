@@ -21,18 +21,21 @@
 
 `xbit` wrapper 默认优先使用已配置的 Miniconda Python；没有可用配置时回退到 `python3`。如果已经按下面的 Shell 命令入口配置过，可以直接运行 `xbit ...`；否则在仓库根目录临时使用 `tools/xbit ...`。
 
+默认输出为 `xout` 结构化文本；需要脚本解析完整字段时加 `--json`。
+
 ```bash
 make -C xbit test
 
-xbit conv "8'shff" --json
-xbit slice "32'hdead_beef" 15 8 --json
-xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
-xbit check --expr "valid && ready" --var valid=1'b1 --var ready=1'b0 --json
+xbit conv "8'shff"
+xbit slice "32'hdead_beef" 15 8
+xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef
+xbit check --expr "valid && ready" --var valid=1'b1 --var ready=1'b0
 ```
 
 未安装 shell 命令时的仓库内临时入口：
 
 ```bash
+tools/xbit conv "8'shff"
 tools/xbit conv "8'shff" --json
 ```
 

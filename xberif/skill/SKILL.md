@@ -155,4 +155,4 @@ make -C xberif
 make -C xberif test
 ```
 
-如果 `make -C xberif test` 因缺少 `pytest` 或运行依赖失败，报告缺失依赖，不要改业务逻辑绕过测试。
+查询类命令默认输出 `xout` 结构化文本；需要完整 JSON 时把全局 `--json` 放在子命令前，例如 `xberif --json status`。如果 `make -C xberif test` 因缺少 `pytest` 或运行依赖失败，报告缺失依赖，不要改业务逻辑绕过测试。

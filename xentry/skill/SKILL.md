@@ -33,6 +33,8 @@ description: >
 tools/xentry '{"api_version":"xentry.v1","action":"decode","config":{...},"fragments":[...]}'
 ```
 
+默认输出是 `xout` 结构化文本；需要完整 JSON 字段时使用 `tools/xentry --json ...` 或 request 中的 `output.format:"json"`。
+
 也可从 stdin：
 
 ```bash

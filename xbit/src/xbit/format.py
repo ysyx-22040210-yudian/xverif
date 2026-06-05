@@ -35,20 +35,25 @@ def dumps(payload: dict, *, pretty: bool = False) -> str:
 
 
 def human_result(payload: dict) -> str:
+    op = payload.get("op", "result")
     if not payload.get("ok"):
         error = payload.get("error", {})
-        return f"error {error.get('code', 'ERROR')}: {error.get('message', '')}"
+        return f"@xbit.error.v1\n\ncode: {error.get('code', 'ERROR')}\nmessage: {error.get('message', '')}"
     result = payload.get("result")
+    lines = [f"@xbit.{op}.v1", ""]
     if isinstance(result, dict) and "sv" in result:
-        pieces = [result["sv"], f"width={result['width']}"]
+        lines.extend(["summary:", f"  result: {result['sv']}", f"  width: {result['width']}"])
         if result.get("known"):
-            pieces.append(f"unsigned={result.get('unsigned')}")
-            pieces.append(f"signed={result.get('signed_value')}")
+            lines.append(f"  unsigned: {result.get('unsigned')}")
+            lines.append(f"  signed: {result.get('signed_value')}")
         if "bool" in result:
-            pieces.append(f"bool={result['bool']}")
-        return " ".join(pieces)
+            lines.append(f"  bool: {str(result['bool']).lower()}")
+        return "\n".join(lines)
     if result is not None:
-        return str(result)
+        lines.extend(["summary:", f"  result: {result}"])
+        return "\n".join(lines)
     if "matched" in payload:
-        return "matched" if payload["matched"] else "not matched"
-    return "ok"
+        lines.extend(["summary:", f"  matched: {str(payload['matched']).lower()}"])
+        return "\n".join(lines)
+    lines.extend(["summary:", "  ok: true"])
+    return "\n".join(lines)

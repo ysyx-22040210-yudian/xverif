@@ -110,7 +110,7 @@ class AiRunner(object):
             req["limits"] = limits
 
         start = time.time()
-        rc, out, err, _ = run_cmd([self.xdebug, "-"], cwd=REPO_ROOT, env=self.env,
+        rc, out, err, _ = run_cmd([self.xdebug, "--json", "-"], cwd=REPO_ROOT, env=self.env,
                                   timeout=timeout, input_text=json.dumps(req) + "\n")
         elapsed_ms = int((time.time() - start) * 1000)
         try:

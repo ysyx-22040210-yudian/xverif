@@ -10,7 +10,7 @@ TMP_HOME="$(mktemp -d)"
 
 cleanup() {
   printf '%s\n' '{"api_version":"xdebug.v1","action":"session.kill","args":{"id":"all"}}' |
-    HOME="$TMP_HOME" "$XDEBUG" - >/dev/null 2>&1 || true
+    HOME="$TMP_HOME" "$XDEBUG" --json - >/dev/null 2>&1 || true
   rm -rf "$TMP_HOME"
 }
 trap cleanup EXIT
@@ -47,12 +47,12 @@ build_p3_db() {
 }
 
 query() {
-  printf '%s\n' "$1" | HOME="$TMP_HOME" "$XDEBUG" -
+  printf '%s\n' "$1" | HOME="$TMP_HOME" "$XDEBUG" --json -
 }
 
 query_any() {
   set +e
-  printf '%s\n' "$1" | HOME="$TMP_HOME" "$XDEBUG" -
+  printf '%s\n' "$1" | HOME="$TMP_HOME" "$XDEBUG" --json -
   local rc=$?
   set -e
   return 0
@@ -76,7 +76,7 @@ require_db "$UART_DB"
 build_p3_db
 require_db "$P3_DB"
 
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | "$XDEBUG" - | python3 -c '
+printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | "$XDEBUG" --json - | python3 -c '
 import json,sys
 d=json.load(sys.stdin)["data"]
 assert "trace.driver" in d["implemented"]
@@ -85,7 +85,7 @@ assert "sequential.update" in d["implemented"]
 assert "counter.explain" in d["implemented"]
 '
 
-printf '%s\n' '{"api_version":"xdebug.v1","action":"schema"}' | "$XDEBUG" - | python3 -c 'import json,sys; assert json.load(sys.stdin)["ok"]'
+printf '%s\n' '{"api_version":"xdebug.v1","action":"schema"}' | "$XDEBUG" --json - | python3 -c 'import json,sys; assert json.load(sys.stdin)["ok"]'
 
 query "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.driver\",\"target\":{\"daidir\":\"$UART_DB\",\"auto_ensure\":true,\"name\":\"uart_ai\"},\"args\":{\"signal\":\"uart_16550.RXDin\"},\"limits\":{\"max_results\":10},\"output\":{\"verbosity\":\"full\"}}" \
   | check_json 'd["ok"] and d["data"]["assignment"]["rhs"]["op"] == "ternary" and len(d["data"]["dependency_edges"]) >= 2 and d["summary"]["confidence"] in ("high","medium")'

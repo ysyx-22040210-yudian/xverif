@@ -15,7 +15,7 @@ FSDB = os.environ.get("XDEBUG_SYSTEM_FSDB", "/home/yian/wave_tmp/waves.fsdb")
 def query(home, request):
     env = os.environ.copy()
     env["HOME"] = home
-    proc = subprocess.run([XDEBUG, "-"], input=json.dumps(request) + "\n", universal_newlines=True,
+    proc = subprocess.run([XDEBUG, "--json", "-"], input=json.dumps(request) + "\n", universal_newlines=True,
                           cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result = json.loads(proc.stdout)
     if proc.returncode != 0 or not result.get("ok"):

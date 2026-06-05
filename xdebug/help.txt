@@ -1,5 +1,5 @@
-xdebug - unified JSON debug interface
-=====================================
+xdebug - unified xdebug request interface
+=========================================
 
 Usage
 -----
@@ -8,17 +8,28 @@ Usage
       Print this human-readable help and exit with status 0.
 
   xdebug -
-      Read one JSON request from stdin and print one JSON response.
+      Read one JSON request from stdin and print one XOUT text response.
 
   xdebug request.json
-      Read one JSON request file and print one JSON response.
+      Read one JSON request file and print one XOUT text response.
 
-JSON-only contract
-------------------
-  -h and -help are the only non-JSON commands.
-  All other xdebug capabilities are requested through JSON:
+  xdebug --json -
+      Read one JSON request and print the original JSON response.
+
+Request / output contract
+-------------------------
+  All xdebug capabilities are requested through JSON:
 
     api_version / action / target / args / limits / output
+
+  Default output is XOUT structured text:
+
+    @xdebug.<action>.v1
+    summary:
+      key: value
+
+  Use --json or output.format=json for machine parsing, schema tests,
+  scripts, and full field access.
 
   Machine-readable help remains available through JSON actions:
 

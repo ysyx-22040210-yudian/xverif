@@ -1,6 +1,6 @@
-# xdebug JSON API
+# xdebug JSON Request API
 
-xdebug 是原 xtrace 与 xwave 的统一 JSON-only 入口。agent 和自动化脚本应通过 JSON 请求访问工具能力，不再依赖传统人类 CLI 动作入口。
+xdebug 是原 xtrace 与 xwave 的统一 JSON request 入口。agent 和自动化脚本应通过 JSON 请求访问工具能力，不再依赖传统人类 CLI 动作入口。默认输出为 `xout` 结构化文本；需要完整 JSON response 时使用 `--json` 或 `output.format:"json"`。
 
 ## 请求 Envelope
 

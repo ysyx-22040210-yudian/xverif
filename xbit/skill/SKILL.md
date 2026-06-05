@@ -35,17 +35,17 @@ description: 当 AI agent 需要确定性计算 bit、SV literal、signed/unsign
 
 如果需要查信号来源、波形值或协议事件，先用 `xdebug`；如果需要计算值、字段或条件，再用 `xbit`。
 
-当 xdebug 响应里出现 `xbit_hints.commands[]` 时，直接执行其中的 `tools/xbit ... --json` 命令；不要把 packed value 的 slice、signed 或字段比较留给自然语言推理。
+当 xdebug 响应里出现 `xbit_hints.commands[]` 时，直接执行其中的 `tools/xbit ...` 命令；不要把 packed value 的 slice、signed 或字段比较留给自然语言推理。默认输出是 `xout`，需要脚本解析字段时才加 `--json`。
 
 ## 调用入口
 
 优先使用 shell 中已安装的 `xbit` 命令。`xbit` 应来自仓库里的 `tools/xbit` wrapper，推荐通过把 `$XVERIF_HOME/tools` 加入 `PATH` 安装；skill 和回答里不要暴露本机绝对路径，需要描述路径时使用 `<xverif-root>`、`<repo-root>` 或 `$XVERIF_HOME` 这类占位符。
 
 ```bash
-xbit conv "8'shff" --json
+xbit conv "8'shff"
 ```
 
-如果当前 shell 尚未安装 `xbit`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xbit conv "8'shff" --json`。
+如果当前 shell 尚未安装 `xbit`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xbit conv "8'shff"`。
 
 兼容入口 `xbit/xbit` 仍保留为转发 wrapper。`tools/xbit` 默认优先使用已配置的 Miniconda Python；没有可用配置时回退到 `python3`。实现只依赖 Python 标准库。
 

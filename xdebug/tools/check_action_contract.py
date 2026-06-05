@@ -81,7 +81,7 @@ def check_spec_shape(specs, xdebug_root):
 def load_runtime_actions(exe):
     request = b'{"api_version":"xdebug.v1","action":"actions"}\n'
     try:
-        raw = subprocess.check_output([str(exe)], input=request)
+        raw = subprocess.check_output([str(exe), "--json"], input=request)
     except Exception as exc:
         fail("failed to run runtime actions output via %s: %s" % (exe, exc))
     try:

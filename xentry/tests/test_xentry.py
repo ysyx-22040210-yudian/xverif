@@ -130,12 +130,12 @@ class CliTests(unittest.TestCase):
             {"seq": 0, "data": "0x1234", "valid_lsb": 0, "valid_width": 12},
             {"seq": 1, "data": "0xab", "valid_lsb": 0, "valid_width": 8},
         ]}
-        payload = self.run_cli("-", input_text=json.dumps(request))
+        payload = self.run_cli("--json", "-", input_text=json.dumps(request))
         self.assertTrue(payload["ok"])
 
     def test_json_arg(self):
         request = {"api_version": "xentry.v1", "action": "explain", "config": CONFIG}
-        payload = self.run_cli(json.dumps(request))
+        payload = self.run_cli("--json", json.dumps(request))
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "explain")
 
@@ -145,10 +145,25 @@ class CliTests(unittest.TestCase):
             json.dump(request, fh)
             path = fh.name
         try:
-            payload = self.run_cli(path)
+            payload = self.run_cli("--json", path)
             self.assertTrue(payload["ok"])
         finally:
             os.unlink(path)
+
+    def test_xout_default(self):
+        request = {"api_version": "xentry.v1", "action": "explain", "config": CONFIG}
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(SRC)
+        proc = subprocess.run(
+            [sys.executable, "-m", "xentry.cli", json.dumps(request)],
+            cwd=str(ROOT),
+            env=env,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        self.assertTrue(proc.stdout.startswith("@xentry.explain.v1"))
 
     def test_compat_decode(self):
         payload = self.run_cli("decode", "--config", "examples/entry.yaml", "--input", "examples/fragments.jsonl", "--json")

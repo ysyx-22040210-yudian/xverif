@@ -102,6 +102,7 @@ xberif init --model opus
 ```bash
 xberif list-topics
 xberif status
+xberif --json status
 xberif brief --mode debug
 xberif get backpressure
 xberif get backpressure --detail
@@ -110,10 +111,12 @@ xberif detail backpressure
 
 常用命令：
 
+查询类命令默认输出 `xout` 结构化文本；需要完整 JSON 时把全局 `--json` 放在子命令前，例如 `xberif --json status`。`agent serve --stdio` 和 hook 协议仍保持 JSON。
+
 - `list-topics`：列出当前项目已有 topic。
 - `status`：区分 `not_configured`、`configured_only`、`generated_raw`、`ready`、`invalid`，用于诊断 cards/detail/catalog 是否一致。
 - `brief --mode <mode>`：按 view 输出短 context。
-- `get <topic>`：输出 topic card JSON。
+- `get <topic>`：默认输出 topic card 的 xout 摘要。
 - `get <topic> --detail`：直接输出 detail markdown。
 - `detail <topic>`：输出 detail markdown。
 - `repair-catalog`：当 `.xberif/cards/*.json` 和 details 已存在但 `.xberif/cards.json` 为空或不同步时，重新 reconcile/update/validate。

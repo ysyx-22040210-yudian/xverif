@@ -18,8 +18,9 @@ smoke:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m json.tool /tmp/xentry_decode.json >/dev/null
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m json.tool /tmp/xentry_explain.json >/dev/null
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m json.tool /tmp/xentry_validate.json >/dev/null
-	printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"examples/entry.yaml","input_path":"examples/fragments.jsonl"}' | PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m xentry.cli - >/tmp/xentry_stdin.json
+	printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"examples/entry.yaml","input_path":"examples/fragments.jsonl"}' | PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m xentry.cli --json - >/tmp/xentry_stdin.json
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m json.tool /tmp/xentry_stdin.json >/dev/null
+	printf '%s\n' '{"api_version":"xentry.v1","action":"explain","config_path":"examples/entry.yaml"}' | PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m xentry.cli - | grep -q '^@xentry.explain.v1'
 
 clean:
 	find src tests -type d -name __pycache__ -prune -exec rm -rf {} +

@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 
 from .errors import VALIDATION_FAILED, XberifError
+from .xout import render_list_topics, render_repair, render_status, render_topic
 
 app = typer.Typer(no_args_is_help=True)
 config_app = typer.Typer(no_args_is_help=True)
@@ -18,6 +19,13 @@ app.add_typer(config_app, name="config")
 app.add_typer(card_app, name="card")
 app.add_typer(agent_app, name="agent")
 console = Console()
+OUTPUT_JSON = False
+
+
+@app.callback()
+def main_options(json_: bool = typer.Option(False, "--json", help="emit JSON for query commands")) -> None:
+    global OUTPUT_JSON
+    OUTPUT_JSON = json_
 
 
 def _root(output: Optional[Path] = None) -> Path:
@@ -30,6 +38,13 @@ def _run(fn):
     except XberifError as exc:
         console.print(f"error: {exc.message}")
         raise typer.Exit(1)
+
+
+def _print_query_json_or_xout(data: dict, renderer) -> None:
+    if OUTPUT_JSON:
+        console.print_json(data=data)
+    else:
+        console.print(renderer(data), end="")
 
 
 @config_app.command("init")
@@ -78,7 +93,7 @@ def validate_cmd(all_: bool = typer.Option(False, "--all")) -> None:
 def status_cmd() -> None:
     from .query import status
 
-    _run(lambda: console.print_json(data=status(Path.cwd())))
+    _run(lambda: _print_query_json_or_xout(status(Path.cwd()), render_status))
 
 
 @app.command("repair-catalog")
@@ -87,7 +102,7 @@ def repair_catalog_cmd() -> None:
 
     def work():
         catalog = repair_catalog(Path.cwd())
-        console.print_json(data={"ok": True, "catalog_card_count": len(catalog.get("cards", []))})
+        _print_query_json_or_xout({"ok": True, "catalog_card_count": len(catalog.get("cards", []))}, render_repair)
 
     _run(work)
 
@@ -96,7 +111,7 @@ def repair_catalog_cmd() -> None:
 def list_topics_cmd() -> None:
     from .query import list_topics
 
-    _run(lambda: console.print_json(data=list_topics(Path.cwd())))
+    _run(lambda: _print_query_json_or_xout(list_topics(Path.cwd()), render_list_topics))
 
 
 @app.command("get")
@@ -106,7 +121,7 @@ def get_cmd(topic: str, detail: bool = typer.Option(False, "--detail")) -> None:
     if detail:
         _run(lambda: console.print(get_topic_detail(Path.cwd(), topic)["content"], end=""))
     else:
-        _run(lambda: console.print_json(data=get_topic(Path.cwd(), topic)))
+        _run(lambda: _print_query_json_or_xout(get_topic(Path.cwd(), topic), render_topic))
 
 
 @app.command("detail")
@@ -192,7 +207,7 @@ def _shortcut(namespace: str, topic: str) -> None:
     def work():
         root = Path.cwd()
         check_namespace(root, namespace)
-        console.print_json(data=get_topic(root, topic.replace("-", "_")))
+        _print_query_json_or_xout(get_topic(root, topic.replace("-", "_")), render_topic)
 
     _run(work)
 

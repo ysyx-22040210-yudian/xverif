@@ -40,6 +40,8 @@ APP_SRCS = src/main.cpp \
            src/api/request_parser.cpp \
            src/api/response.cpp \
            src/api/help_text.cpp \
+           src/api/text_response_builder.cpp \
+           src/api/xout_renderer.cpp \
            src/api/action_catalog.cpp \
            src/api/dispatcher.cpp \
            $(API_SUPPORT_SRCS) \
@@ -133,7 +135,7 @@ $(BUILD)/%.o: %.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -DXDEBUG_INTERNAL_ENGINE -c -o $@ $<
 
-unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o
+unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o $(BUILD)/src/api/text_response_builder.o $(BUILD)/src/api/xout_renderer.o
 	mkdir -p $(BUILD)/tests
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_core_types tests/unit/test_core_types.cpp $(CORE_OBJS)
 	$(BUILD)/tests/test_core_types
@@ -141,6 +143,8 @@ unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o
 	$(BUILD)/tests/test_action_log
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_action_registry tests/unit/test_action_registry.cpp $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o
 	$(BUILD)/tests/test_action_registry
+	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_text_response_builder tests/unit/test_text_response_builder.cpp $(BUILD)/src/api/text_response_builder.o $(BUILD)/src/api/xout_renderer.o
+	$(BUILD)/tests/test_text_response_builder
 
 schema-test:
 	python3 tools/validate_schema.py schemas/v1

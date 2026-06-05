@@ -35,12 +35,15 @@ UVM_ERROR L_00000001 @ 100ns: packet mismatch
 
 ## Quick Start
 
+默认输出为 `xout` 结构化文本；需要脚本解析时，`resolve/context/stats` 可加 `--json`。
+
 ```bash
 make -C xloc test
 
 # 用一个手动构造的 JSONL 试一下
 echo '{"loc_id":"L_00000001","file":"tb/test.sv","line":42,"msg_id":"ERROR_TEST"}' > /tmp/test.xloc.jsonl
 tools/xloc resolve L_00000001 --map /tmp/test.xloc.jsonl
+tools/xloc resolve L_00000001 --map /tmp/test.xloc.jsonl --json
 ```
 
 ### Shell 命令入口

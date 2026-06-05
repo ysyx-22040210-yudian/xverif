@@ -12,7 +12,7 @@
 
 ## Quick Start
 
-JSON request 是推荐入口：
+JSON request 是推荐入口；默认输出为 `xout` 结构化文本：
 
 ```bash
 printf '%s\n' '{
@@ -32,9 +32,27 @@ tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentr
 或使用兼容的人类 CLI：
 
 ```bash
+tools/xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl
+tools/xentry explain --config xentry/examples/entry.yaml
+tools/xentry validate --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl
+```
+
+需要完整 JSON response 时加 `--json`：
+
+```bash
+tools/xentry --json '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
 tools/xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
-tools/xentry explain --config xentry/examples/entry.yaml --json
-tools/xentry validate --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
+```
+
+默认 xout 示例：
+
+```text
+@xentry.explain.v1
+summary:
+  total_bits: 20
+
+fields:
+  opcode [3:0] 4
 ```
 
 ## JSON Request

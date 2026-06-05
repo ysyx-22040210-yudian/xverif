@@ -12,6 +12,16 @@
 
 ## 工具概览
 
+### 默认输出格式：XOUT
+
+除显式机器协议外，xverif 用户命令默认输出 `xout` 结构化文本，第一行形如：
+
+```text
+@xdebug.trace.driver.v1
+```
+
+`xout` 使用少量固定区块，例如 `target:`、`summary:`、`data:`、`evidence:`、`next:`，目的是让 AI 少读无用 JSON envelope。需要脚本解析、schema 校验或完整字段时，显式加 `--json`；内部 agent stdio/hook 协议仍保持 JSON。
+
 ### xdebug
 
 `xdebug` 是 xtrace 与 xwave 合并后的统一调试工具。它通过 JSON API 查询 Verdi/VCS `daidir` 设计事实、FSDB 波形事实，或在两者同时存在时做 combined/debug join。
@@ -28,6 +38,7 @@
 ```bash
 tools/xdebug -h
 printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
+printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug --json -
 ```
 
 完整说明见 [`xdebug/README.md`](xdebug/README.md)。
@@ -47,8 +58,8 @@ printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
 入口示例：
 
 ```bash
-tools/xbit conv "8'shff" --json
-tools/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
+tools/xbit conv "8'shff"
+tools/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef
 ```
 
 完整说明见 [`xbit/README.md`](xbit/README.md)。
@@ -69,6 +80,7 @@ tools/xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef --json
 ```bash
 printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"xentry/examples/entry.yaml","input_path":"xentry/examples/fragments.jsonl"}' | tools/xentry -
 tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+tools/xentry --json '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
 ```
 
 完整说明见 [`xentry/README.md`](xentry/README.md)。

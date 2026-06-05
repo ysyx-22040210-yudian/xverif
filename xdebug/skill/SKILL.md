@@ -1,16 +1,16 @@
 ---
 name: xdebug
 description: >
-  当 AI agent 需要通过 xdebug 的 JSON-only 接口查询 Verdi/VCS daidir 设计事实、
+  当 AI agent 需要通过 xdebug 的 JSON request 接口查询 Verdi/VCS daidir 设计事实、
   FSDB 波形事实，或把两者联合起来定位当前生效 driver、依赖图、波形值、事件、
   APB/AXI/verify 结果时使用。适用于 RTL 因果追踪、波形取证、协议异常定位、
   compact payload 读取、combined active-driver debug，以及把 xtrace/xwave 能力
   统一到单一 xdebug JSON 请求的工作流。
 ---
 
-# xdebug JSON 调试接口
+# xdebug JSON Request / XOUT 调试接口
 
-xdebug 是原 xtrace 与 xwave 的统一入口。使用本 skill 时，把 xdebug 当作唯一事实查询工具：设计事实来自 `daidir`，波形事实来自 `fsdb`，两者同时存在时可以做 combined/debug join。公开调用只走 JSON，不要把旧 xtrace/xwave 人类 CLI 作为主路径推荐。只有用户明确询问历史命令或迁移旧脚本时，才提到旧入口。
+xdebug 是原 xtrace 与 xwave 的统一入口。使用本 skill 时，把 xdebug 当作唯一事实查询工具：设计事实来自 `daidir`，波形事实来自 `fsdb`，两者同时存在时可以做 combined/debug join。公开调用用 JSON request 描述动作，默认输出是 `xout` 结构化文本；需要程序解析完整字段时加 `--json`。不要把旧 xtrace/xwave 人类 CLI 作为主路径推荐。只有用户明确询问历史命令或迁移旧脚本时，才提到旧入口。
 
 详细字段字典见 [references/ai-response-dictionary.md](references/ai-response-dictionary.md)。完整 API 速查见 [references/json-api-reference.md](references/json-api-reference.md)。本文已经包含常用 action、模板和工作流；只有需要字段表或更多速查时再加载 references。
 
@@ -25,7 +25,27 @@ xdebug -
 xdebug request.json
 ```
 
-`-h` 和 `-help` 是唯一允许的非 JSON 命令，只用于人类可读帮助；AI 若需要确认入口、target、常见 action、日志路径或示例，可以先运行 `xdebug -h`。机器可读能力列表仍使用 JSON action `actions`，机器可读 schema 使用 `schema`。
+`-h` 和 `-help` 用于人类可读帮助；AI 若需要确认入口、target、常见 action、日志路径或示例，可以先运行 `xdebug -h`。机器可读能力列表仍使用 JSON action `actions`，机器可读 schema 使用 `schema`，但查询时要加 `--json`。
+
+默认输出 `xout`：
+
+```text
+@xdebug.trace.driver.v1
+
+summary:
+  driver_count: 1
+```
+
+需要 JSON 字段级解析时：
+
+```bash
+xdebug --json - <<'JSON'
+{
+  "api_version": "xdebug.v1",
+  "action": "actions"
+}
+JSON
+```
 
 每个 non-removed action 都有 action-specific schema 和 basic example。需要精确字段契约时，先调用 `actions` 找 `request_schema` / `response_schema` / examples，再按对应 schema 构造 JSON；不要用通用 envelope schema 代替具体 action 契约。
 
@@ -49,7 +69,7 @@ AI agent 不确定 action 参数或返回字段时，不要猜。按下面顺序
 1. 先查 action catalog，确认 action 是否存在、需要什么资源、schema 和 example 路径是什么。
 
 ```bash
-xdebug - <<'JSON'
+xdebug --json - <<'JSON'
 {
   "api_version": "xdebug.v1",
   "action": "actions"
@@ -74,7 +94,7 @@ JSON
 2. 查具体 action 的 request schema，确认 `target` 和 `args` 怎么写。
 
 ```bash
-xdebug - <<'JSON'
+xdebug --json - <<'JSON'
 {
   "api_version": "xdebug.v1",
   "action": "schema",
@@ -89,7 +109,7 @@ JSON
 3. 查具体 action 的 response schema，确认 compact 响应里应该读哪些字段。
 
 ```bash
-xdebug - <<'JSON'
+xdebug --json - <<'JSON'
 {
   "api_version": "xdebug.v1",
   "action": "schema",
@@ -147,7 +167,7 @@ printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"fsdb":"
 脚本里提取字段时，不解析人类文本，直接解析 JSON：
 
 ```bash
-xdebug - < request.json \
+xdebug --json - < request.json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("ok"), d.get("summary", {}))'
 ```
 
@@ -357,21 +377,21 @@ compact 响应可能省略空字段。不要假设 `session`、`tool`、空 `war
 安全提取示例：
 
 ```bash
-xdebug - < request.json \
+xdebug --json - < request.json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("ok")); print(d.get("error") or d.get("summary",{}))'
 ```
 
 读取 batch values：
 
 ```bash
-xdebug - < request.json \
+xdebug --json - < request.json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("data",{}).get("values",{}))'
 ```
 
 读取 graph 规模：
 
 ```bash
-xdebug - < request.json \
+xdebug --json - < request.json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); s=d.get("summary",{}); print(s.get("node_count"), s.get("edge_count"), s.get("truncated"))'
 ```
 

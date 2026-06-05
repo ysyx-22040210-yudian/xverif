@@ -9,7 +9,7 @@ from .api import dispatch_request
 from .config import load_config_file
 from .decode import decode_entry, explain_config, validate_entry
 from .errors import JsonError
-from .format import dumps, error_response
+from .format import dumps, error_response, to_xout
 from .fragments import load_fragments_file
 
 
@@ -47,8 +47,8 @@ Actions:
 """
 
 
-def emit(payload: dict, *, pretty: bool) -> int:
-    print(dumps(payload, pretty=pretty))
+def emit(payload: dict, *, pretty: bool, json_mode: bool = False) -> int:
+    print(dumps(payload, pretty=pretty) if json_mode else to_xout(payload), end="" if not json_mode else "\n")
     return 0 if payload.get("ok") else 1
 
 
@@ -69,20 +69,24 @@ def load_request_arg(arg: str | None) -> dict:
     return request
 
 
-def json_main(argv: list[str]) -> int:
+def json_main(argv: list[str], *, json_mode: bool = False) -> int:
     arg = argv[0] if argv else None
     try:
         request = load_request_arg(arg)
         payload = dispatch_request(request)
         pretty = bool(request.get("output", {}).get("pretty", False)) if isinstance(request.get("output"), dict) else False
-        return emit(payload, pretty=pretty)
+        request_json_mode = bool(
+            isinstance(request.get("output"), dict)
+            and request["output"].get("format") == "json"
+        )
+        return emit(payload, pretty=pretty, json_mode=json_mode or request_json_mode)
     except Exception as exc:
         action = ""
         request_id = None
         if "request" in locals() and isinstance(request, dict):
             action = str(request.get("action", ""))
             request_id = request.get("request_id")
-        return emit(error_response(exc, action=action, request_id=request_id), pretty=True)
+        return emit(error_response(exc, action=action, request_id=request_id), pretty=True, json_mode=json_mode)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -131,15 +135,22 @@ def main(argv: list[str] | None = None) -> int:
     if len(argv) == 1 and argv[0] in {"-h", "-help"}:
         print(HELP_TEXT)
         return 0
+    json_mode = False
+    if "--json" in argv:
+        json_mode = True
+        argv = [arg for arg in argv if arg != "--json"]
+    if "--text" in argv or "--xout" in argv:
+        argv = [arg for arg in argv if arg not in {"--text", "--xout"}]
     if not argv or argv[0] == "-" or (len(argv) == 1 and (argv[0].lstrip().startswith("{") or os.path.exists(argv[0]))):
-        return json_main(argv[:1])
+        return json_main(argv[:1], json_mode=json_mode)
     parser = build_parser()
     args = parser.parse_args(argv)
+    args.json = bool(getattr(args, "json", False) or json_mode)
     try:
         payload = args.func(args)
-        return emit(payload, pretty=args.pretty)
+        return emit(payload, pretty=args.pretty, json_mode=args.json)
     except Exception as exc:
-        return emit(error_response(exc, action=args.command), pretty=True)
+        return emit(error_response(exc, action=args.command), pretty=True, json_mode=args.json)
 
 
 if __name__ == "__main__":

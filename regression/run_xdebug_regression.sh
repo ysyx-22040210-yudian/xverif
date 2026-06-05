@@ -12,11 +12,11 @@ fi
 TMP_HOME="$(mktemp -d /tmp/xdebug-regression-home.XXXXXX)"
 
 query() {
-    printf '%s\n' "$2" | HOME="$TMP_HOME" "$XDEBUG" - > "$TMP_HOME/$1.json"
+    printf '%s\n' "$2" | HOME="$TMP_HOME" "$XDEBUG" --json - > "$TMP_HOME/$1.json"
 }
 
 query_from_root() {
-    (cd "$ROOT" && printf '%s\n' "$2" | HOME="$TMP_HOME" "$XDEBUG" -) > "$TMP_HOME/$1.json"
+    (cd "$ROOT" && printf '%s\n' "$2" | HOME="$TMP_HOME" "$XDEBUG" --json -) > "$TMP_HOME/$1.json"
 }
 
 expect_ok() {
@@ -34,7 +34,7 @@ PY
 
 cleanup() {
     printf '%s\n' '{"api_version":"xdebug.v1","action":"session.kill","args":{"id":"all"}}' |
-        HOME="$TMP_HOME" "$XDEBUG" - >/dev/null 2>&1 || true
+        HOME="$TMP_HOME" "$XDEBUG" --json - >/dev/null 2>&1 || true
     rm -rf "$TMP_HOME"
 }
 trap cleanup EXIT
@@ -52,10 +52,12 @@ assert "signal.search" in data["removed"]
 PY
 
 printf '%s\n' '{"api_version":"unsupported.v0","action":"actions"}' |
-    HOME="$TMP_HOME" "$XDEBUG" - > "$TMP_HOME/unsupported_api.json" || true
+    HOME="$TMP_HOME" "$XDEBUG" --json - > "$TMP_HOME/unsupported_api.json" || true
 printf '%s\n' '{"api_version":"xdebug.v1","action":"signal.search"}' |
-    HOME="$TMP_HOME" "$XDEBUG" - > "$TMP_HOME/removed_action.json" || true
-HOME="$TMP_HOME" "$XDEBUG" open waves.fsdb > "$TMP_HOME/text_cli.json" || true
+    HOME="$TMP_HOME" "$XDEBUG" --json - > "$TMP_HOME/removed_action.json" || true
+HOME="$TMP_HOME" "$XDEBUG" open waves.fsdb > "$TMP_HOME/text_cli.xout" || true
+HOME="$TMP_HOME" "$XDEBUG" --json open waves.fsdb > "$TMP_HOME/text_cli.json" || true
+grep -q '^@xdebug.error.v1' "$TMP_HOME/text_cli.xout"
 python3 - "$TMP_HOME/unsupported_api.json" "$TMP_HOME/removed_action.json" "$TMP_HOME/text_cli.json" <<'PY'
 import json
 import sys
