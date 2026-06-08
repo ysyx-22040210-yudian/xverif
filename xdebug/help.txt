@@ -132,9 +132,17 @@ Session transport
       "transport": "file"
     }
 
-  file transport stores requests, claims, responses, done history, failed
-  items, tmp files and heartbeat under
-  ~/.xdebug/{design,waveform}/sessions/<session_id>/transport/.
+  file transport stores a v2 state directory under
+  ~/.xdebug/{design,waveform}/sessions/<session_id>/transport/:
+
+      requests/    client-published pending requests
+      claims/      worker-claimed running requests
+      responses/   unread responses
+      done/        archived request/claim/response history
+      failed/      client_timeout / expired / stale_claim / invalid_request
+      tmp/         atomic write temp files
+      heartbeat/   worker liveness files
+
   Request, response and heartbeat files are written via tmp file plus atomic
   publish so readers do not consume half-written files. Old locks/ directories
   from earlier sessions can be ignored.

@@ -64,7 +64,22 @@ session 默认使用 `uds`。本机同用户调试不需要显式设置 transpor
 | `port` | `args` 或 `target` | TCP 端口；`0` 或省略表示自动分配 |
 | `file_dir` | response/log | file transport 的 session 交换目录，由 xdebug 生成 |
 
-`XDEBUG_TRANSPORT=uds|tcp|file` 只影响新建 session；JSON 中显式的 `args.transport` 或 `target.transport` 优先级更高。file transport v2 使用 `requests/claims/responses/done/failed/tmp/heartbeat` 状态目录，不依赖 file lock。普通请求默认等待 300 秒，可用 `XDEBUG_FILE_TRANSPORT_TIMEOUT_MS` 调整；ping/quit 默认等待 2 秒，可用 `XDEBUG_FILE_TRANSPORT_PING_TIMEOUT_MS` 调整。`XDEBUG_FILE_KEEP_HISTORY=1` 默认保留 done/failed 证据链。
+`XDEBUG_TRANSPORT=uds|tcp|file` 只影响新建 session；JSON 中显式的 `args.transport` 或 `target.transport` 优先级更高。
+
+file transport v2 使用以下状态目录，不依赖 file lock：
+
+```text
+file transport directory:
+  requests/    client-published pending requests
+  claims/      worker-claimed running requests
+  responses/   unread responses
+  done/        archived request/claim/response history
+  failed/      client_timeout / expired / stale_claim / invalid_request
+  tmp/         atomic write temp files
+  heartbeat/   worker liveness files
+```
+
+普通请求默认等待 300 秒，可用 `XDEBUG_FILE_TRANSPORT_TIMEOUT_MS` 调整；ping/quit 默认等待 2 秒，可用 `XDEBUG_FILE_TRANSPORT_PING_TIMEOUT_MS` 调整。`XDEBUG_FILE_KEEP_HISTORY=1` 默认保留 `done/failed` 证据链。`XDEBUG_FILE_MAX_JSON_BYTES` 限制单个 request/response JSON 文件大小，`XDEBUG_FILE_CLAIM_TIMEOUT_MS` 控制 stale claim 判定。
 
 `session.open` 使用 TCP：
 

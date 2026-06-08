@@ -88,7 +88,7 @@ UNSUPPORTED_API_VERSION
 | `pid` | number | daemon pid |
 | `transport` | string | `uds`、`tcp` 或 `file` |
 | `socket` / `socket_path` | string | UDS socket 路径；TCP session 中可能为空或仅作内部路径记录 |
-| `file_dir` | string | file transport v2 交换目录，内部含 `requests/claims/responses/done/failed/tmp/heartbeat` |
+| `file_dir` | string | file transport v2 交换目录，内部含 `requests/`、`claims/`、`responses/`、`done/`、`failed/`、`tmp/`、`heartbeat/` |
 | `bind_host` | string | TCP daemon listen 地址 |
 | `host` | string | TCP client 连接地址 |
 | `port` | number | TCP port；`0` 请求自动分配，响应里通常是实际端口 |

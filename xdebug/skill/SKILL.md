@@ -57,7 +57,20 @@ JSON
 - 集群计算节点查询但本机无法连接节点 TCP 端口：仍用 `xdebug`，但打开 session 时设置 `args.transport:"file"`，或设置 `XDEBUG_TRANSPORT=file` 作为新建 session 默认值。
 - AI 客户端支持 MCP 且需要多 session 管理：用 `tools/xdebug-mcp`；MCP 内部仍调用 `tools/xdebug --json -`。
 
-file transport 是 xdebug 原生 session transport，不需要额外 agent。它在 `~/.xdebug/{design,waveform}/sessions/<session_id>/transport/` 下用 `requests/claims/responses/done/failed/tmp/heartbeat` 交换文件；request/response/heartbeat 都先写入 tmp，再 atomic publish，避免读到半文件。旧 session 目录中如果有 `locks/`，按历史残留处理，不作为当前协议依赖。
+file transport 是 xdebug 原生 session transport，不需要额外 agent。它在 `~/.xdebug/{design,waveform}/sessions/<session_id>/transport/` 下交换文件，目录含义固定如下：
+
+```text
+file transport directory:
+  requests/    client-published pending requests
+  claims/      worker-claimed running requests
+  responses/   unread responses
+  done/        archived request/claim/response history
+  failed/      client_timeout / expired / stale_claim / invalid_request
+  tmp/         atomic write temp files
+  heartbeat/   worker liveness files
+```
+
+request/response/heartbeat 都先写入 `tmp/`，再 atomic publish，避免读到半文件。旧 session 目录中如果有 `locks/`，按历史残留处理，不作为当前协议依赖。
 
 如果当前 AI 客户端支持 MCP，可以使用 `tools/xdebug-mcp`。它是 stdio MCP wrapper，内部仍调用 `tools/xdebug --json -`，但会帮 agent 管理多个命名 session 和默认 session。MCP 场景下优先使用：
 
