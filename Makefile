@@ -21,6 +21,7 @@ test: xdebug xbit xentry xloc xberif
 	$(MAKE) -C xdebug schema-test
 	$(MAKE) -C xdebug contract-test
 	$(MAKE) -C xdebug unit-test
+	$(MAKE) -C xdebug mcp-test
 	$(MAKE) -C xbit test
 	$(MAKE) -C xentry test
 	$(MAKE) -C xloc test

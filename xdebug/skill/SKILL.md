@@ -51,6 +51,16 @@ JSON
 
 如果当前 shell 尚未安装 `xdebug`，并且当前工作目录就是仓库根目录，可以临时使用 `tools/xdebug -h`、`tools/xdebug -help` 或 `tools/xdebug -`。兼容入口 `tools/xdebug-env` 只作为旧脚本转发，不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
 
+如果当前 AI 客户端支持 MCP，可以使用 `tools/xdebug-mcp`。它是 stdio MCP wrapper，内部仍调用 `tools/xdebug --json -`，但会帮 agent 管理多个命名 session 和默认 session。MCP 场景下优先使用：
+
+- `xdebug_session_open` 打开/复用 `daidir`、`fsdb` 或 combined session。
+- `xdebug_session_use` 切换默认 session。
+- `xdebug_query` 用默认 session 调任意 action。
+- `xdebug_request` 在需要完整 envelope 控制时直接传 xdebug JSON request。
+- `xdebug_actions` / `xdebug_schema` 查询机器契约。
+
+MCP wrapper 的 session registry 是进程内状态；重启后用 `xdebug_session_open` 搭配 `reuse:true` 恢复。
+
 ## Action 选择速查
 
 | 调试意图 | 首选 action | 不要误用 |

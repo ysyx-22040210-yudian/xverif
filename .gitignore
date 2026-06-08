@@ -45,6 +45,7 @@ plan*.md
 **/plan*.md
 NPI_TRACING_KNOWLEDGE.md
 **/NPI_TRACING_KNOWLEDGE.md
+CLAUDE.md
 
 *.o
 *.a
@@ -54,6 +55,7 @@ __pycache__/
 xdebug/build/
 xdebug/xdebug
 xdebug/libexec/
+xdebug/signal.rc
 *_probeLog/
 experiments/
 no_push_skill.md

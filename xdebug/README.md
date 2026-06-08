@@ -110,6 +110,37 @@ xdebug request.json
 
 兼容入口 `tools/xdebug-env` 仍保留为转发 wrapper，但新文档和 skill 推荐 `tools/xdebug` 或 `PATH` 中的 `xdebug`。
 
+### MCP wrapper
+
+`tools/xdebug-mcp` 是一个轻量 Python stdio MCP server。它不直接读取 NPI/FSDB/daidir，只把 MCP tool call 转成 `tools/xdebug --json -` 请求，并在 MCP 进程内维护多个 session 别名和默认 session。
+
+MCP client 配置示例：
+
+```json
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "<xverif-root>/tools/xdebug-mcp",
+      "env": {
+        "XVERIF_HOME": "<xverif-root>"
+      }
+    }
+  }
+}
+```
+
+可用 MCP tools：
+
+- `xdebug_session_open`：打开/复用命名 session，并记录到 wrapper registry。
+- `xdebug_session_list`：列出 wrapper 管理的多个 session。
+- `xdebug_session_use`：切换默认 session。
+- `xdebug_session_close`：关闭 session 并移除 wrapper 记录。
+- `xdebug_query`：用显式 target、指定 session 或默认 session 调用任意 xdebug action。
+- `xdebug_request`：传完整 xdebug JSON request。
+- `xdebug_actions` / `xdebug_schema`：查询 action catalog 和 action-specific schema。
+
+wrapper registry 是进程内状态；MCP server 重启后可用 `xdebug_session_open` + `reuse:true` 恢复命名 session。真实 session 仍由 xdebug 自己记录在 `~/.xdebug`。
+
 重复调试建议先打开 session，再用 `target.session_id` 访问：
 
 ```json

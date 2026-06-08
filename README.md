@@ -40,7 +40,10 @@
 tools/xdebug -h
 printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
 printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug --json -
+tools/xdebug-mcp
 ```
+
+`tools/xdebug-mcp` 是 stdio MCP wrapper，适合支持 MCP 的 AI 客户端；它维护多个 session 别名，并把 tool call 转成 xdebug JSON 请求。
 
 完整说明见 [`xdebug/README.md`](xdebug/README.md)。
 
