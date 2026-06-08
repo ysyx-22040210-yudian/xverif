@@ -3,6 +3,7 @@
 #include "../common/xdebug_waveform_paths.h"
 #include "../protocol/protocol.h"
 #include "logging/action_log.h"
+#include "session/session_types.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -119,10 +120,10 @@ bool SessionManager::current_fsdb_metadata(const SessionInfo& session, SessionIn
 }
 
 bool SessionManager::fsdb_metadata_matches(const SessionInfo& expected, const SessionInfo& current) const {
-    return expected.fsdb_mtime == current.fsdb_mtime &&
-           expected.fsdb_size == current.fsdb_size &&
-           expected.fsdb_dev == current.fsdb_dev &&
-           expected.fsdb_inode == current.fsdb_inode;
+    return xdebug_core::resource_content_matches(expected.fsdb_mtime,
+                                                 expected.fsdb_size,
+                                                 current.fsdb_mtime,
+                                                 current.fsdb_size);
 }
 
 WaitForServerResult SessionManager::wait_for_server(const std::string& session_id, pid_t pid) {
@@ -621,13 +622,34 @@ bool SessionManager::ensure_session_current(const std::string& session_id) {
         return false;
     }
     if (!fsdb_metadata_matches(session, current)) {
-        debug_log("ensure_session_current: fsdb_changed session=%s old_mtime=%ld new_mtime=%ld old_size=%lld new_size=%lld",
+        bool identity_changed = xdebug_core::resource_identity_differs(session.fsdb_dev,
+                                                                       session.fsdb_inode,
+                                                                       current.fsdb_dev,
+                                                                       current.fsdb_inode);
+        debug_log("ensure_session_current: fsdb_changed session=%s old_mtime=%ld new_mtime=%ld old_size=%lld new_size=%lld old_dev=%llu new_dev=%llu old_inode=%llu new_inode=%llu",
                   session_id.c_str(), session.fsdb_mtime, current.fsdb_mtime,
-                  session.fsdb_size, current.fsdb_size);
+                  session.fsdb_size, current.fsdb_size,
+                  session.fsdb_dev, current.fsdb_dev,
+                  session.fsdb_inode, current.fsdb_inode);
         xdebug_core::log_lifecycle_event("waveform", session_id, "ensure_session_current.fsdb_changed_restart", true,
                                          {{"old_mtime", session.fsdb_mtime}, {"new_mtime", current.fsdb_mtime},
-                                          {"old_size", session.fsdb_size}, {"new_size", current.fsdb_size}});
+                                          {"old_size", session.fsdb_size}, {"new_size", current.fsdb_size},
+                                          {"old_dev", session.fsdb_dev}, {"new_dev", current.fsdb_dev},
+                                          {"old_inode", session.fsdb_inode}, {"new_inode", current.fsdb_inode},
+                                          {"identity_changed", identity_changed}});
         return restart_session(session_id);
+    }
+    if (xdebug_core::resource_identity_differs(session.fsdb_dev,
+                                               session.fsdb_inode,
+                                               current.fsdb_dev,
+                                               current.fsdb_inode)) {
+        debug_log("ensure_session_current: fsdb_identity_changed session=%s old_dev=%llu new_dev=%llu old_inode=%llu new_inode=%llu content_match=1",
+                  session_id.c_str(), session.fsdb_dev, current.fsdb_dev,
+                  session.fsdb_inode, current.fsdb_inode);
+        xdebug_core::log_lifecycle_event("waveform", session_id, "ensure_session_current.fsdb_identity_changed", true,
+                                         {{"old_dev", session.fsdb_dev}, {"new_dev", current.fsdb_dev},
+                                          {"old_inode", session.fsdb_inode}, {"new_inode", current.fsdb_inode},
+                                          {"content_match", true}, {"identity_changed", true}});
     }
     SessionHealth health = diagnose_session(session_id);
     debug_log("ensure_session_current: diagnose status=%s healthy=%d message=%s",
@@ -782,14 +804,38 @@ SessionHealth SessionManager::diagnose_session(const std::string& session_id) {
               (unsigned long long)session.fsdb_inode,
               (unsigned long long)current.fsdb_inode);
     if (!fsdb_metadata_matches(session, current)) {
+        bool identity_changed = xdebug_core::resource_identity_differs(session.fsdb_dev,
+                                                                       session.fsdb_inode,
+                                                                       current.fsdb_dev,
+                                                                       current.fsdb_inode);
         health.status = SessionHealthStatus::FsdbChanged;
         health.message = "FSDB file changed since session was opened";
         debug_log("diagnose_session: status=%s message=%s",
                   session_health_status_name(health.status),
                   health.message.c_str());
         xdebug_core::log_lifecycle_event("waveform", session_id, "diagnose.fsdb_changed", false,
-                                         {{"fsdb", session.fsdb_file}});
+                                         {{"fsdb", session.fsdb_file},
+                                          {"old_mtime", session.fsdb_mtime}, {"new_mtime", current.fsdb_mtime},
+                                          {"old_size", session.fsdb_size}, {"new_size", current.fsdb_size},
+                                          {"old_dev", session.fsdb_dev}, {"new_dev", current.fsdb_dev},
+                                          {"old_inode", session.fsdb_inode}, {"new_inode", current.fsdb_inode},
+                                          {"identity_changed", identity_changed}});
         return health;
+    }
+    if (xdebug_core::resource_identity_differs(session.fsdb_dev,
+                                               session.fsdb_inode,
+                                               current.fsdb_dev,
+                                               current.fsdb_inode)) {
+        debug_log("diagnose_session: fsdb_identity_changed old_dev=%llu new_dev=%llu old_inode=%llu new_inode=%llu content_match=1",
+                  (unsigned long long)session.fsdb_dev,
+                  (unsigned long long)current.fsdb_dev,
+                  (unsigned long long)session.fsdb_inode,
+                  (unsigned long long)current.fsdb_inode);
+        xdebug_core::log_lifecycle_event("waveform", session_id, "diagnose.fsdb_identity_changed", true,
+                                         {{"fsdb", session.fsdb_file},
+                                          {"old_dev", session.fsdb_dev}, {"new_dev", current.fsdb_dev},
+                                          {"old_inode", session.fsdb_inode}, {"new_inode", current.fsdb_inode},
+                                          {"content_match", true}, {"identity_changed", true}});
     }
 
     if (is_local_session_host(session) && kill(session.server_pid, 0) != 0) {

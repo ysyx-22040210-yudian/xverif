@@ -56,6 +56,55 @@ xdebug/examples/responses/<action>.basic.json
 | `{"daidir":"simv.daidir","fsdb":"waves.fsdb"}` | 联合侧，并允许回退到设计/波形 action |
 | `{"session_id":"case_a"}` | 使用已打开 session 的资源集合 |
 
+## session transport 字段
+
+默认 transport 是 `uds`。只有 UDS socket 不可达、容器/namespace 隔离或用户明确需要跨边界连接 daemon 时，才使用 TCP。
+
+| 字段 | 位置 | 说明 |
+| --- | --- | --- |
+| `transport` | `args` 或 `target` | `uds` / `tcp`，默认 `uds` |
+| `bind_host` / `bind` | `args` 或 `target` | daemon listen 地址；本机 TCP 推荐 `127.0.0.1` |
+| `host` | `args` 或 `target` | client 连接地址；远程/跨容器时应是 agent 可达地址 |
+| `port` | `args` 或 `target` | TCP 端口；`0` 或省略表示自动分配 |
+
+`session.open` TCP 模板：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "session.open",
+  "target": {
+    "fsdb": "waves.fsdb"
+  },
+  "args": {
+    "name": "wave_tcp",
+    "transport": "tcp",
+    "bind_host": "127.0.0.1",
+    "port": 0
+  }
+}
+```
+
+`auto_open` TCP 模板：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "value.at",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true,
+    "transport": "tcp",
+    "bind_host": "127.0.0.1",
+    "port": 0
+  },
+  "args": {
+    "signal": "top.clk",
+    "time": "10ns"
+  }
+}
+```
+
 ## output 与 include
 
 输出档位：

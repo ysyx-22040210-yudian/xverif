@@ -49,5 +49,13 @@ struct SessionInfo {
 };
 
 const char* database_kind_name(DatabaseKind kind);
+bool resource_content_matches(long expected_mtime,
+                              long long expected_size,
+                              long current_mtime,
+                              long long current_size);
+bool resource_identity_differs(unsigned long long expected_dev,
+                               unsigned long long expected_inode,
+                               unsigned long long current_dev,
+                               unsigned long long current_inode);
 
 } // namespace xdebug_core

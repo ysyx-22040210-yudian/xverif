@@ -176,6 +176,40 @@ xdebug 当前只支持两类输入资源：
 | 仅 `fsdb` | 使用波形侧能力，覆盖原 xwave 的 value/event/APB/AXI/verify 等事实查询 |
 | 同时有 `daidir` 与 `fsdb` | 启用 combined/debug join 能力，把波形现象连接到设计因果 |
 
+### Session Transport：UDS 与 TCP
+
+xdebug session 默认使用本机 Unix domain socket：
+
+```json
+{
+  "transport": "uds"
+}
+```
+
+同一台机器上的普通调试优先使用默认 UDS。只有 socket 路径不可共享、容器或 namespace 隔离导致 UDS 不可达、或确实需要跨进程边界连接 daemon 时，才显式使用 TCP。
+
+本机 TCP session 示例：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "session.open",
+  "target": {
+    "fsdb": "waves.fsdb"
+  },
+  "args": {
+    "name": "wave_tcp",
+    "transport": "tcp",
+    "bind_host": "127.0.0.1",
+    "port": 0
+  }
+}
+```
+
+`port:0` 或省略 `port` 表示由 daemon 自动分配端口；实际 endpoint 会写入 session endpoint/registry，后续查询继续通过 `target.session_id` 复用即可。远程或跨容器场景下，`bind_host` 是 daemon listen 地址，`host` 是 client 连接时使用的地址；只有用户明确需要远程访问时才设置公网或非 loopback 地址。
+
+跨登录机和计算节点访问同一个共享路径时，`stat()` 返回的 `dev/inode` 可能不同。xdebug 只把 `dev/inode` 作为 endpoint/fingerprint 诊断信息记录，资源 freshness 判定只使用 `mtime + size`；因此这类共享挂载差异不会单独触发 session unhealthy 或自动 restart。
+
 ### JSON envelope
 
 所有请求统一使用这个 envelope：

@@ -99,6 +99,29 @@ Target modes
   target.session_id
       Reuse an already opened session. Prefer this for multi-step debug.
 
+Session transport
+-----------------
+  Default transport is UDS. Keep the default for normal same-host debug.
+
+  Use TCP only when UDS sockets are not reachable, for example container or
+  namespace boundaries, inaccessible socket paths, or explicitly requested
+  remote/cross-process daemon access.
+
+  Local TCP session.open args:
+      Set args.transport=tcp with bind_host and port.
+
+    {
+      "name": "wave_tcp",
+      "transport": "tcp",
+      "bind_host": "127.0.0.1",
+      "port": 0
+    }
+
+  port:0 or omitted lets the daemon choose an available port. bind_host is the
+  daemon listen address; host is the client-reachable endpoint address for
+  remote/container cases. Do not bind to public addresses unless explicitly
+  needed and authorized.
+
 Common actions
 --------------
   Catalog:

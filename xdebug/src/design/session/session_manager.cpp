@@ -3,6 +3,7 @@
 #include "../common/xdebug_design_paths.h"
 #include "../protocol/protocol.h"
 #include "logging/action_log.h"
+#include "session/session_types.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -151,10 +152,10 @@ bool SessionManager::current_dbdir_metadata(const SessionInfo& session, SessionI
 }
 
 bool SessionManager::dbdir_metadata_matches(const SessionInfo& expected, const SessionInfo& current) const {
-    return expected.dbdir_mtime == current.dbdir_mtime &&
-           expected.dbdir_size == current.dbdir_size &&
-           expected.dbdir_dev == current.dbdir_dev &&
-           expected.dbdir_inode == current.dbdir_inode;
+    return xdebug_core::resource_content_matches(expected.dbdir_mtime,
+                                                 expected.dbdir_size,
+                                                 current.dbdir_mtime,
+                                                 current.dbdir_size);
 }
 
 bool SessionManager::parse_open_args(const std::vector<std::string>& design_args,
@@ -529,11 +530,35 @@ SessionHealth SessionManager::diagnose_session(const std::string& session_id) {
         return health;
     }
     if (!dbdir_metadata_matches(session, current)) {
+        bool identity_changed = xdebug_core::resource_identity_differs(session.dbdir_dev,
+                                                                       session.dbdir_inode,
+                                                                       current.dbdir_dev,
+                                                                       current.dbdir_inode);
         health.status = SessionHealthStatus::DbdirChanged;
         health.message = "Daidir metadata changed since session was opened";
         xdebug_core::log_lifecycle_event("design", session_id, "diagnose.dbdir_changed", false,
-                                         {{"dbdir", session.dbdir_path}});
+                                         {{"dbdir", session.dbdir_path},
+                                          {"old_mtime", session.dbdir_mtime}, {"new_mtime", current.dbdir_mtime},
+                                          {"old_size", session.dbdir_size}, {"new_size", current.dbdir_size},
+                                          {"old_dev", session.dbdir_dev}, {"new_dev", current.dbdir_dev},
+                                          {"old_inode", session.dbdir_inode}, {"new_inode", current.dbdir_inode},
+                                          {"identity_changed", identity_changed}});
         return health;
+    }
+    if (xdebug_core::resource_identity_differs(session.dbdir_dev,
+                                               session.dbdir_inode,
+                                               current.dbdir_dev,
+                                               current.dbdir_inode)) {
+        debug_log("diagnose_session: dbdir_identity_changed old_dev=%llu new_dev=%llu old_inode=%llu new_inode=%llu content_match=1",
+                  (unsigned long long)session.dbdir_dev,
+                  (unsigned long long)current.dbdir_dev,
+                  (unsigned long long)session.dbdir_inode,
+                  (unsigned long long)current.dbdir_inode);
+        xdebug_core::log_lifecycle_event("design", session_id, "diagnose.dbdir_identity_changed", true,
+                                         {{"dbdir", session.dbdir_path},
+                                          {"old_dev", session.dbdir_dev}, {"new_dev", current.dbdir_dev},
+                                          {"old_inode", session.dbdir_inode}, {"new_inode", current.dbdir_inode},
+                                          {"content_match", true}, {"identity_changed", true}});
     }
 
     if (is_local_session_host(session) && kill(session.server_pid, 0) != 0) {

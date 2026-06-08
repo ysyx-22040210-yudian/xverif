@@ -50,6 +50,58 @@ examples/responses/<action>.basic.json
 | 仅 `daidir` | 使用设计数据库能力，即原 xtrace 能力 |
 | 仅 `fsdb` | 使用波形数据库能力，即原 xwave 能力 |
 | 同时有 `daidir` 与 `fsdb` | 使用 combined/debug join 能力 |
+| `session_id` | 使用已打开 session 的资源集合 |
+
+## Session transport
+
+session 默认使用 `uds`。本机同用户调试不需要显式设置 transport；当 UDS socket 因容器、namespace、挂载隔离或路径不可达而无法连接时，可以用 TCP。
+
+| 字段 | 位置 | 说明 |
+| --- | --- | --- |
+| `transport` | `args` 或 `target` | `uds` 或 `tcp`；默认 `uds` |
+| `bind_host` / `bind` | `args` 或 `target` | daemon listen 地址；本机 TCP 推荐 `127.0.0.1` |
+| `host` | `args` 或 `target` | client 连接 endpoint 时使用的地址；跨容器/远程时应是 agent 可达地址 |
+| `port` | `args` 或 `target` | TCP 端口；`0` 或省略表示自动分配 |
+
+`session.open` 使用 TCP：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "session.open",
+  "target": {
+    "fsdb": "waves.fsdb"
+  },
+  "args": {
+    "name": "wave_tcp",
+    "transport": "tcp",
+    "bind_host": "127.0.0.1",
+    "port": 0
+  }
+}
+```
+
+单次 `auto_open` 使用 TCP：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "value.at",
+  "target": {
+    "fsdb": "waves.fsdb",
+    "auto_open": true,
+    "transport": "tcp",
+    "bind_host": "127.0.0.1",
+    "port": 0
+  },
+  "args": {
+    "signal": "top.clk",
+    "time": "10ns"
+  }
+}
+```
+
+不要默认把 daemon 绑定到公网地址。若必须远程访问，显式设置 `bind_host` 和 `host`，并用 `session.doctor` 与 `transport.ndjson` 检查 endpoint、connect、ping 和 timeout。
 
 常见波形意图选择：
 

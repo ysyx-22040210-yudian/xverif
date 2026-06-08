@@ -29,4 +29,18 @@ const char* database_kind_name(DatabaseKind kind) {
     return "unknown";
 }
 
+bool resource_content_matches(long expected_mtime,
+                              long long expected_size,
+                              long current_mtime,
+                              long long current_size) {
+    return expected_mtime == current_mtime && expected_size == current_size;
+}
+
+bool resource_identity_differs(unsigned long long expected_dev,
+                               unsigned long long expected_inode,
+                               unsigned long long current_dev,
+                               unsigned long long current_inode) {
+    return expected_dev != current_dev || expected_inode != current_inode;
+}
+
 } // namespace xdebug_core

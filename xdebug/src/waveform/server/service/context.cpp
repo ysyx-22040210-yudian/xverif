@@ -1,4 +1,5 @@
 #include "../server_internal.h"
+#include "session/session_types.h"
 
 namespace xdebug_waveform {
 
@@ -166,8 +167,10 @@ bool fsdb_changed() {
     unsigned long long dev = 0;
     unsigned long long inode = 0;
     if (!stat_fsdb(mtime, size, dev, inode)) return true;
-    return mtime != g_fsdb_mtime || size != g_fsdb_size ||
-           dev != g_fsdb_dev || inode != g_fsdb_inode;
+    return !xdebug_core::resource_content_matches(g_fsdb_mtime,
+                                                  g_fsdb_size,
+                                                  mtime,
+                                                  size);
 }
 
 void send_error(int client_fd, const std::string& message) {

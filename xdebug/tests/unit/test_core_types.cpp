@@ -22,5 +22,12 @@ int main() {
     assert(std::string(xdebug_core::CMD_PING) == "PING");
     assert(xdebug_core::registry_path(config).find(".xdebug/registry.json") != std::string::npos);
     assert(xdebug_core::socket_path(config, "case_a").find(".xdebug/sessions/s_") != std::string::npos);
+
+    assert(xdebug_core::resource_content_matches(100, 4096, 100, 4096));
+    assert(!xdebug_core::resource_identity_differs(10, 20, 10, 20));
+    assert(xdebug_core::resource_identity_differs(10, 20, 11, 20));
+    assert(xdebug_core::resource_identity_differs(10, 20, 10, 21));
+    assert(!xdebug_core::resource_content_matches(100, 4096, 101, 4096));
+    assert(!xdebug_core::resource_content_matches(100, 4096, 100, 8192));
     return 0;
 }

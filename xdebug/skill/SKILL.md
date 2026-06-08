@@ -216,6 +216,41 @@ xdebug --json - < request.json \
 
 单次查询可以用 `auto_open:true` 或 `auto_ensure:true`。多步调试应先 `session.open`，后续使用 `target.session_id`，这样避免重复打开数据库和重复启动后台引擎。
 
+### Session transport：默认 UDS，按需 TCP
+
+xdebug session 默认使用 `transport:"uds"`。同机本地调试不要主动切 TCP；只有 UDS socket 不可达、容器或 namespace 隔离、socket 路径不能共享，或用户明确要求跨进程/远程连接 daemon 时，才使用 TCP。
+
+本机 TCP 推荐模板：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "session.open",
+  "target": {
+    "fsdb": "waves.fsdb"
+  },
+  "args": {
+    "name": "wave_tcp",
+    "transport": "tcp",
+    "bind_host": "127.0.0.1",
+    "port": 0
+  }
+}
+```
+
+字段含义：
+
+| 字段 | 含义 |
+| --- | --- |
+| `transport` | `uds` 或 `tcp`；默认 `uds` |
+| `bind_host` / `bind` | daemon listen 地址，本机 TCP 用 `127.0.0.1` |
+| `host` | client 连接 endpoint 时使用的地址，远程/跨容器时必须是 agent 可达地址 |
+| `port` | TCP 端口；`0` 或省略表示自动分配 |
+
+远程 TCP 只在用户明确授权时使用。不要默认把 daemon 绑定到公网地址；如果必须用非 loopback `bind_host`，回答里要提醒用户这是暴露本地调试 daemon 的高级用法。TCP 失败时先跑 `session.doctor`，再读 `transport.ndjson`，重点看 endpoint 的 `transport/host/port`、connect/ping/read timeout、daemon 是否退出。MCP wrapper 仍是本机调用 xdebug 的外层协议，不要求把 xdebug session transport 切成 TCP。
+
+登录机和 LSF 计算节点访问同一个共享路径时，`dev/inode` 可能不同。xdebug 的资源 freshness 判定以 `mtime + size` 为准；`dev/inode` 只用于诊断日志。看到 `identity_changed:true` 不要直接判定资源已变，除非同时有 mtime 或 size 变化。
+
 ## Agent 决策树
 
 先判断用户给了什么资源：
