@@ -56,9 +56,11 @@ class SessionLauncher:
         queue: Optional[str] = None,
         resource: Optional[str] = None,
         session_id: Optional[str] = None,
+        job_prefix: Optional[str] = None,
     ) -> SessionInfo:
         sid = session_id or alias
-        job_name = f"xdebug_sess_{alias}"
+        prefix = job_prefix or "xdebug"
+        job_name = f"{prefix}_sess_{alias}"
         bind_addr = os.environ.get("XDEBUG_LSF_SESSION_BIND", "0.0.0.0:0")
         cmd = [
             sys.executable,

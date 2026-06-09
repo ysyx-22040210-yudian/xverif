@@ -380,6 +380,9 @@ class LsfBackend:
         self.sessions: Dict[str, SessionInfo] = {}
         self.default_session: Optional[str] = None
         self.session_launcher = SessionLauncher(self.bsub, fake=self.fake)
+        # Stable job name prefix so all jobs from this MCP server share the same root
+        import getpass, uuid as _uuid
+        self._job_prefix = f"xdebug_{getpass.getuser()}_{os.getpid()}_{_uuid.uuid4().hex[:8]}"
 
     def ping(self) -> str:
         self.ensure_router()
@@ -390,7 +393,8 @@ class LsfBackend:
     def ensure_router(self) -> RouterClient:
         if self.router is not None and self.router.process.proc.poll() is None:
             return self.router
-        self.router = RouterClient.start(self.bsub)
+        router_job = f"{self._job_prefix}_router"
+        self.router = RouterClient.start(self.bsub, router_job_name=router_job)
         seen = set()
         for info in list(self.sessions.values()):
             if id(info) in seen:
@@ -412,7 +416,8 @@ class LsfBackend:
     ) -> Json:
         del kwargs
         router = self.ensure_router()
-        info = self.session_launcher.open(name, fsdb, daidir, queue, resource)
+        info = self.session_launcher.open(name, fsdb, daidir, queue, resource,
+                                          job_prefix=self._job_prefix)
         reg = router.register(self._router_session(info))
         if not reg.get("ok"):
             return reg
