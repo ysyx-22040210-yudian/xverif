@@ -419,11 +419,20 @@ bool json_time_range(const Json& args,
     begin = 0;
     end = 0xFFFFFFFFFFFFFFFFULL;
     Json tr = args.value("time_range", Json::object());
-    bool has_begin = (tr.is_object() && tr.contains("begin")) || args.contains("begin");
-    bool has_end = (tr.is_object() && tr.contains("end")) || args.contains("end");
+    bool has_begin = (tr.is_object() && (tr.contains("begin") || tr.contains("from"))) || args.contains("begin") || args.contains("from");
+    bool has_end   = (tr.is_object() && (tr.contains("end")   || tr.contains("to")))   || args.contains("end")   || args.contains("to");
     if (has_begin || has_end || !args.contains("around")) {
-        std::string begin_s = tr.value("begin", args.value("begin", std::string("0ns")));
-        std::string end_s = tr.value("end", args.value("end", std::string("max")));
+        auto read_time_key = [&](const char* primary, const char* alias, const char* default_val) -> std::string {
+            if (tr.is_object()) {
+                if (tr.contains(primary)) return tr[primary].get<std::string>();
+                if (tr.contains(alias))   return tr[alias].get<std::string>();
+            }
+            if (args.contains(primary)) return args[primary].get<std::string>();
+            if (args.contains(alias))   return args[alias].get<std::string>();
+            return default_val;
+        };
+        std::string begin_s = read_time_key("begin", "from", "0ns");
+        std::string end_s   = read_time_key("end",   "to",   "max");
         return parse_user_time(begin_s.c_str(), false, begin, error) &&
                parse_user_time(end_s.c_str(), true, end, error);
     }
