@@ -14,6 +14,18 @@ from .protocol import JsonlProcess
 class BsubOptions:
     queue: Optional[str] = None
     resource: Optional[str] = None
+    job_name: Optional[str] = None
+
+    def extra_args(self) -> List[str]:
+        """Extra flags to pass to bsub before the command."""
+        extras: List[str] = []
+        if self.job_name:
+            extras.extend(["-J", self.job_name])
+        if self.queue:
+            extras.extend(["-q", self.queue])
+        if self.resource:
+            extras.extend(["-R", self.resource])
+        return extras
 
 
 class BsubRunner:
@@ -25,10 +37,7 @@ class BsubRunner:
         base = shlex.split(self.bsub_cmd)
         if "-I" not in base:
             base.append("-I")
-        if opts.queue:
-            base.extend(["-q", opts.queue])
-        if opts.resource:
-            base.extend(["-R", opts.resource])
+        base.extend(opts.extra_args())
         base.extend(list(command))
         return base
 

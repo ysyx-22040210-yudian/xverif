@@ -75,3 +75,37 @@ PYTHON=python3 XDEBUG_MCP_FAKE_LSF=1 tools/xdebug-lsf-doctor --fake
 ```
 
 测试里的 fake LSF 不需要真实 `bsub`，但会覆盖 ready 噪声、router 恢复、多 session 并行、同 session 串行、session crash 隔离和 xout/json/envelope 返回。
+
+## 配置 Claude Code MCP
+
+在项目根目录创建 `.mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "xdebug": {
+      "type": "stdio",
+      "command": "<conda-env>/bin/python",
+      "args": ["-m", "xdebug_mcp.server"],
+      "env": {
+        "PYTHONPATH": "<xverif>/xdebug_mcp/src:<xverif>",
+        "XVERIF_HOME": "<xverif>",
+        "VERDI_HOME": "<verdi-install>",
+        "LD_LIBRARY_PATH": "<verdi-install>/share/NPI/lib/LINUX64",
+        "XDEBUG_MCP_BACKEND": "direct"
+      }
+    }
+  }
+}
+```
+
+替换说明：
+- `<conda-env>`：安装了 `mcp[cli]` 的 Python 环境路径（如 `~/miniconda3/envs/xdebug-mcp`）
+- `<xverif>`：xverif 仓库根目录
+- `<verdi-install>`：Synopsys Verdi 安装根目录（`XDEBUG_MCP_BACKEND=lsf` 时不需要）
+
+`XDEBUG_MCP_BACKEND` 可选值：
+- `direct`：本机直接调用 `tools/xdebug --json -`
+- `lsf`：通过 bsub 在 LSF 集群内启动 router + per-session TCP endpoint
+
+Claude Code 在启动时会自动加载项目根目录下的 `.mcp.json`，无需额外配置。

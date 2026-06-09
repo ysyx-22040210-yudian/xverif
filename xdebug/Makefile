@@ -158,7 +158,19 @@ schema-test:
 	$(PYTHON) tools/validate_examples.py examples schemas/v1
 
 mcp-test:
-	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m unittest discover -s tests/mcp -v
+	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m pytest -q $(CURDIR)/../xdebug_mcp/tests $(CURDIR)/tests/mcp -v
+
+mcp-sdk-test:
+	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m pytest -q $(CURDIR)/../xdebug_mcp/tests/test_mcp_sdk_smoke.py -v
+
+mcp-lsf-test:
+	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. XDEBUG_MCP_FAKE_LSF=1 $(PYTHON) -m pytest -q $(CURDIR)/tests/mcp/test_lsf_router.py -v
+
+mcp-inspect:
+	cd $(CURDIR)/.. && PYTHONPATH=xdebug_mcp/src $(PYTHON) -m mcp dev xdebug_mcp/src/xdebug_mcp/server.py
+
+mcp-run:
+	cd $(CURDIR)/.. && PYTHONPATH=xdebug_mcp/src $(PYTHON) -m mcp run xdebug_mcp/src/xdebug_mcp/server.py
 
 contract-test: $(EXE) schema-test
 	$(PYTHON) tools/audit_action_schema_coverage.py $(CURDIR)

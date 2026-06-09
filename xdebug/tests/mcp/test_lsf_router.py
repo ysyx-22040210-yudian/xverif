@@ -9,7 +9,7 @@ from xdebug_lsf.bsub import BsubRunner
 from xdebug_lsf.router_client import RouterClient
 from xdebug_lsf.session_launcher import SessionLauncher
 from xdebug_mcp.backend import XDebugMcpBackend, LsfBackend
-from xdebug_mcp.server import XdebugMcpServer
+from xdebug_mcp.server_legacy import XdebugMcpServer
 
 
 FAKE_BSUB = f"{sys.executable} -m xdebug_lsf.fake_bsub"

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Compatibility shim for the xdebug MCP server."""
+"""Compatibility shim for the xdebug MCP server.
 
-from xdebug_mcp.server import (  # noqa: F401
+Old classes are imported from server_legacy; the new FastMCP app instance is
+imported from server.
+"""
+
+from xdebug_mcp.server_legacy import (  # noqa: F401
     ManagedSession,
     XdebugMcpServer,
     XdebugRunner,
@@ -11,6 +15,9 @@ from xdebug_mcp.server import (  # noqa: F401
     write_message,
 )
 
+from xdebug_mcp.server import mcp  # noqa: F401
+
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from xdebug_mcp.server_legacy import main as legacy_main
+    raise SystemExit(legacy_main())

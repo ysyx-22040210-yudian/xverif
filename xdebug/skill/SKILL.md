@@ -82,6 +82,15 @@ MCP 场景使用 `tools/xdebug-mcp`，它内部仍调用 `tools/xdebug --json -`
 
 当用户说明 AI 客户端在登录机、查询必须跑到 LSF 计算节点、且登录机无法直连计算节点 TCP 端口时，MCP 首选 `XDEBUG_MCP_BACKEND=lsf`。这个 backend 由 `tools/xdebug-mcp` 启动 LSF router job 和 per-session endpoint job；agent 仍只调用 MCP tools，不手写 router JSONL。详细规则见 [references/lsf-mcp.md](references/lsf-mcp.md)。
 
+## MCP 场景
+
+通过 `xdebug_query` MCP tool 调用时，所有 action 和参数与 CLI JSON 请求一致。额外注意：
+
+- 默认 `output_format` 是 `xout`。需要程序解析时传 `output_format:"json"`，调试 MCP/LSF wrapper 时传 `output_format:"envelope"`。
+- `xdebug_query` 的 `limits`、`output`、`output_format` 参数与 CLI 的 `limits`/`output` envelope 完全对应。
+- `truncated: true` 时，先用 `output.verbosity:"full"` 或增大对应 `limits.max_items/max_depth` 重试；仍截断则缩小 `time_range` 或 `path` 分批查询。不要假设 `truncated: false` 的结果是全量；`scope.list` 在大 scope 下必然截断。
+- 不要直接调用旧 `xdebug_request`（它只走 direct backend，不会用 MCP session）；始终用 `xdebug_query`。
+
 ## 资源 target 决策
 
 | target | 能力 |
@@ -131,7 +140,7 @@ file transport 规则：
 | 查 driver | `trace.driver` | `trace.graph` / `trace.explain` | 不要靠源码文本猜 |
 | 查当前生效 driver | `trace.active_driver` | `value.batch_at` | 必须有 daidir + fsdb + time |
 | 查源码证据 | `source.context` | `trace.explain` | 不要默认 include 整个 module |
-| 查 APB/AXI 异常 | `apb.query` / `axi.analysis` | `axi.query` | 不要默认 include 正常 transaction/beat |
+| 查 APB/AXI 异常 | 先 `apb.config.load` / `axi.config.load` 注册信号映射，再 `apb.query` / `axi.analysis` | `axi.channel_stall` / `axi.latency_outlier` / `axi.query` | 不要跳过 config.load；没有注册的 config 无法 query；不要默认 include 正常 transaction/beat |
 | 查 X/Z | `detect_anomaly` | `signal.changes` / `trace.active_driver` | 不要把 `known:false` 直接当 root cause |
 | 生成波形证据 | `rc.generate` | `value.batch_at` / marker config | 不要让 AI 手写 nWave rc |
 
@@ -240,6 +249,61 @@ include 原则：
 - 导出事件/样本明细：只加 `include_rows:true` 或 `include_samples:true`，并设置 `limits.max_rows`。
 - 查协议明细：先看 compact findings，只在需要证明异常 transaction/beat/access 时加 `include_transactions`、`include_beats`、`include_accesses`。
 
+## 常见陷阱
+
+### APB/AXI 必须先 config.load
+
+`apb.query`、`axi.analysis`、`axi.channel_stall`、`axi.latency_outlier` 等所有协议查询 action，必须先调用 `apb.config.load` 或 `axi.config.load` 注册信号映射。没有注册的 config，query 会报 `MISSING_FIELD: requires args.name or latest config`。
+
+`apb.config.list` / `axi.config.list` 只能列出**已加载**的配置，不是全局搜索。
+
+config.load 需要完整的信号映射（`args.config` 对象）。最小模板 — APB（9 信号）：`pclk, presetn, paddr, psel, penable, pwrite, pwdata, prdata, pready`。AXI（5 通道约 26 信号含 clk/resetn）：写地址通道、写数据通道、写响应通道、读地址通道、读数据通道对应的所有 valid/ready/data/addr/id/last/strobe 信号。具体字段名只能从实际代码中推测。
+
+### event.find / event.export 的 signals 是 Object 不是 Array
+
+正确格式：
+```json
+{"signals": {"valid": "top.u.valid", "ready": "top.u.ready"}, "expr": "valid && !ready"}
+```
+错误格式（会报 `MISSING_FIELD`）：
+```json
+{"signals": ["top.valid", "top.ready"]}
+```
+`expr` 中用别名引用 `signals` 中定义的 key。`event.find` inline 模式还需要 `clk` 参数。
+
+### signal.changes 只接受单数 signal
+
+一次只能查一个信号。不要写成 `"signals": [...]`（那是 `value.batch_at` 的格式）。
+
+### window.verify 与 verify.conditions 的 conditions 格式不同
+
+| action | condition 格式 |
+|--------|---------------|
+| `window.verify` | `{"expr":"signal == 0", "signals":{"signal":"path"}}`，还需要 `clock` 和 `time_range` |
+| `verify.conditions` | `{"signal":"path", "op":"==", "value":"0"}`，还需要 `time_range` |
+
+两个 action 的 conditions 格式不兼容，不要混用。
+
+### scope.list 在大 scope 下必然截断
+
+超过 ~1000 信号时 `truncated: true`。`args.name` 在 compact 模式下不缩小范围。对策：用精确 `path`（如 `xring_tb_top.u_dut`）缩小范围，或用外部 `rg` 找候选后直接 `signal.resolve`。不要假设一次 `scope.list` 能返回全部信号。
+
+### signal.statistics 实际需要 clock 参数
+
+Schema 中 `required: ["signal"]` 不包含 `clock`，但实际必须传：`{"signal":"top.clk", "clock":"top.clk"}`。不传会报 `WAVE_QUERY_FAILED: signal.trend requires args.signal and args.clock`。
+
+### handshake.inspect 的 ready 是 active-high ready
+
+`ds_bp` 是 active-high backpressure（1=stall），不是 active-high ready。如果直接把 `ds_bp` 当 `ready` 传，分析结果会反转（0 transfer 实际有大量传输）。对反压信号，需要构造表达式信号或传入取反后的信号名。传递前先确认信号的 ready/vld/bp 极性语义。
+
+### trace.active_driver 对深层信号可能返回空
+
+`trace.driver` 和 `trace.explain` 正常工作的路径，`trace.active_driver` 可能返回 `active_time: 0.00` / `driver_status: unresolved` / `limitations: ["无法将时间转换为 FSDB 时间"]`。先用 `trace.driver` 确认路径可达且 driver 可被解析，再对有把握的信号用 `trace.active_driver` 做 waveform↔design join。如果 active_driver 失败，分开查 waveform + design 并手动关联。
+
+### APB/AXI config.load 的 config 字段无自动文档
+
+config 对象需要哪些字段只能从实际代码中推测。APB: `pclk, presetn, paddr, psel, penable, pwrite, pwdata, prdata, pready`。AXI: 5 通道各需 valid/ready + data/addr/id/last/strobe + `clk` + `resetn`，约 26 个信号。不要假设 `name:"axi0"` 能自动检测——必须显式提供完整信号路径。
+
 ## 禁止模式
 
 - 不要用 `signal.changes` 的 row count 当周期数；周期统计用 `signal.statistics` 加 clock。
@@ -251,6 +315,10 @@ include 原则：
 - 不要把 `meta.truncated:true` 的结果当成全集。
 - 不要让 xdebug 做模糊 signal search；波形用 `scope.list`，源码候选用 `rg`。
 - 不要把旧 xtrace/xwave CLI 作为主路径。
+- 不要跳过 `config.load` 直接调 APB/AXI query。
+- 不要把 `event.find` 的 `signals` 写成数组。
+- 不要把 `ds_bp`（active-high backpressure）直接当 ready 信号传给 handshake.inspect。
+- 不要假设 `scope.list` 能返回全部信号而不截断；大 scope 下必然 `truncated: true`。
 
 ## 错误处理 playbook
 

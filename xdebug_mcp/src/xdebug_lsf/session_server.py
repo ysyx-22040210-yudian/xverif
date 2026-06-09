@@ -58,7 +58,7 @@ class SessionTcpServer:
             "protocol": "xdebug-session-tcp",
             "version": 1,
             "session_id": self.session_id,
-            "host": self.args.host or actual_host or _host(),
+            "host": self.args.host or self._advertise_host(host),
             "port": actual_port,
             "pid": os.getpid(),
             "token": self.token,
@@ -74,7 +74,20 @@ class SessionTcpServer:
         if ":" not in spec:
             return spec, 0
         host, port_s = spec.rsplit(":", 1)
-        return host or "127.0.0.1", int(port_s or "0")
+        return host or "0.0.0.0", int(port_s or "0")
+
+    def _advertise_host(self, bind_host: str) -> str:
+        """返回真实可连接的 hostname，而非 127.0.0.1。"""
+        env_host = os.environ.get("XDEBUG_LSF_ADVERTISE_HOST")
+        if env_host:
+            return env_host
+        if bind_host in ("0.0.0.0", "::", ""):
+            return socket.getfqdn() or socket.gethostname()
+        if bind_host == "127.0.0.1":
+            if os.environ.get("XDEBUG_LSF_ALLOW_LOOPBACK_SESSION") == "1":
+                return bind_host
+            return socket.getfqdn() or socket.gethostname()
+        return bind_host
 
     def _handle_conn(self, conn: socket.socket) -> None:
         with conn:
@@ -170,7 +183,7 @@ class SessionTcpServer:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tcp", default="127.0.0.1:0")
+    parser.add_argument("--tcp", default="0.0.0.0:0")
     parser.add_argument("--host", default="")
     parser.add_argument("--session-id", default="")
     parser.add_argument("--token", default="")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass
 from typing import Dict, Optional
@@ -17,7 +18,7 @@ Json = Dict[str, object]
 class SessionInfo:
     alias: str
     session_id: str
-    job_id: Optional[str]
+    job_name: Optional[str]
     host: str
     port: int
     token: str
@@ -31,6 +32,7 @@ class SessionInfo:
         return {
             "alias": self.alias,
             "session_id": self.session_id,
+            "job_name": self.job_name,
             "host": self.host,
             "port": self.port,
             "pid": self.pid,
@@ -56,12 +58,14 @@ class SessionLauncher:
         session_id: Optional[str] = None,
     ) -> SessionInfo:
         sid = session_id or alias
+        job_name = f"xdebug_sess_{alias}"
+        bind_addr = os.environ.get("XDEBUG_LSF_SESSION_BIND", "0.0.0.0:0")
         cmd = [
             sys.executable,
             "-m",
             "xdebug_lsf.session_server",
             "--tcp",
-            "127.0.0.1:0",
+            bind_addr,
             "--session-id",
             sid,
             "--fsdb",
@@ -71,12 +75,13 @@ class SessionLauncher:
             cmd.extend(["--daidir", daidir])
         if self.fake:
             cmd.append("--fake")
-        proc = self.bsub.start(cmd, BsubOptions(queue=queue, resource=resource))
+        proc = self.bsub.start(cmd, BsubOptions(
+            queue=queue, resource=resource, job_name=job_name))
         ready = proc.wait_ready("xdebug-session-tcp", self.startup_timeout_sec)
         return SessionInfo(
             alias=alias,
             session_id=str(ready["session_id"]),
-            job_id=None,
+            job_name=job_name,
             host=str(ready["host"]),
             port=int(ready["port"]),
             token=str(ready["token"]),
@@ -85,4 +90,3 @@ class SessionLauncher:
             daidir=daidir,
             process=proc,
         )
-

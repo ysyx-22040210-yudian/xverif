@@ -132,3 +132,91 @@
 当用户需要给 nWave 打开同一组信号、marker、analog 波形或表达式信号时，用 `rc.generate`。不要让 AI 手写 rc；由 xdebug 校验 FSDB 信号和 marker 时间后生成。
 
 详细配置见 [rc-generate.md](rc-generate.md)。
+
+## APB/AXI 协议查询
+
+**必须先用 config.load 注册信号映射，再进行任何 query/analysis。**
+
+### 前置条件：加载配置
+
+APB 示例（9 信号）：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "apb.config.load",
+  "target": {"session_id": "case_a"},
+  "args": {
+    "name": "apb0",
+    "config": {
+      "pclk": "top.pclk",
+      "presetn": "top.presetn",
+      "paddr": "top.u_dut.paddr",
+      "psel": "top.u_dut.psel",
+      "penable": "top.u_dut.penable",
+      "pwrite": "top.u_dut.pwrite",
+      "pwdata": "top.u_dut.pwdata",
+      "prdata": "top.u_dut.prdata",
+      "pread": "top.u_dut.pready"
+    }
+  }
+}
+```
+
+AXI 示例（26 信号，5 通道各需 valid/ready + data/addr/id/last/strobe + clk + resetn）：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "axi.config.load",
+  "target": {"session_id": "case_a"},
+  "args": {
+    "name": "axi0",
+    "config": {
+      "clk": "top.aclk",
+      "resetn": "top.aresetn",
+      "awvalid": "top.u_dut.awvalid",
+      "awready": "top.u_dut.awready",
+      "awaddr": "top.u_dut.awaddr",
+      "awlen": "top.u_dut.awlen",
+      "awsize": "top.u_dut.awsize",
+      "awburst": "top.u_dut.awburst",
+      "awid": "top.u_dut.awid",
+      "wvalid": "top.u_dut.wvalid",
+      "wready": "top.u_dut.wready",
+      "wdata": "top.u_dut.wdata",
+      "wstrb": "top.u_dut.wstrb",
+      "wlast": "top.u_dut.wlast",
+      "bvalid": "top.u_dut.bvalid",
+      "bready": "top.u_dut.bready",
+      "bid": "top.u_dut.bid",
+      "bresp": "top.u_dut.bresp",
+      "arvalid": "top.u_dut.arvalid",
+      "arready": "top.u_dut.arready",
+      "araddr": "top.u_dut.araddr",
+      "arlen": "top.u_dut.arlen",
+      "arsize": "top.u_dut.arsize",
+      "arburst": "top.u_dut.arburst",
+      "arid": "top.u_dut.arid",
+      "rvalid": "top.u_dut.rvalid",
+      "rready": "top.u_dut.rready",
+      "rdata": "top.u_dut.rdata",
+      "rresp": "top.u_dut.rresp",
+      "rid": "top.u_dut.rid",
+      "rlast": "top.u_dut.rlast"
+    }
+  }
+}
+```
+
+### 查询
+
+加载后用 `apb.config.list` / `axi.config.list` 确认已注册，然后：
+
+- `apb.query` / `axi.query`：查指定时间窗口的传输。
+- `axi.analysis`：查异常（protocol violation、timing outlier 等）。
+- `axi.channel_stall`：查通道级停顿热点。
+- `axi.latency_outlier`：查延迟异常。
+- `axi.outstanding_timeline`：查未完成事务的时间线。
+
+**没有 config.load，query 会报 `MISSING_FIELD: requires args.name or latest config`。** config 字段名以实际代码中的 VIP/DUT 信号名为准，没有自动检测。

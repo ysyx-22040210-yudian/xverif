@@ -26,7 +26,7 @@ def _split_command(argv: List[str]) -> List[str]:
             args.pop(0)
             break
         flag = args.pop(0)
-        if flag in {"-q", "-R"} and args:
+        if flag in {"-q", "-R", "-J"} and args:
             args.pop(0)
     return args
 

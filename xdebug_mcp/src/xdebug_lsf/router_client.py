@@ -23,6 +23,9 @@ class RouterClient:
     @classmethod
     def start(cls, bsub: BsubRunner, opts: Optional[BsubOptions] = None, timeout_sec: float = 30.0) -> "RouterClient":
         cmd = [sys.executable, "-m", "xdebug_router.main"]
+        opts = opts or BsubOptions(job_name="xdebug_router")
+        if not opts.job_name:
+            opts.job_name = "xdebug_router"
         proc = bsub.start(cmd, opts)
         ready = proc.wait_ready("xdebug-router-jsonl", timeout_sec)
         return cls(proc, ready, timeout_sec)

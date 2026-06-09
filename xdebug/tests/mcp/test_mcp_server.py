@@ -8,24 +8,31 @@ class FakeRunner:
     def __init__(self):
         self.requests = []
 
-    def request(self, request):
+    def request(self, request, output_format="json"):
         self.requests.append(request)
         action = request.get("action")
         if action == "session.open":
             name = request.get("args", {}).get("name", "case")
-            return {
+            result = {
                 "ok": True,
                 "action": action,
                 "summary": {"session_id": name, "mode": "waveform"},
                 "session": {"id": name},
             }
-        if action == "session.close":
-            return {"ok": True, "action": action, "summary": {"removed": True}}
-        if action == "actions":
-            return {"ok": True, "action": action, "data": {"implemented": ["value.at"]}}
-        if action == "schema":
-            return {"ok": True, "action": action, "data": {"schema": {"type": "object"}}}
-        return {"ok": True, "action": action, "target": request.get("target", {}), "args": request.get("args", {})}
+        elif action == "session.close":
+            result = {"ok": True, "action": action, "summary": {"removed": True}}
+        elif action == "actions":
+            result = {"ok": True, "action": action, "data": {"implemented": ["value.at"]}}
+        elif action == "schema":
+            result = {"ok": True, "action": action, "data": {"schema": {"type": "object"}}}
+        else:
+            result = {"ok": True, "action": action, "target": request.get("target", {}), "args": request.get("args", {})}
+
+        if output_format == "xout":
+            return f"@xdebug.{action}.v1\n\nsummary:\n  action: {action}\n"
+        if output_format == "envelope":
+            return {"ok": True, "exit_code": 0, "stdout": json.dumps(result), "stderr": "", "payload_format": "json"}
+        return result
 
 
 class TestXdebugMcpServer(unittest.TestCase):

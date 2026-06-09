@@ -27,6 +27,7 @@ class JsonlProcess:
     stderr_tail: Deque[str] = field(default_factory=lambda: deque(maxlen=200))
     pending: Dict[str, Json] = field(default_factory=dict)
     read_lock: threading.Lock = field(default_factory=threading.Lock)
+    job_name: Optional[str] = None
     _stdout_thread: Optional[threading.Thread] = None
     _stderr_thread: Optional[threading.Thread] = None
 
