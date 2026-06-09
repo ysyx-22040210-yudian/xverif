@@ -177,8 +177,8 @@ void render_signal_changes(TextResponseBuilder& out, const Json& response) {
     const Json data = response.value("data", Json::object());
     out.emit_section("target");
     emit_scalar_keys(out, data, {"signal"});
-    if (data.contains("time_range") && data["time_range"].is_object()) {
-        out.emit_kv("window", scalar_text(data["time_range"], "start") + ".." + scalar_text(data["time_range"], "end"));
+    if (data.contains("begin") && data.contains("end")) {
+        out.emit_kv("window", scalar_text(data, "begin") + ".." + scalar_text(data, "end"));
     }
     out.emit_section("summary");
     emit_scalar_keys(out, summary, {"change_count", "transition_count", "actual_transition_count", "returned_change_rows", "truncated"});
@@ -198,18 +198,21 @@ void render_active_driver(TextResponseBuilder& out, const Json& response) {
     out.emit_section("target");
     emit_scalar_keys(out, summary, {"signal", "requested_time", "active_time"});
     out.emit_section("summary");
-    emit_scalar_keys(out, summary, {"classification", "active_driver", "value", "confidence", "truncated"});
-    for (const char* key : {"drivers", "control", "evidence"}) {
+    emit_scalar_keys(out, summary, {"driver_status", "statement_count", "truncated"});
+    // data keys: driver (singular), path, statements, controls, events
+    for (const char* key : {"driver", "path", "statements", "controls", "events"}) {
         if (data.contains(key)) {
             out.emit_section(key);
-            if (std::string(key) == "evidence") {
-                emit_evidence_object(out, data[key]);
-            } else if (data[key].is_array()) {
+            if (data[key].is_array()) {
                 for (const auto& item : data[key]) out.emit_row({item.is_object() ? item.dump() : json_to_xout_value(item)});
             } else if (data[key].is_object()) {
                 for (auto it = data[key].begin(); it != data[key].end(); ++it) out.emit_row({it.key(), json_to_xout_value(it.value())});
             }
         }
+    }
+    if (data.contains("limitations") && data["limitations"].is_array() && !data["limitations"].empty()) {
+        out.emit_section("limitations");
+        for (const auto& l : data["limitations"]) out.emit_row({l.get<std::string>()});
     }
 }
 
