@@ -1,2 +1,0 @@
-"""xdebug router package."""
-
