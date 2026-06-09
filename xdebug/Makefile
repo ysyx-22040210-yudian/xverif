@@ -46,6 +46,7 @@ APP_SRCS = src/main.cpp \
            src/api/xout_renderer.cpp \
            src/api/action_catalog.cpp \
            src/api/dispatcher.cpp \
+           src/api/stdio_loop.cpp \
            $(API_SUPPORT_SRCS) \
            src/session/session_store.cpp \
            src/backend/engine_adapter.cpp \

@@ -2,6 +2,7 @@
 #include "api/help_text.h"
 #include "api/request_parser.h"
 #include "api/response.h"
+#include "api/stdio_loop.h"
 #include "api/xout_renderer.h"
 #include "logging/action_log.h"
 
@@ -68,9 +69,12 @@ int main(int argc, char** argv) {
 
     CliOptions options;
     options.format = env_wants_json() ? OutputFormat::Json : OutputFormat::Xout;
+    bool stdio_loop = false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
-        if (arg == "--json") {
+        if (arg == "--stdio-loop") {
+            stdio_loop = true;
+        } else if (arg == "--json") {
             options.format = OutputFormat::Json;
         } else if (arg == "--text" || arg == "--xout") {
             options.format = OutputFormat::Xout;
@@ -83,6 +87,11 @@ int main(int argc, char** argv) {
             print_response(response, options.format);
             return 1;
         }
+    }
+
+    if (stdio_loop) {
+        return xdebug::run_stdio_loop(executable_dir(),
+                                      options.format == OutputFormat::Json);
     }
 
     std::string input;
