@@ -119,8 +119,9 @@ class McpSessionManager:
         self,
         session: Optional[str],
         action: str,
-        args: Optional[Json],
-        output_format: str,
+        args: Optional[Json] = None,
+        output_format: str = "xout",
+        **kwargs: Any,
     ) -> Any:
         key = session or self.default_session
         if not key:
@@ -166,13 +167,13 @@ class McpSessionManager:
     def session_open(self, name: str, fsdb: str, **kwargs: Any) -> Json:
         return self.open_session(name=name, fsdb=fsdb, **kwargs)
 
-    def session_list(self, **kwargs):
+    def session_list(self, **kwargs: Any) -> Json:
         return self.list_sessions()
 
-    def session_use(self, session):
+    def session_use(self, session: str) -> Json:
         return self.use_session(session)
 
-    def session_close(self, session):
+    def session_close(self, session: str) -> Json:
         return self.close_session(session)
 
     # ------------------------------------------------------------------
