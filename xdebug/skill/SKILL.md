@@ -17,6 +17,7 @@ xdebug 是原 xtrace 与 xwave 的统一事实查询入口。设计事实来自 
 - API 速查：[references/json-api-reference.md](references/json-api-reference.md)
 - 响应字段字典：[references/ai-response-dictionary.md](references/ai-response-dictionary.md)
 - 常见 debug recipes：[references/recipes.md](references/recipes.md)
+- MCP LSF backend：[references/lsf-mcp.md](references/lsf-mcp.md)
 - LSF/file transport：[references/file-transport.md](references/file-transport.md)
 - nWave rc 生成：[references/rc-generate.md](references/rc-generate.md)
 
@@ -71,13 +72,15 @@ JSON
 
 如果当前 shell 未安装 `xdebug`，且当前目录是仓库根目录，可以临时使用 `tools/xdebug`。兼容入口 `tools/xdebug-env` 只作为旧脚本转发。
 
-MCP 场景使用 `tools/xdebug-mcp`，它内部仍调用 `tools/xdebug --json -`，但会维护多个 session 别名和默认 session。MCP tool 选择：
+MCP 场景使用 `tools/xdebug-mcp`，它内部仍调用 `tools/xdebug --json -` 或 LSF backend 里的 per-session endpoint，但会维护多个 session 别名和默认 session。MCP tool 选择：
 
 - `xdebug_session_open`：打开/复用 `daidir`、`fsdb` 或 combined session。
 - `xdebug_session_use`：切换默认 session。
 - `xdebug_query`：用默认 session 调 action。
 - `xdebug_request`：需要完整 envelope 控制时直接传 xdebug JSON request。
 - `xdebug_actions` / `xdebug_schema`：查询机器契约。
+
+当用户说明 AI 客户端在登录机、查询必须跑到 LSF 计算节点、且登录机无法直连计算节点 TCP 端口时，MCP 首选 `XDEBUG_MCP_BACKEND=lsf`。这个 backend 由 `tools/xdebug-mcp` 启动 LSF router job 和 per-session endpoint job；agent 仍只调用 MCP tools，不手写 router JSONL。详细规则见 [references/lsf-mcp.md](references/lsf-mcp.md)。
 
 ## 资源 target 决策
 
@@ -101,6 +104,11 @@ Transport 选择：
 - 默认 `uds`：同机本地调试首选，不要主动切 TCP/file。
 - `tcp`：仅在 UDS socket 不可达、容器/namespace 隔离或用户明确需要跨进程/远程 daemon 时使用。
 - `file`：登录机无法连接计算节点 TCP 端口、LSF batch、共享文件系统可见时使用。
+
+注意区分：
+
+- MCP 场景的 LSF backend 是 `tools/xdebug-mcp` 的运行模式，适合 AI 客户端通过 MCP 访问集群计算节点。
+- xdebug 原生 `transport:"file"` 是 daemon/session 通信模式，适合不走 MCP 的命令行或共享文件系统 request/response。
 
 file transport 规则：
 

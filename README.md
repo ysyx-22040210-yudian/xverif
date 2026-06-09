@@ -44,7 +44,8 @@ tools/xdebug-mcp
 ```
 
 `tools/xdebug-mcp` 是 stdio MCP wrapper，适合支持 MCP 的 AI 客户端；它维护多个 session 别名，并把 tool call 转成 xdebug JSON 请求。
-如果本机无法直连计算节点 TCP 端口，xdebug 原生支持 `transport:"file"`，通过共享文件系统在 session 目录下交换 request/response。
+如果 AI 客户端在登录机、NPI/FSDB 查询需要跑到 LSF 计算节点，可以设置 `XDEBUG_MCP_BACKEND=lsf`，让 MCP wrapper 通过 `bsub -I` 启动集群内 router 和 per-session endpoint。不同 session 并行，同一 session 串行。
+如果不走 MCP 且本机无法直连计算节点 TCP 端口，xdebug 原生支持 `transport:"file"`，通过共享文件系统在 session 目录下交换 request/response。
 
 完整说明见 [`xdebug/README.md`](xdebug/README.md)。
 

@@ -21,6 +21,7 @@ LDFLAGS  = $(NPI_LDFLAGS) -pthread $(if $(NPI_LIB),-Xlinker -rpath -Xlinker $(NP
 BUILD    = build
 LIBEXEC  = libexec
 EXE      = xdebug
+PYTHON  ?= python3
 
 CORE_SRCS = src/core/common/tool_config.cpp \
             src/core/common/path_utils.cpp \
@@ -153,15 +154,15 @@ unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o $(BUILD)
 	$(BUILD)/tests/test_rc_generator
 
 schema-test:
-	python3 tools/validate_schema.py schemas/v1
-	python3 tools/validate_examples.py examples schemas/v1
+	$(PYTHON) tools/validate_schema.py schemas/v1
+	$(PYTHON) tools/validate_examples.py examples schemas/v1
 
 mcp-test:
-	PYTHONPATH=$(CURDIR)/.. python3 -m unittest discover -s tests/mcp -v
+	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m unittest discover -s tests/mcp -v
 
 contract-test: $(EXE) schema-test
-	python3 tools/audit_action_schema_coverage.py $(CURDIR)
-	python3 tools/check_action_contract.py specs/actions $(CURDIR)/$(EXE)
+	$(PYTHON) tools/audit_action_schema_coverage.py $(CURDIR)
+	$(PYTHON) tools/check_action_contract.py specs/actions $(CURDIR)/$(EXE)
 
 clean:
 	rm -rf $(BUILD) $(LIBEXEC) $(EXE)

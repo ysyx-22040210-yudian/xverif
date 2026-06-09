@@ -189,6 +189,60 @@ MCP client 配置示例：
 
 wrapper registry 是进程内状态；MCP server 重启后可用 `xdebug_session_open` + `reuse:true` 恢复命名 session。真实 session 仍由 xdebug 自己记录在 `~/.xdebug`。
 
+#### MCP LSF backend
+
+默认 MCP backend 是 `direct`，适合同机直接运行 `tools/xdebug`。如果 AI 客户端在登录机上，但 NPI/FSDB 查询必须跑到 LSF 计算节点上，可以把 MCP backend 切到 `lsf`：
+
+```json
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "<xverif-root>/tools/xdebug-mcp",
+      "env": {
+        "XVERIF_HOME": "<xverif-root>",
+        "XDEBUG_MCP_BACKEND": "lsf"
+      }
+    }
+  }
+}
+```
+
+LSF backend 的链路是：
+
+```text
+AI MCP client
+  -> tools/xdebug-mcp
+  -> bsub -I router job
+  -> per-session TCP endpoint jobs
+  -> tools/xdebug
+```
+
+它解决的是“本机无法连接计算节点 TCP 端口，但登录机可以通过 LSF 在集群内部启动 router/session job”的场景。不同 session 可以并行；同一个 session 的请求会串行，避免同一 daemon 被并发请求打乱状态。
+
+常用环境变量：
+
+| 变量 | 作用 |
+| --- | --- |
+| `XDEBUG_MCP_BACKEND=lsf` | 启用 LSF backend |
+| `XDEBUG_LSF_BSUB` | 覆盖 `bsub` 命令，便于站点 wrapper 或测试 fake runner |
+| `XDEBUG_MCP_TIMEOUT_SEC` | direct backend 单次请求超时 |
+| `PYTHON` | 指定运行 MCP wrapper 的 Python，建议使用 Python 3.11+ |
+| `XVERIF_HOME` | 指向仓库根目录，便于计算节点找到 `tools/xdebug` |
+
+本地开发可用 fake LSF 跑 smoke，不需要真实 LSF：
+
+```bash
+PYTHON=python3 XDEBUG_MCP_FAKE_LSF=1 tools/xdebug-lsf-doctor --fake
+```
+
+真实环境建议先跑：
+
+```bash
+PYTHON=python3 tools/xdebug-lsf-doctor
+```
+
+如果用户明确说“LSF 计算节点只能集群内部 TCP，登录机不能直连计算节点端口”，MCP 场景优先用 `XDEBUG_MCP_BACKEND=lsf`。如果不用 MCP、只走 xdebug 原生命令，则优先使用上面的 `transport:"file"`。
+
 重复调试建议先打开 session，再用 `target.session_id` 访问：
 
 ```json
@@ -762,5 +816,6 @@ xdebug 默认静默记录结构化日志。日志只写文件，不打印到 std
 - [skill/references/json-api-reference.md](skill/references/json-api-reference.md)：skill 内 API 速查。
 - [skill/references/ai-response-dictionary.md](skill/references/ai-response-dictionary.md)：skill 内响应字段字典。
 - [skill/references/recipes.md](skill/references/recipes.md)：常见 debug workflow。
+- [skill/references/lsf-mcp.md](skill/references/lsf-mcp.md)：MCP LSF backend 说明。
 - [skill/references/file-transport.md](skill/references/file-transport.md)：LSF/file transport v2 说明。
 - [skill/references/rc-generate.md](skill/references/rc-generate.md)：nWave `signal.rc` 生成说明。

@@ -1,5 +1,7 @@
 .PHONY: all xdebug xbit xentry xloc xberif test full-test clean
 
+PYTHON ?= python3
+
 all: xdebug xbit xentry xloc xberif
 
 xdebug:
@@ -18,22 +20,22 @@ xberif:
 	$(MAKE) -C xberif
 
 test: xdebug xbit xentry xloc xberif
-	$(MAKE) -C xdebug schema-test
-	$(MAKE) -C xdebug contract-test
+	$(MAKE) -C xdebug PYTHON=$(PYTHON) schema-test
+	$(MAKE) -C xdebug PYTHON=$(PYTHON) contract-test
 	$(MAKE) -C xdebug unit-test
-	$(MAKE) -C xdebug mcp-test
-	$(MAKE) -C xbit test
-	$(MAKE) -C xentry test
+	$(MAKE) -C xdebug PYTHON=$(PYTHON) mcp-test
+	$(MAKE) -C xbit PYTHON=$(PYTHON) test
+	$(MAKE) -C xentry PYTHON=$(PYTHON) test
 	$(MAKE) -C xloc test
-	$(MAKE) -C xberif test
+	$(MAKE) -C xberif PYTHON=$(PYTHON) test
 	$(MAKE) -C xdebug/testdata/combined/active_driver fixture
 	regression/run_xdebug_regression.sh
 
 full-test: xdebug xbit xentry xloc xberif
-	$(MAKE) -C xbit test
-	$(MAKE) -C xentry test
+	$(MAKE) -C xbit PYTHON=$(PYTHON) test
+	$(MAKE) -C xentry PYTHON=$(PYTHON) test
 	$(MAKE) -C xloc test
-	$(MAKE) -C xberif test
+	$(MAKE) -C xberif PYTHON=$(PYTHON) test
 	regression/run_full_regression.sh
 
 clean:
