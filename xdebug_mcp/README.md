@@ -44,17 +44,18 @@ MCP client 配置：
 ```text
 AI MCP client
   -> tools/xdebug-mcp
-  -> bsub -I router job
-  -> per-session TCP endpoint jobs
-  -> tools/xdebug
+  -> McpSessionManager
+  -> DirectLauncher:           tools/xdebug --stdio-loop    (direct mode)
+  -> LsfLauncher:     bsub -I tools/xdebug --stdio-loop    (LSF mode)
 ```
+
+direct 和 LSF 共用同一套 XdebugLoopSession 实现（session 生命周期、request/response、timeout、cleanup），只在启动器（Launcher）层分离。
 
 并发语义：
 
-- 不同 session 并行。
-- 同一 session 串行。
-- Router crash 后 wrapper 会重启 router，并重新注册仍 alive 的 session。
-- 单个 session crash 只影响该 session。
+- 不同 session 并行（独立 process）。
+- 同一 session 串行（request_lock）。
+- 每 session 独立 --stdio-loop 进程，互不干扰。
 
 ## 环境变量
 

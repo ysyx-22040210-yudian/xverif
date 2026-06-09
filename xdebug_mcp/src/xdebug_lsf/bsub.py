@@ -46,11 +46,11 @@ class BsubRunner:
     def build(self, command: Iterable[str], opts: Optional[BsubOptions] = None) -> List[str]:
         opts = opts or BsubOptions()
         base = shlex.split(self.bsub_cmd)
-        # Use -Is (interactive + shell) so the job can be cleanly terminated with bkill.
-        # Avoid duplicate flags when bsub_cmd already contains -I / -Is / -Ip.
+        # Default to -I (interactive).  -Is is allowed when user explicitly sets it via
+        # XDEBUG_LSF_BSUB, but we default to -I for cleaner machine-protocol output.
         interactive = {"-I", "-Is", "-Ip"}
         if not any(flag in base for flag in interactive):
-            base.append("-Is")
+            base.append("-I")
         base.extend(opts.extra_args())
         base.extend(list(command))
         return base

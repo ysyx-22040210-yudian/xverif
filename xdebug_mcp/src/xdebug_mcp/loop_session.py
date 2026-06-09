@@ -170,7 +170,7 @@ class XdebugLoopSession:
         if not self.handle:
             return _error("SESSION_PROCESS_MISSING", "no loop process")
         with self._lock:
-            return self.handle.request(req, timeout or self.request_timeout_sec)
+            return self.handle.request(req, timeout_sec=timeout or self.request_timeout_sec)
 
     # ------------------------------------------------------------------
     # public info
