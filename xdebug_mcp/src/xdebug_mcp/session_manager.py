@@ -70,7 +70,10 @@ class McpSessionManager:
         daidir: Optional[str] = None,
         queue: Optional[str] = None,
         resource: Optional[str] = None,
+        reuse: bool = True,
+        reopen: bool = False,
         make_default: bool = True,
+        **kwargs: Any,
     ) -> Json:
         if name in self.sessions:
             existing = self.sessions[name]
@@ -160,8 +163,8 @@ class McpSessionManager:
     # backward-compat aliases (old server_legacy calls these)
     # ------------------------------------------------------------------
 
-    def session_open(self, name, **kwargs):
-        return self.open_session(name, **kwargs)
+    def session_open(self, name: str, fsdb: str, **kwargs: Any) -> Json:
+        return self.open_session(name=name, fsdb=fsdb, **kwargs)
 
     def session_list(self, **kwargs):
         return self.list_sessions()

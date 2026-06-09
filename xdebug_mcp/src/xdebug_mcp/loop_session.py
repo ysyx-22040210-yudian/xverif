@@ -82,14 +82,16 @@ class XdebugLoopSession:
                 "api_version": "xdebug.v1",
                 "action": "session.open",
                 "target": {"fsdb": self.fsdb},
-                "args": {"name": self.alias, "transport": "uds"},
+                "args": {"name": self.alias, "transport": "uds", "reuse": True},
                 "output": {"format": "json"},
             }
             if self.daidir:
                 open_req["target"]["daidir"] = self.daidir
 
             rsp = self._call_raw(open_req, timeout=self.startup_timeout_sec)
-            if not rsp.get("ok"):
+            # Accept SESSION_ID_EXISTS as success (session was already open with matching resources)
+            err = rsp.get("error", {})
+            if not rsp.get("ok") and err.get("code") != "SESSION_ID_EXISTS":
                 self.state = "dead"
                 return rsp
 
