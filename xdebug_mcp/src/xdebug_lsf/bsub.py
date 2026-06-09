@@ -1,13 +1,24 @@
-"""bsub -I command construction and startup."""
+"""bsub -Is command construction and startup."""
 
 from __future__ import annotations
 
 import os
+import re
 import shlex
 from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
 from .protocol import JsonlProcess
+
+
+# LSF typical output: "Job <123456> is submitted to queue <interactive>."
+_JOB_RE = re.compile(r"Job\s+<(?P<job_id>\d+)>\s+is\s+submitted")
+
+
+def parse_lsf_job_id(text: str) -> Optional[str]:
+    """Parse job ID from bsub stderr/stdout output."""
+    m = _JOB_RE.search(text)
+    return m.group("job_id") if m else None
 
 
 @dataclass
@@ -35,12 +46,14 @@ class BsubRunner:
     def build(self, command: Iterable[str], opts: Optional[BsubOptions] = None) -> List[str]:
         opts = opts or BsubOptions()
         base = shlex.split(self.bsub_cmd)
-        if "-I" not in base:
-            base.append("-I")
+        # Use -Is (interactive + shell) so the job can be cleanly terminated with bkill
+        for flag in ("-Is", "-I"):
+            if flag not in base:
+                base.append(flag)
+                break
         base.extend(opts.extra_args())
         base.extend(list(command))
         return base
 
     def start(self, command: Iterable[str], opts: Optional[BsubOptions] = None) -> JsonlProcess:
         return JsonlProcess.start(self.build(command, opts))
-

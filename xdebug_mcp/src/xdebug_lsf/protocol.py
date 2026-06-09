@@ -28,6 +28,7 @@ class JsonlProcess:
     pending: Dict[str, Json] = field(default_factory=dict)
     read_lock: threading.Lock = field(default_factory=threading.Lock)
     job_name: Optional[str] = None
+    job_id: Optional[str] = None
     _stdout_thread: Optional[threading.Thread] = None
     _stderr_thread: Optional[threading.Thread] = None
 
@@ -56,8 +57,15 @@ class JsonlProcess:
 
     def _read_stderr(self) -> None:
         assert self.proc.stderr is not None
+        # Lazy import to avoid circular dependency
+        from xdebug_lsf.bsub import parse_lsf_job_id as _parse
         for line in self.proc.stderr:
-            self.stderr_tail.append(line.rstrip("\n"))
+            stripped = line.rstrip("\n")
+            self.stderr_tail.append(stripped)
+            if not self.job_id:
+                jid = _parse(stripped)
+                if jid:
+                    self.job_id = jid
 
     def wait_ready(self, protocol: str, timeout_sec: float = 30.0) -> Json:
         deadline = time.time() + timeout_sec

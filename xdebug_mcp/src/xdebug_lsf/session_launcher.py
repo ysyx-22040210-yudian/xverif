@@ -27,9 +27,10 @@ class SessionInfo:
     daidir: Optional[str]
     state: str = "alive"
     process: Optional[JsonlProcess] = None
+    job_id: Optional[str] = None
 
     def public_json(self) -> Json:
-        return {
+        out: Json = {
             "alias": self.alias,
             "session_id": self.session_id,
             "job_name": self.job_name,
@@ -40,6 +41,9 @@ class SessionInfo:
             "daidir": self.daidir,
             "state": self.state,
         }
+        if self.job_id:
+            out["job_id"] = self.job_id
+        return out
 
 
 class SessionLauncher:
@@ -91,4 +95,5 @@ class SessionLauncher:
             fsdb=fsdb,
             daidir=daidir,
             process=proc,
+            job_id=proc.job_id,
         )

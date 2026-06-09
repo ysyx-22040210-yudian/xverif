@@ -19,7 +19,8 @@ def _env_int(name: str, default: int = 0) -> int:
 
 def _split_command(argv: List[str]) -> List[str]:
     args = list(argv)
-    if args and args[0] == "-I":
+    # Consume -I / -Is flag
+    if args and args[0] in ("-I", "-Is"):
         args.pop(0)
     while args and args[0].startswith("-"):
         if args[0] == "--":

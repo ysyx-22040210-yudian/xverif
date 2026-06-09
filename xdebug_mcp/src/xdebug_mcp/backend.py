@@ -8,7 +8,7 @@ import subprocess
 import time
 from typing import Any, Dict, List, Optional
 
-from xdebug_lsf.bsub import BsubRunner
+from xdebug_lsf.bsub import BsubOptions, BsubRunner
 from xdebug_lsf.router_client import RouterClient
 from xdebug_lsf.session_launcher import SessionInfo, SessionLauncher
 
@@ -44,6 +44,17 @@ def _bkill_job(job_name: Optional[str]) -> None:
     bkill_cmd = os.environ.get("XDEBUG_LSF_BKILL", "bkill")
     try:
         subprocess.run([bkill_cmd, "-J", job_name], timeout=10, check=False)
+    except Exception:
+        pass
+
+
+def _bkill_by_id(job_id: str) -> None:
+    """Clean up an LSF job by ID using bkill <id>."""
+    if not job_id:
+        return
+    bkill_cmd = os.environ.get("XDEBUG_LSF_BKILL", "bkill")
+    try:
+        subprocess.run([bkill_cmd, job_id], timeout=10, check=False)
     except Exception:
         pass
 
@@ -383,10 +394,18 @@ class LsfBackend:
         # Stable job name prefix so all jobs from this MCP server share the same root
         import getpass, uuid as _uuid
         self._job_prefix = f"xdebug_{getpass.getuser()}_{os.getpid()}_{_uuid.uuid4().hex[:8]}"
+        # Queues: separate for router and session, default "interactive"
+        self._router_queue = os.environ.get("XDEBUG_LSF_ROUTER_QUEUE", "interactive")
+        self._session_queue = os.environ.get("XDEBUG_LSF_SESSION_QUEUE", "interactive")
+
+    # -- router lifecycle --------------------------------------------------
 
     def ping(self) -> str:
-        self.ensure_router()
-        assert self.router is not None
+        # No router needed for ping when no sessions exist
+        if not self.sessions:
+            return "pong (no sessions)"
+        if self.router is None or self.router.process.proc.poll() is not None:
+            return "pong (router not running)"
         rsp = self.router.ping()
         return "pong" if rsp.get("ok") else json.dumps(rsp)
 
@@ -394,7 +413,11 @@ class LsfBackend:
         if self.router is not None and self.router.process.proc.poll() is None:
             return self.router
         router_job = f"{self._job_prefix}_router"
-        self.router = RouterClient.start(self.bsub, router_job_name=router_job)
+        self.router = RouterClient.start(
+            self.bsub, router_job_name=router_job,
+            opts=BsubOptions(queue=self._router_queue, job_name=router_job),
+        )
+        # Re-register all alive sessions
         seen = set()
         for info in list(self.sessions.values()):
             if id(info) in seen:
@@ -403,6 +426,44 @@ class LsfBackend:
             if info.state == "alive":
                 self.router.register(self._router_session(info))
         return self.router
+
+    def _kill_router(self) -> None:
+        """Kill the router job if running."""
+        if self.router is None:
+            return
+        if self.router.process:
+            # Prefer job_id for bkill
+            jid = getattr(self.router.process, "job_id", None)
+            if jid:
+                _bkill_by_id(jid)
+            else:
+                _bkill_job(getattr(self.router.process, "job_name", None))
+        self.router.close()
+        self.router = None
+
+    # -- session lifecycle --------------------------------------------------
+
+    def _launch_session(self, info: SessionInfo) -> None:
+        """Actually launch a pending session job and register with router."""
+        launched = self.session_launcher.open(
+            info.alias, info.fsdb, info.daidir,
+            queue=self._session_queue, job_prefix=self._job_prefix,
+        )
+        # Copy fields from launched to existing info
+        info.session_id = launched.session_id
+        info.host = launched.host
+        info.port = launched.port
+        info.token = launched.token
+        info.pid = launched.pid
+        info.process = launched.process
+        info.job_id = launched.job_id
+        info.job_name = launched.job_name
+        info.state = "alive"
+        # Also index by session_id
+        self.sessions[launched.session_id] = info
+        # Register with router
+        if self.router:
+            self.router.register(self._router_session(info))
 
     def session_open(
         self,
@@ -414,13 +475,24 @@ class LsfBackend:
         make_default: bool = True,
         **kwargs: Any,
     ) -> Json:
+        """Record a session intent — does NOT launch a job until first query."""
         del kwargs
-        router = self.ensure_router()
-        info = self.session_launcher.open(name, fsdb, daidir, queue, resource,
-                                          job_prefix=self._job_prefix)
-        reg = router.register(self._router_session(info))
-        if not reg.get("ok"):
-            return reg
+        if not isinstance(name, str) or not name:
+            return error_payload("INVALID_ARGUMENT", "session_open requires name")
+        if not isinstance(fsdb, str) or not fsdb:
+            return error_payload("INVALID_ARGUMENT", "LSF session_open requires fsdb")
+
+        # Override queue from env if not explicitly passed
+        actual_queue = queue or self._session_queue
+
+        info = SessionInfo(
+            alias=name,
+            session_id=name,  # placeholder until launch
+            job_name=f"{self._job_prefix}_sess_{name}",
+            host="", port=0, token="", pid=None,
+            fsdb=fsdb, daidir=daidir,
+            state="pending",
+        )
         self.sessions[name] = info
         self.sessions[info.session_id] = info
         if make_default:
@@ -443,8 +515,17 @@ class LsfBackend:
         if not key:
             return error_payload("SESSION_REQUIRED", "provide session or call xdebug_session_open")
         info = self.sessions.get(key)
-        if not info or info.state != "alive":
+        if not info:
+            return error_payload("SESSION_DEAD", f"session not found: {key}")
+
+        # Lazy start: launch pending session on first query
+        if info.state == "pending":
+            self.ensure_router()
+            self._launch_session(info)
+
+        if info.state != "alive":
             return error_payload("SESSION_DEAD", f"session not alive: {key}")
+
         request = {"api_version": "xdebug.v1", "action": action, "args": args or {}}
         router = self.ensure_router()
         rsp = router.query(info.session_id, request, output_format)
@@ -466,13 +547,24 @@ class LsfBackend:
         if self.router:
             self.router.unregister(info.session_id)
         if info.process:
-            _bkill_job(info.job_name)
-            info.process.terminate()
+            self._kill_session(info)
         self.sessions.pop(info.alias, None)
         self.sessions.pop(info.session_id, None)
         if self.default_session == info.session_id:
             self.default_session = None
+        # If this was the last alive session, kill the router too
+        if not any(s.state == "alive" for s in self.sessions.values()):
+            self._kill_router()
         return {"ok": True, "closed": info.public_json(), "default_session": self.default_session}
+
+    def _kill_session(self, info: SessionInfo) -> None:
+        """Kill a session job — prefer job_id, fallback to job_name."""
+        if info.job_id:
+            _bkill_by_id(info.job_id)
+        elif info.job_name:
+            _bkill_job(info.job_name)
+        info.process.terminate()
+        info.state = "dead"
 
     def session_list(self, include_native: bool = False) -> Json:
         del include_native
@@ -487,7 +579,7 @@ class LsfBackend:
 
     def session_use(self, session: str) -> Json:
         info = self.sessions.get(session)
-        if not info or info.state != "alive":
+        if not info or info.state not in ("alive", "pending"):
             return error_payload("SESSION_NOT_FOUND", f"session is not alive or unknown: {session}")
         self.default_session = info.session_id
         return {"ok": True, "default_session": self.default_session, "session": info.public_json()}
@@ -496,14 +588,10 @@ class LsfBackend:
         """Close the entire LSF backend, cleaning up router and all sessions."""
         for info in list(self.sessions.values()):
             if info.process:
-                _bkill_job(info.job_name)
-                info.process.terminate()
+                self._kill_session(info)
             info.state = "closed"
         self.sessions.clear()
-        if self.router:
-            _bkill_job(getattr(self.router.process, "job_name", None))
-            self.router.close()
-            self.router = None
+        self._kill_router()
         self.default_session = None
 
 
