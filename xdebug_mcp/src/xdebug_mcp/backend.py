@@ -392,8 +392,12 @@ class LsfBackend:
         self.default_session: Optional[str] = None
         self.session_launcher = SessionLauncher(self.bsub, fake=self.fake)
         # Stable job name prefix so all jobs from this MCP server share the same root
-        import getpass, uuid as _uuid
-        self._job_prefix = f"xdebug_{getpass.getuser()}_{os.getpid()}_{_uuid.uuid4().hex[:8]}"
+        import getpass, re, uuid as _uuid
+
+        def _safe_name(s: str) -> str:
+            return re.sub(r"[^A-Za-z0-9_]", "_", s)
+
+        self._job_prefix = f"xdebug_{_safe_name(getpass.getuser())}_{os.getpid()}_{_uuid.uuid4().hex[:8]}"
         # Queues: separate for router and session, default "interactive"
         self._router_queue = os.environ.get("XDEBUG_LSF_ROUTER_QUEUE", "interactive")
         self._session_queue = os.environ.get("XDEBUG_LSF_SESSION_QUEUE", "interactive")
@@ -461,6 +465,9 @@ class LsfBackend:
         info.state = "alive"
         # Also index by session_id
         self.sessions[launched.session_id] = info
+        # Update default_session if it was pointing to the alias
+        if self.default_session == info.alias:
+            self.default_session = launched.session_id
         # Register with router
         if self.router:
             self.router.register(self._router_session(info))

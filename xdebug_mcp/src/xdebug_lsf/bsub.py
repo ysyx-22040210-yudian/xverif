@@ -46,14 +46,17 @@ class BsubRunner:
     def build(self, command: Iterable[str], opts: Optional[BsubOptions] = None) -> List[str]:
         opts = opts or BsubOptions()
         base = shlex.split(self.bsub_cmd)
-        # Use -Is (interactive + shell) so the job can be cleanly terminated with bkill
-        for flag in ("-Is", "-I"):
-            if flag not in base:
-                base.append(flag)
-                break
+        # Use -Is (interactive + shell) so the job can be cleanly terminated with bkill.
+        # Avoid duplicate flags when bsub_cmd already contains -I / -Is / -Ip.
+        interactive = {"-I", "-Is", "-Ip"}
+        if not any(flag in base for flag in interactive):
+            base.append("-Is")
         base.extend(opts.extra_args())
         base.extend(list(command))
         return base
 
     def start(self, command: Iterable[str], opts: Optional[BsubOptions] = None) -> JsonlProcess:
-        return JsonlProcess.start(self.build(command, opts))
+        opts = opts or BsubOptions()
+        proc = JsonlProcess.start(self.build(command, opts))
+        proc.job_name = opts.job_name
+        return proc

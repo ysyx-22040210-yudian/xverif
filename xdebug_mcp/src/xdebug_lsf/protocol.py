@@ -52,8 +52,14 @@ class JsonlProcess:
 
     def _read_stdout(self) -> None:
         assert self.proc.stdout is not None
+        from xdebug_lsf.bsub import parse_lsf_job_id as _parse
         for line in self.proc.stdout:
-            self.stdout_queue.put(line.rstrip("\n"))
+            stripped = line.rstrip("\n")
+            if not self.job_id:
+                jid = _parse(stripped)
+                if jid:
+                    self.job_id = jid
+            self.stdout_queue.put(stripped)
 
     def _read_stderr(self) -> None:
         assert self.proc.stderr is not None
