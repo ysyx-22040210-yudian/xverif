@@ -6,4 +6,4 @@ root="$(cd "$script_dir/.." && pwd)"
 export XVERIF_HOME="${XVERIF_HOME:-$root}"
 export PYTHONPATH="$root/xverif_mcp/src:$root:${PYTHONPATH:-}"
 
-"${PYTHON:-python3}" -m xdebug_lsf.doctor "$@"
+"${PYTHON:-python3}" -m xverif_mcp.lsf.doctor "$@"

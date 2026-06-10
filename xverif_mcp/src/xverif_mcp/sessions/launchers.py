@@ -7,8 +7,8 @@ import sys
 from dataclasses import dataclass
 from typing import Optional
 
-from xdebug_lsf.bsub import BsubOptions, BsubRunner
-from xdebug_lsf.protocol import JsonlProcess
+from xverif_mcp.lsf.bsub import BsubOptions, BsubRunner
+from xverif_mcp.lsf.protocol import JsonlProcess
 
 from xverif_mcp.config import repo_root, default_xdebug_bin
 
@@ -58,7 +58,7 @@ class LsfLauncher(Launcher):
     def __init__(self, bsub: Optional[BsubRunner] = None) -> None:
         bsub_cmd = os.environ.get("XVERIF_LSF_BSUB")
         if bsub is None and os.environ.get("XVERIF_MCP_FAKE_LSF") == "1" and not bsub_cmd:
-            bsub_cmd = f"{sys.executable} -m xdebug_lsf.fake_bsub"
+            bsub_cmd = f"{sys.executable} -m xverif_mcp.lsf.fake_bsub"
         self.bsub = bsub or BsubRunner(bsub_cmd)
 
     def start(self, cfg: LaunchConfig) -> JsonlProcess:

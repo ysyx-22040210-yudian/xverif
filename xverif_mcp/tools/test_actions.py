@@ -3,8 +3,8 @@
 
 用法:
     conda activate xdebug-mcp
-    PYTHONPATH=xdebug_mcp/src python xdebug_mcp/tools/test_actions.py
-    PYTHONPATH=xdebug_mcp/src python xdebug_mcp/tools/test_actions.py -c my_config.json
+    PYTHONPATH=xverif_mcp/src python xverif_mcp/tools/test_actions.py
+    PYTHONPATH=xverif_mcp/src python xverif_mcp/tools/test_actions.py -c my_config.json
 
 选项:
     -c, --config      指定 JSON 配置文件（默认 tools/test_config.json）
@@ -338,7 +338,7 @@ async def main():
 
     server_params = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "xdebug_mcp.server"],
+        args=["-m", "xverif_mcp.server"],
         env=_server_env(),
     )
 

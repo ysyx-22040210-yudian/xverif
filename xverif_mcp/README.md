@@ -28,7 +28,7 @@ tools/xverif-lsf-doctor
       "command": "<conda-env>/bin/python",
       "args": ["-m", "xverif_mcp.server"],
       "env": {
-        "PYTHONPATH": "<xverif>/xverif_mcp/src:<xverif>/xdebug_mcp/src:<xverif>",
+        "PYTHONPATH": "<xverif>/xverif_mcp/src:<xverif>",
         "XVERIF_HOME": "<xverif>",
         "XVERIF_MCP_BACKEND": "direct",
         "VERDI_HOME": "<verdi-install>",
@@ -66,7 +66,7 @@ LSF 模式下不需要设置 `VERDI_HOME` 和 `LD_LIBRARY_PATH`，由计算节�
       "command": "<conda-env>/bin/python",
       "args": ["-m", "xverif_mcp.server"],
       "env": {
-        "PYTHONPATH": "<xverif>/xverif_mcp/src:<xverif>/xdebug_mcp/src:<xverif>",
+        "PYTHONPATH": "<xverif>/xverif_mcp/src:<xverif>",
         "XVERIF_HOME": "<xverif>"
       }
     }

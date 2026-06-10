@@ -8,7 +8,7 @@ import re
 import uuid as _uuid
 from typing import Any, Dict, Optional
 
-from xdebug_lsf.bsub import BsubRunner
+from xverif_mcp.lsf.bsub import BsubRunner
 
 from xverif_mcp.config import default_xdebug_bin
 from xverif_mcp.sessions.launchers import DirectLauncher, Launcher, LsfLauncher
@@ -42,7 +42,7 @@ class McpSessionManager:
             bsub_cmd = os.environ.get("XVERIF_LSF_BSUB")
             if os.environ.get("XVERIF_MCP_FAKE_LSF") == "1" and not bsub_cmd:
                 import sys
-                bsub_cmd = f"{sys.executable} -m xdebug_lsf.fake_bsub"
+                bsub_cmd = f"{sys.executable} -m xverif_mcp.lsf.fake_bsub"
             self.launcher = LsfLauncher(BsubRunner(bsub_cmd))
         else:
             raise ValueError(f"unsupported XVERIF_MCP_BACKEND: {self.mode}")

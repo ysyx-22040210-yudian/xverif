@@ -7,7 +7,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from xdebug_lsf.protocol import JsonlProcess, ProtocolError
+from xverif_mcp.lsf.protocol import JsonlProcess, ProtocolError
 
 from xverif_mcp.config import default_xdebug_bin
 from xverif_mcp.sessions.launchers import LaunchConfig, Launcher

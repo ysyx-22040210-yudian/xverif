@@ -55,7 +55,7 @@ class JsonlProcess:
 
     def _read_stdout(self) -> None:
         assert self.proc.stdout is not None
-        from xdebug_lsf.bsub import parse_lsf_job_id as _parse
+        from xverif_mcp.lsf.bsub import parse_lsf_job_id as _parse
         for line in self.proc.stdout:
             stripped = line.rstrip("\n")
             if not self.job_id:
@@ -67,7 +67,7 @@ class JsonlProcess:
     def _read_stderr(self) -> None:
         assert self.proc.stderr is not None
         # Lazy import to avoid circular dependency
-        from xdebug_lsf.bsub import parse_lsf_job_id as _parse
+        from xverif_mcp.lsf.bsub import parse_lsf_job_id as _parse
         for line in self.proc.stderr:
             stripped = line.rstrip("\n")
             self.stderr_tail.append(stripped)

@@ -14,7 +14,7 @@ import pytest
 from xverif_mcp.config import default_xdebug_bin
 from xverif_mcp.sessions.launchers import DirectLauncher, LaunchConfig
 from xverif_mcp.sessions.loop_session import XdebugLoopSession, _safe_name
-from xdebug_lsf.protocol import JsonlProcess
+from xverif_mcp.lsf.protocol import JsonlProcess
 
 
 # ---------------------------------------------------------------------------

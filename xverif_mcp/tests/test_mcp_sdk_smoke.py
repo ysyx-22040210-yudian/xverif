@@ -15,15 +15,12 @@ from mcp.client.stdio import stdio_client  # noqa: E402
 _XVERIF_MCP_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../xverif_mcp/src")
 )
-_XDEBUG_LSF_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "src")
-)
 
 
 def _server_env() -> dict:
     env = os.environ.copy()
     existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = f"{_XVERIF_MCP_SRC}:{_XDEBUG_LSF_SRC}:{existing}".strip(":")
+    env["PYTHONPATH"] = f"{_XVERIF_MCP_SRC}:{existing}".strip(":")
     return env
 
 

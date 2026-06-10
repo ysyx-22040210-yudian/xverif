@@ -26,8 +26,6 @@ regression/*
 !xentry/tests/**
 !xberif/tests/
 !xberif/tests/**
-!xdebug_mcp/tests/
-!xdebug_mcp/tests/**
 !xverif_mcp/tests/
 !xverif_mcp/tests/**
 xdebug/testdata/**/out/

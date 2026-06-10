@@ -11,8 +11,8 @@ from typing import Dict, List, Optional
 
 from xverif_mcp.config import default_xdebug_bin
 from xverif_mcp.sessions.launchers import DirectLauncher, LaunchConfig
-from xdebug_lsf.bsub import parse_lsf_job_id
-from xdebug_lsf.protocol import JsonlProcess
+from xverif_mcp.lsf.bsub import parse_lsf_job_id
+from xverif_mcp.lsf.protocol import JsonlProcess
 
 
 def _check_mcp_sdk() -> str:
@@ -114,7 +114,7 @@ def run(fake: bool = False) -> Dict[str, object]:
 def main(argv: Optional[List[str]] = None) -> int:
     fake = "--fake" in (argv or sys.argv[1:])
     result = run(fake=fake)
-    print("xdebug_lsf_doctor:")
+    print("xverif_lsf_doctor:")
     for key, value in result.items():
         if isinstance(value, (dict, list)):
             value = json.dumps(value, ensure_ascii=False, sort_keys=True)

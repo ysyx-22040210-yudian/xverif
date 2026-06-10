@@ -22,7 +22,7 @@ import pytest
 from xverif_mcp.sessions.launchers import DirectLauncher
 from xverif_mcp.sessions.loop_session import XdebugLoopSession
 from xverif_mcp.sessions.session_manager import McpSessionManager
-from xdebug_lsf.protocol import JsonlProcess
+from xverif_mcp.lsf.protocol import JsonlProcess
 
 
 # ---------------------------------------------------------------------------
