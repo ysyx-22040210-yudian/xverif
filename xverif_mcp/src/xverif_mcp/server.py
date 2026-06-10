@@ -9,6 +9,10 @@ from xverif_mcp.adapters.xdebug import XverifDebugAdapter
 from xverif_mcp.adapters.xbit import bit_conv, bit_eval, bit_slice, bit_check
 from xverif_mcp.adapters.xentry import entry_decode, entry_explain, entry_validate
 from xverif_mcp.adapters.xloc import loc_resolve, loc_context, loc_stats, loc_annotate
+from xverif_mcp.adapters.xberif import (context_status, context_list_topics, context_brief,
+                                         context_get, context_detail, context_validate,
+                                         context_config_init, context_init, context_repair)
+from xverif_mcp.adapters.xsva import sva_list, sva_scan, sva_parse, sva_explain, sva_render
 from xverif_mcp.errors import error_payload
 
 # ---------------------------------------------------------------------------
@@ -402,6 +406,157 @@ def xverif_loc_annotate(log_path: str, map_path: Optional[str] = None,
     """
     return loc_annotate(log_path, map_path=map_path,
                         output_format=output_format)
+
+
+# ---------------------------------------------------------------------------
+# Context tools (xberif — stateless CLI adapter)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def xverif_context_status(project_root: Optional[str] = None,
+                           output_format: str = "json") -> Any:
+    """Check xberif project status (which kinds, cards, details exist)."""
+    return context_status(project_root=project_root, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_context_list_topics(project_root: Optional[str] = None,
+                                output_format: str = "json") -> Any:
+    """List all known context topics."""
+    return context_list_topics(project_root=project_root, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_context_brief(mode: str = "debug", project_root: Optional[str] = None,
+                          output_format: str = "xout") -> Any:
+    """Generate a context summary brief for the given mode.
+
+    Args:
+        mode: Context mode (e.g. "debug").
+        output_format: "json" or "xout".
+    """
+    return context_brief(mode=mode, project_root=project_root,
+                         output_format=output_format)
+
+
+@mcp.tool()
+def xverif_context_get(topic: str, detail: bool = False,
+                        project_root: Optional[str] = None,
+                        output_format: str = "xout") -> Any:
+    """Get a topic summary card, optionally with full detail.
+
+    Args:
+        topic: Topic name (e.g. "clk_rst", "memory_map").
+        detail: If True, also include full detail content.
+        output_format: "json" or "xout".
+    """
+    return context_get(topic, detail=detail, project_root=project_root,
+                       output_format=output_format)
+
+
+@mcp.tool()
+def xverif_context_detail(topic: str, project_root: Optional[str] = None,
+                           output_format: str = "markdown") -> Any:
+    """Get the full detail markdown for a topic.
+
+    Args:
+        topic: Topic name.
+        output_format: "markdown" (raw detail text).
+    """
+    return context_detail(topic, project_root=project_root,
+                          output_format=output_format)
+
+
+@mcp.tool()
+def xverif_context_validate(project_root: Optional[str] = None,
+                             output_format: str = "json") -> Any:
+    """Validate project cards and detail files for consistency."""
+    return context_validate(project_root=project_root, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_context_config_init(kind: str, project_root: Optional[str] = None) -> Any:
+    """Initialize xberif kind.toml config. Requires XVERIF_MCP_ENABLE_WRITE=1."""
+    return context_config_init(kind, project_root=project_root)
+
+
+@mcp.tool()
+def xverif_context_init(model: str, project_root: Optional[str] = None) -> Any:
+    """Initialize xberif project structure. Requires XVERIF_MCP_ENABLE_WRITE=1."""
+    return context_init(model, project_root=project_root)
+
+
+@mcp.tool()
+def xverif_context_repair(project_root: Optional[str] = None) -> Any:
+    """Repair xberif catalog index. Requires XVERIF_MCP_ENABLE_WRITE=1."""
+    return context_repair(project_root=project_root)
+
+
+# ---------------------------------------------------------------------------
+# SVA tools (xsva — stateless CLI adapter)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def xverif_sva_list(file: str, output_format: str = "json") -> Any:
+    """List all property/assertion names in a SVA source file.
+
+    Args:
+        file: Path to SVA source file (.sv/.sva/.v).
+    """
+    return sva_list(file, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_sva_scan(file: str, output_format: str = "json") -> Any:
+    """Scan syntax constructs used in a SVA source file.
+
+    Args:
+        file: Path to SVA source file.
+    """
+    return sva_scan(file, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_sva_parse(file: str, property: str, emit: str = "timeline-ir",
+                      output_format: str = "json") -> Any:
+    """Parse a SVA property into IR.
+
+    Args:
+        file: Path to SVA source file.
+        property: Property/assertion name.
+        emit: IR level — "surface-ir", "sequence-ir", or "timeline-ir".
+    """
+    return sva_parse(file, property, emit=emit, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_sva_explain(file: str, property: str, strict: bool = False,
+                        output_format: str = "xout") -> Any:
+    """Generate a human-readable explanation of a SVA property.
+
+    Args:
+        file: Path to SVA source file.
+        property: Property/assertion name.
+        strict: If True, error on unsupported constructs.
+        output_format: "json", "markdown", or "xout".
+    """
+    return sva_explain(file, property, strict=strict, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_sva_render(file: str, property: str, format: str = "mermaid",
+                       output_format: str = "xout") -> Any:
+    """Render a SVA property as mermaid or SVG.
+
+    Args:
+        file: Path to SVA source file.
+        property: Property/assertion name.
+        format: "mermaid" or "svg".
+        output_format: "xout" (rendered text).
+    """
+    return sva_render(file, property, format=format, output_format=output_format)
 
 
 # ---------------------------------------------------------------------------
