@@ -19,9 +19,9 @@ from pathlib import Path
 
 import pytest
 
-from xdebug_mcp.launchers import DirectLauncher
-from xdebug_mcp.loop_session import XdebugLoopSession
-from xdebug_mcp.session_manager import McpSessionManager
+from xverif_mcp.sessions.launchers import DirectLauncher
+from xverif_mcp.sessions.loop_session import XdebugLoopSession
+from xverif_mcp.sessions.session_manager import McpSessionManager
 from xdebug_lsf.protocol import JsonlProcess
 
 

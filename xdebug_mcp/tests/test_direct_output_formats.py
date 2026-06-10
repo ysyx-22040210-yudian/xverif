@@ -1,4 +1,4 @@
-"""Direct backend output format tests (xout / json / envelope)."""
+"""Output format tests for xverif-mcp one-shot requests (xout / json / envelope)."""
 
 from __future__ import annotations
 
@@ -10,14 +10,15 @@ from pathlib import Path
 
 import pytest
 
-from xdebug_mcp.backend import DirectBackend, XdebugRunner
+from xverif_mcp.runner import StatelessCliRunner
 
 
-def _make_fake_xdebug(dirpath: Path, xout_response: str = "@xdebug.fake.v1\n\nsummary:\n  format: xout\n"):
+def _make_fake_xdebug(dirpath: Path,
+                      xout_response: str = "@xdebug.fake.v1\n\nsummary:\n  format: xout\n"):
     """Create a fake xdebug executable that returns controlled output."""
     script = dirpath / "xdebug"
-    json_response = json.dumps({"ok": True, "action": "fake", "summary": {"format": "json"}})
-
+    json_response = json.dumps({"ok": True, "action": "fake",
+                                "summary": {"format": "json"}})
     script.write_text(
         '#!/usr/bin/env python3\n'
         'import json, sys\n'
@@ -34,100 +35,74 @@ def _make_fake_xdebug(dirpath: Path, xout_response: str = "@xdebug.fake.v1\n\nsu
 
 
 @pytest.fixture
-def backend_with_fake_xdebug():
-    """Return a DirectBackend pointed at a fake xdebug."""
+def runner():
+    """Return a StatelessCliRunner pointed at a fake xdebug."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         script = _make_fake_xdebug(tmp)
-        runner = XdebugRunner(
-            cmd_json=[str(script), "--json", "-"],
-            cmd_xout=[str(script), "-"],
-        )
-        yield DirectBackend(runner)
+        r = StatelessCliRunner()
+        # Override tool_path to use our fake script
+        orig_tool_path = r.tool_path
+        r.tool_path = lambda tool: str(script)
+        yield r
+        r.tool_path = orig_tool_path
 
 
-class TestDirectOutputFormats:
-    def test_xout_returns_string(self, backend_with_fake_xdebug):
-        result = backend_with_fake_xdebug.query(
-            action="fake", args={}, output_format="xout",
-            target={"fsdb": "fake.fsdb"},
-        )
+class TestXverifOutputFormats:
+    def test_xout_returns_string(self, runner):
+        result = runner.run_text("xdebug", ["-"],
+                                  input_text=json.dumps(
+                                      {"api_version": "xdebug.v1",
+                                       "action": "fake"}))
         assert isinstance(result, str)
         assert result.startswith("@xdebug.")
 
-    def test_json_returns_dict(self, backend_with_fake_xdebug):
-        result = backend_with_fake_xdebug.query(
-            action="fake", args={}, output_format="json",
-            target={"fsdb": "fake.fsdb"},
-        )
+    def test_json_returns_dict(self, runner):
+        result = runner.run_json("xdebug", ["--json", "-"],
+                                  input_text=json.dumps(
+                                      {"api_version": "xdebug.v1",
+                                       "action": "fake"}))
         assert isinstance(result, dict)
         assert result["ok"] is True
         assert result["summary"]["format"] == "json"
 
-    def test_envelope_returns_dict_with_keys(self, backend_with_fake_xdebug):
-        result = backend_with_fake_xdebug.query(
-            action="fake", args={}, output_format="envelope",
-            target={"fsdb": "fake.fsdb"},
-        )
-        assert isinstance(result, dict)
-        assert "stdout" in result
-        assert "stderr" in result
-        assert "exit_code" in result
-
-    def test_default_output_is_xout(self, backend_with_fake_xdebug):
-        result = backend_with_fake_xdebug.query(
-            action="fake", args={},
-            target={"fsdb": "fake.fsdb"},
-        )
+    def test_default_output_is_xout(self, runner):
+        result = runner.run_text("xdebug", ["-"],
+                                  input_text=json.dumps(
+                                      {"api_version": "xdebug.v1",
+                                       "action": "fake"}))
         assert isinstance(result, str)
         assert result.startswith("@xdebug.")
 
-    def test_invalid_output_format_returns_error(self, backend_with_fake_xdebug):
-        result = backend_with_fake_xdebug.query(
-            action="fake", args={}, output_format="invalid"
-        )
-        # Should not crash; handled by the query caller (server.py validates)
-        # At the backend level we pass through to runner
-        pass  # Backend doesn't validate format — server.py does
+    def test_invalid_output_returns_error(self):
+        """Non-existent binary gives CLI_FAILED error."""
+        r = StatelessCliRunner()
+        result = r.run_json("nonexistent_tool", ["--help"])
+        assert not result.get("ok")
+        assert result["error"]["code"] == "XVERIF_CLI_FAILED"
 
-    def test_request_method_keeps_json_default(self, backend_with_fake_xdebug):
-        """The legacy request() method defaults to json output."""
-        result = backend_with_fake_xdebug.request(
-            {"api_version": "xdebug.v1", "action": "fake"}
-        )
-        # Legacy: calls runner.request with output_format="json" as default
+    def test_json_keeps_json_default(self, runner):
+        """run_json always returns a dict."""
+        result = runner.run_json("xdebug", ["--json", "-"],
+                                  input_text=json.dumps(
+                                      {"api_version": "xdebug.v1",
+                                       "action": "fake"}))
         assert isinstance(result, dict)
         assert result.get("ok") is True
 
-    def test_runner_direct_xout(self):
-        """XdebugRunner.request() can produce xout string."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp = Path(tmpdir)
-            script = _make_fake_xdebug(tmp)
-            runner = XdebugRunner(
-                cmd_json=[str(script), "--json", "-"],
-                cmd_xout=[str(script), "-"],
-            )
-            result = runner.request(
-                {"api_version": "xdebug.v1", "action": "fake"},
-                output_format="xout",
-            )
-            assert isinstance(result, str)
-            assert result.startswith("@xdebug.")
+    def test_runner_xout_text(self, runner):
+        """run_text produces raw text string on success."""
+        result = runner.run_text("xdebug", ["-"],
+                                  input_text=json.dumps(
+                                      {"api_version": "xdebug.v1",
+                                       "action": "fake"}))
+        assert isinstance(result, str)
+        assert result.startswith("@xdebug.")
 
-    def test_runner_envelope(self):
-        """XdebugRunner.request() envelope mode returns raw process info."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp = Path(tmpdir)
-            script = _make_fake_xdebug(tmp)
-            runner = XdebugRunner(
-                cmd_json=[str(script), "--json", "-"],
-                cmd_xout=[str(script), "-"],
-            )
-            result = runner.request(
-                {"api_version": "xdebug.v1", "action": "fake"},
-                output_format="envelope",
-            )
-            assert isinstance(result, dict)
-            assert "exit_code" in result
-            assert "stdout" in result
+    def test_runner_error_returns_dict(self):
+        """run_text returns error dict on failure."""
+        r = StatelessCliRunner()
+        result = r.run_text("nonexistent_binary", ["--help"])
+        assert isinstance(result, dict)
+        assert not result.get("ok")
+        assert result["error"]["code"] == "XVERIF_CLI_FAILED"

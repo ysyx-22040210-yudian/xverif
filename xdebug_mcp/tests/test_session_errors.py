@@ -1,6 +1,6 @@
 """Unit tests for session_errors.py."""
 
-from xdebug_mcp.session_errors import (
+from xverif_mcp.sessions.session_errors import (
     TERMINAL_SESSION_ERROR_CODES,
     TERMINAL_BACKEND_STATES,
     error_code,
