@@ -1,6 +1,6 @@
 # xverif
 
-`xverif` 是面向芯片验证 debug agent 的本地工具仓库，当前包含六个互补工具：
+`xverif` 是面向芯片验证 debug agent 的本地工具仓库，当前包含六个互补工具和一个统一 MCP 入口：
 
 - [`xdebug`](xdebug/README.md)：查询设计数据库和波形数据库里的事实。
 - [`xbit`](xbit/README.md)：确定性计算 bit、literal、slice、表达式和 expected value。
@@ -8,8 +8,10 @@
 - [`xloc`](xloc/README.md)：UVM 日志位置压缩与恢复，降低 LLM token 噪声。
 - [`xberif`](xberif/README.md)：生成和查询项目 summary cards/detail context，给 agent 提供可控上下文。
 - [`xsva`](xsva/README.md)：把 SystemVerilog Assertion 编译为结构化 IR，并生成确定性解释和可视化。
+- [`xverif-mcp`](xverif_mcp/README.md)：统一 MCP server，xdebug 作为唯一 stateful backend，其他工具以 stateless CLI adapter 接入。
+- [`xeda-runner`](xeda_runner/README.md)：带环境快照缓存的阻塞式 EDA 命令执行器（非 MCP，独立 CLI）。
 
-简单说：`xdebug` 负责“事实从哪里来、某时刻发生了什么”，`xbit` 负责“这些值按 SystemVerilog 规则算出来到底是多少”，`xentry` 负责“这个 entry 的 bit 域段按配置切出来是什么”，`xloc` 负责“这条 log 在哪个文件的哪一行，但只在需要时才查”，`xberif` 负责“项目知识先用短卡片喂给 agent，细节按 topic 再展开”，`xsva` 负责“assertion 的 temporal 语义先降成 IR，再解释给人和 agent”。
+简单说：`xdebug` 负责“事实从哪里来、某时刻发生了什么”，`xbit` 负责“这些值按 SystemVerilog 规则算出来到底是多少”，`xentry` 负责“这个 entry 的 bit 域段按配置切出来是什么”，`xloc` 负责“这条 log 在哪个文件的哪一行，但只在需要时才查”，`xberif` 负责”项目知识先用短卡片喂给 agent，细节按 topic 再展开”，`xsva` 负责”assertion 的 temporal 语义先降成 IR，再解释给人和 agent”，`xverif-mcp` 负责”把这六个工具统一暴露给 AI agent 的 MCP 协议入口”，`xeda-runner` 负责”在预配置的安全白名单内执行 EDA 命令”。
 
 ## 工具概览
 
@@ -187,7 +189,7 @@ xberif config init --kind bt
 xsva list --file xsva/tests/golden_ir/simple_impl/input.sva
 ```
 
-兼容旧入口仍保留转发：`tools/xdebug-env`、`xbit/xbit`、`xentry/xentry` 都会转到新的 `tools/<tool>`。
+所有工具入口统一放在 `tools/` 目录下。
 
 ## 构建与测试
 
@@ -198,12 +200,16 @@ make -C xdebug
 make -C xdebug schema-test
 make -C xdebug contract-test
 make -C xdebug unit-test
+make -C xdebug mcp-test            # xverif_mcp test_actions (需要 Verdi 环境)
 
 make -C xbit test
 make -C xentry test
 make -C xloc test
 make -C xberif test
 make -C xsva test
+
+# xverif_mcp 单元测试（无需 Verdi）
+PYTHONPATH=xverif_mcp/src:. python -m pytest xverif_mcp/tests/ -q
 
 make test
 make full-test
@@ -226,3 +232,5 @@ make full-test
 - xsva 用户文档：[`xsva/README.md`](xsva/README.md)
 - xsva agent skill：[`xsva/skill/SKILL.md`](xsva/skill/SKILL.md)
 - xsva 设计规范：[`xsva/xsva_design_spec.md`](xsva/xsva_design_spec.md)
+- xverif-mcp 用户文档：[`xverif_mcp/README.md`](xverif_mcp/README.md)
+- xeda-runner 用户文档：[`xeda_runner/README.md`](xeda_runner/README.md)
