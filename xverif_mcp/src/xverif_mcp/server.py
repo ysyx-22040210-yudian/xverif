@@ -7,6 +7,8 @@ from mcp.server.fastmcp import FastMCP
 
 from xverif_mcp.adapters.xdebug import XverifDebugAdapter
 from xverif_mcp.adapters.xbit import bit_conv, bit_eval, bit_slice, bit_check
+from xverif_mcp.adapters.xentry import entry_decode, entry_explain, entry_validate
+from xverif_mcp.adapters.xloc import loc_resolve, loc_context, loc_stats, loc_annotate
 from xverif_mcp.errors import error_payload
 
 # ---------------------------------------------------------------------------
@@ -293,6 +295,113 @@ def xverif_bit_check(expr: str, vars: Optional[dict] = None,
     """
     return bit_check(expr, vars=vars, values=values, state=state,
                      output_format=output_format)
+
+
+# ---------------------------------------------------------------------------
+# Entry tools (xentry — stateless CLI adapter)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def xverif_entry_decode(config_path: str, input_path: str,
+                         output_format: str = "json") -> Any:
+    """Decode multi-beat byte fragments into raw field slices per config.
+
+    Args:
+        config_path: Path to YAML/JSON entry config file.
+        input_path: Path to JSONL fragments input file.
+        output_format: "json" or "xout".
+    """
+    return entry_decode(config_path, input_path, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_entry_explain(config_path: str, output_format: str = "json") -> Any:
+    """Explain the field layout defined by an entry config.
+
+    Args:
+        config_path: Path to YAML/JSON entry config file.
+        output_format: "json" or "xout".
+    """
+    return entry_explain(config_path, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_entry_validate(config_path: str,
+                           input_path: Optional[str] = None,
+                           output_format: str = "json") -> Any:
+    """Validate an entry config (and optionally an input) without decoding.
+
+    Args:
+        config_path: Path to YAML/JSON entry config file.
+        input_path: Optional path to JSONL fragments for deeper validation.
+        output_format: "json" or "xout".
+    """
+    return entry_validate(config_path, input_path=input_path,
+                          output_format=output_format)
+
+
+# ---------------------------------------------------------------------------
+# Location tools (xloc — stateless CLI adapter)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def xverif_loc_resolve(loc_id: str, map_path: str,
+                        output_format: str = "json") -> Any:
+    """Resolve a compressed loc_id (L_XXXXXXXX) to source file:line.
+
+    Args:
+        loc_id: The loc_id to resolve (e.g. L_00000001).
+        map_path: Path to JSONL sidecar map file.
+        output_format: "json" or "xout".
+    """
+    return loc_resolve(loc_id, map_path, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_loc_context(loc_id: str, map_path: str, before: int = 20,
+                        after: int = 20, output_format: str = "xout") -> Any:
+    """Resolve a loc_id and show surrounding source code context.
+
+    Args:
+        loc_id: The loc_id to resolve.
+        map_path: Path to JSONL sidecar map file.
+        before: Lines to show before the target line.
+        after: Lines to show after the target line.
+        output_format: "json" or "xout".
+    """
+    return loc_context(loc_id, map_path, before=before, after=after,
+                       output_format=output_format)
+
+
+@mcp.tool()
+def xverif_loc_stats(log_path: str, map_path: Optional[str] = None,
+                      top: int = 20, output_format: str = "json") -> Any:
+    """Count loc_id frequency in a simulation log (hotspot analysis).
+
+    Args:
+        log_path: Path to simulation log.
+        map_path: Optional path to JSONL sidecar map file for resolution.
+        top: Show top N locations (default: 20).
+        output_format: "json" or "xout".
+    """
+    return loc_stats(log_path, map_path=map_path, top=top,
+                     output_format=output_format)
+
+
+@mcp.tool()
+def xverif_loc_annotate(log_path: str, map_path: Optional[str] = None,
+                         output_format: str = "xout") -> Any:
+    """Insert source location hints into a simulation log.
+
+    Args:
+        log_path: Path to simulation log.
+        map_path: Optional path to JSONL sidecar map file.
+        output_format: "xout" (annotated text).
+    """
+    return loc_annotate(log_path, map_path=map_path,
+                        output_format=output_format)
 
 
 # ---------------------------------------------------------------------------
