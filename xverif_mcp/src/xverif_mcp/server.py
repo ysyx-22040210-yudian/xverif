@@ -6,6 +6,7 @@ from typing import Any, Optional
 from mcp.server.fastmcp import FastMCP
 
 from xverif_mcp.adapters.xdebug import XverifDebugAdapter
+from xverif_mcp.adapters.xbit import bit_conv, bit_eval, bit_slice, bit_check
 from xverif_mcp.errors import error_payload
 
 # ---------------------------------------------------------------------------
@@ -218,6 +219,80 @@ def xverif_debug_query(
         output=output,
         output_format=output_format,
     )
+
+
+# ---------------------------------------------------------------------------
+# Bit tools (xbit — stateless CLI adapter)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def xverif_bit_conv(value: str, width: int = 0, signed: bool = False,
+                     unsigned: bool = False, state: str = "2",
+                     output_format: str = "json") -> Any:
+    """Convert a value between radices and SV literal formats.
+
+    Args:
+        value: The value to convert (hex, binary, SV literal, etc.).
+        width: Resize result to N bits (0 = keep original).
+        signed: Treat as signed value.
+        unsigned: Treat as unsigned value.
+        state: 2 or 4 state encoding (default: 2).
+        output_format: "json" or "xout".
+    """
+    return bit_conv(value, width=width, signed=signed, unsigned=unsigned,
+                    state=state, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_bit_eval(expr: str, vars: Optional[dict] = None, width: int = 0,
+                     signed: bool = False, unsigned: bool = False,
+                     state: str = "2", output_format: str = "json") -> Any:
+    """Evaluate a deterministic bit/expression calculation.
+
+    Args:
+        expr: Expression string (e.g. "0x10 + 0x1", "sig_a & sig_b").
+        vars: Dict of variable name to literal value.
+        width: Resize result to N bits.
+        signed: Treat as signed value.
+        unsigned: Treat as unsigned value.
+        state: 2 or 4 state encoding (default: 2).
+        output_format: "json" or "xout".
+    """
+    return bit_eval(expr, vars=vars, width=width, signed=signed,
+                    unsigned=unsigned, state=state, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_bit_slice(value: str, msb: int, lsb: int, state: str = "2",
+                      output_format: str = "json") -> Any:
+    """Extract a bit slice from a value.
+
+    Args:
+        value: The source value.
+        msb: Most significant bit index.
+        lsb: Least significant bit index.
+        state: 2 or 4 state encoding (default: 2).
+        output_format: "json" or "xout".
+    """
+    return bit_slice(value, msb, lsb, state=state, output_format=output_format)
+
+
+@mcp.tool()
+def xverif_bit_check(expr: str, vars: Optional[dict] = None,
+                      values: Optional[str] = None, state: str = "2",
+                      output_format: str = "json") -> Any:
+    """Check a bit expression against expected values.
+
+    Args:
+        expr: Expression to evaluate.
+        vars: Dict of variable name to literal value.
+        values: Expected values to check against.
+        state: 2 or 4 state encoding (default: 2).
+        output_format: "json" or "xout".
+    """
+    return bit_check(expr, vars=vars, values=values, state=state,
+                     output_format=output_format)
 
 
 # ---------------------------------------------------------------------------
