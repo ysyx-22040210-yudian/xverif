@@ -171,13 +171,13 @@ mcp-session-test:
 	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m pytest -q $(CURDIR)/../xdebug_mcp/tests/test_stdio_loop_session_lifecycle.py $(CURDIR)/../xdebug_mcp/tests/test_backend_wiring.py $(CURDIR)/../xdebug_mcp/tests/test_session_errors.py -v
 
 mcp-sdk-test:
-	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m pytest -q $(CURDIR)/../xdebug_mcp/tests/test_mcp_sdk_smoke.py $(CURDIR)/tests/mcp -v
+	PYTHONPATH=$(CURDIR)/../xdebug_mcp/src:$(CURDIR)/.. $(PYTHON) -m pytest -q $(CURDIR)/../xdebug_mcp/tests/test_mcp_sdk_smoke.py -v
 
 mcp-inspect:
-	cd $(CURDIR)/.. && PYTHONPATH=xdebug_mcp/src $(PYTHON) -m mcp dev xdebug_mcp/src/xdebug_mcp/server.py
+	cd $(CURDIR)/.. && PYTHONPATH=xverif_mcp/src:xdebug_mcp/src $(PYTHON) -m mcp dev xverif_mcp/src/xverif_mcp/server.py
 
 mcp-run:
-	cd $(CURDIR)/.. && PYTHONPATH=xdebug_mcp/src $(PYTHON) -m mcp run xdebug_mcp/src/xdebug_mcp/server.py
+	cd $(CURDIR)/.. && PYTHONPATH=xverif_mcp/src:xdebug_mcp/src $(PYTHON) -m mcp run xverif_mcp/src/xverif_mcp/server.py
 
 contract-test: $(EXE) schema-test
 	$(PYTHON) tools/audit_action_schema_coverage.py $(CURDIR)
