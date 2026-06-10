@@ -160,88 +160,82 @@ request 先写到 `tmp/`，再 atomic publish 到 `requests/`；daemon 用 `rena
 
 ### MCP wrapper
 
-`tools/xdebug-mcp` 是一个轻量 Python stdio MCP server。它不直接读取 NPI/FSDB/daidir，只把 MCP tool call 转成 `tools/xdebug --json -` 请求，并在 MCP 进程内维护多个 session 别名和默认 session。
+`tools/xverif-mcp` 是基于 FastMCP SDK 的统一 MCP server。xdebug 作为唯一 stateful backend，通过 stdio-loop session 提供设计/波形查询能力。其他 xverif 工具（xbit/xentry/xloc/xberif/xsva）以 stateless CLI adapter 方式接入。
 
-MCP client 配置示例：
+MCP client 配置示例（direct 模式）：
 
 ```json
 {
   "mcpServers": {
-    "xdebug": {
-      "command": "<xverif-root>/tools/xdebug-mcp",
+    "xverif": {
+      "command": "<conda-env>/bin/python",
+      "args": ["-m", "xverif_mcp.server"],
       "env": {
-        "XVERIF_HOME": "<xverif-root>"
+        "PYTHONPATH": "<xverif>/xverif_mcp/src:<xverif>",
+        "XVERIF_HOME": "<xverif>",
+        "XVERIF_MCP_BACKEND": "direct",
+        "VERDI_HOME": "<verdi-install>",
+        "LD_LIBRARY_PATH": "<verdi-install>/share/NPI/lib/LINUX64"
       }
     }
   }
 }
 ```
 
-可用 MCP tools：
+可用 xdebug MCP tools（以 `xverif_` 前缀统一命名）：
 
-- `xdebug_session_open`：打开/复用命名 session，并记录到 wrapper registry。
-- `xdebug_session_list`：列出 wrapper 管理的多个 session。
-- `xdebug_session_use`：切换默认 session。
-- `xdebug_session_close`：关闭 session 并移除 wrapper 记录。
-- `xdebug_query`：用显式 target、指定 session 或默认 session 调用任意 xdebug action。
-- `xdebug_request`：传完整 xdebug JSON request。
-- `xdebug_actions` / `xdebug_schema`：查询 action catalog 和 action-specific schema。
-
-wrapper registry 是进程内状态；MCP server 重启后可用 `xdebug_session_open` + `reuse:true` 恢复命名 session。真实 session 仍由 xdebug 自己记录在 `~/.xdebug`。
+- `xverif_debug_session_open`：打开/复用命名 session。
+- `xverif_debug_session_list`：列出管理的 session。
+- `xverif_debug_session_use`：切换默认 session。
+- `xverif_debug_session_close`：关闭 session 并清理。
+- `xverif_debug_query`：通过 loop session 调用 xdebug action。
+- `xverif_debug_request`：一次性 raw JSON request（无 session）。
+- `xverif_debug_actions` / `xverif_debug_schema`：查询 action catalog 和 schema。
+- `xverif_wave_value_at`、`xverif_design_trace_driver` 等高频别名。
 
 #### MCP LSF backend
 
-默认 MCP backend 是 `direct`，适合同机直接运行 `tools/xdebug`。如果 AI 客户端在登录机上，但 NPI/FSDB 查询必须跑到 LSF 计算节点上，可以把 MCP backend 切到 `lsf`：
+LSF 模式将 `XVERIF_MCP_BACKEND` 设为 `lsf`：
 
 ```json
-{
-  "mcpServers": {
-    "xdebug": {
-      "command": "<xverif-root>/tools/xdebug-mcp",
-      "env": {
-        "XVERIF_HOME": "<xverif-root>",
-        "XDEBUG_MCP_BACKEND": "lsf"
-      }
-    }
-  }
-}
+"XVERIF_MCP_BACKEND": "lsf",
+"XVERIF_LSF_SESSION_QUEUE": "interactive"
 ```
 
 LSF backend 的链路是：
 
 ```text
 AI MCP client
-  -> tools/xdebug-mcp
-  -> bsub -I router job
-  -> per-session TCP endpoint jobs
-  -> tools/xdebug
+  -> xverif-mcp FastMCP server
+  -> McpSessionManager
+  -> LsfLauncher: bsub -I tools/xdebug --stdio-loop
 ```
 
-它解决的是“本机无法连接计算节点 TCP 端口，但登录机可以通过 LSF 在集群内部启动 router/session job”的场景。不同 session 可以并行；同一个 session 的请求会串行，避免同一 daemon 被并发请求打乱状态。
+每个 session 一个独立 LSF job（不是 router + per-session TCP endpoint 的两层架构）。不同 session 并行，同一 session 串行（request_lock）。
 
 常用环境变量：
 
 | 变量 | 作用 |
 | --- | --- |
-| `XDEBUG_MCP_BACKEND=lsf` | 启用 LSF backend |
-| `XDEBUG_LSF_BSUB` | 覆盖 `bsub` 命令，便于站点 wrapper 或测试 fake runner |
-| `XDEBUG_MCP_TIMEOUT_SEC` | direct backend 单次请求超时 |
+| `XVERIF_MCP_BACKEND=lsf` | 启用 LSF backend |
+| `XVERIF_LSF_BSUB` | 覆盖 `bsub` 命令，便于站点 wrapper 或测试 fake runner |
+| `XVERIF_MCP_TIMEOUT_SEC` | 单次请求超时（默认 120s） |
 | `PYTHON` | 指定运行 MCP wrapper 的 Python，建议使用 Python 3.11+ |
 | `XVERIF_HOME` | 指向仓库根目录，便于计算节点找到 `tools/xdebug` |
 
 本地开发可用 fake LSF 跑 smoke，不需要真实 LSF：
 
 ```bash
-PYTHON=python3 XDEBUG_MCP_FAKE_LSF=1 tools/xdebug-lsf-doctor --fake
+PYTHON=python3 XVERIF_MCP_FAKE_LSF=1 tools/xverif-lsf-doctor --fake
 ```
 
 真实环境建议先跑：
 
 ```bash
-PYTHON=python3 tools/xdebug-lsf-doctor
+PYTHON=python3 tools/xverif-lsf-doctor
 ```
 
-如果用户明确说“LSF 计算节点只能集群内部 TCP，登录机不能直连计算节点端口”，MCP 场景优先用 `XDEBUG_MCP_BACKEND=lsf`。如果不用 MCP、只走 xdebug 原生命令，则优先使用上面的 `transport:"file"`。
+如果用户明确说”LSF 计算节点只能集群内部 TCP，登录机不能直连计算节点端口”，MCP 场景优先用 `XVERIF_MCP_BACKEND=lsf`。如果不用 MCP、只走 xdebug 原生命令，则优先使用上面的 `transport:”file”`。
 
 重复调试建议先打开 session，再用 `target.session_id` 访问：
 

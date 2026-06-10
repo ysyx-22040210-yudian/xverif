@@ -1,4 +1,4 @@
-# xdebug MCP LSF backend
+# xverif MCP LSF backend
 
 本文说明 AI MCP 场景下如何使用 LSF backend 把 xdebug 查询提交到 LSF 计算节点。
 
@@ -8,7 +8,7 @@
 MCP Client / Agent
     |
     v
-xdebug_mcp FastMCP server
+xverif_mcp FastMCP server
     |
     v
 McpSessionManager
@@ -26,14 +26,14 @@ LSF 和 direct 共用 `XdebugLoopSession`，区别仅在于进程启动方式：
 ```json
 {
   "mcpServers": {
-    "xdebug": {
+    "xverif": {
       "command": "<conda-env>/bin/python",
-      "args": ["-m", "xdebug_mcp.server"],
+      "args": ["-m", "xverif_mcp.server"],
       "env": {
-        "PYTHONPATH": "<xverif>/xdebug_mcp/src:<xverif>",
+        "PYTHONPATH": "<xverif>/xverif_mcp/src:<xverif>",
         "XVERIF_HOME": "<xverif>",
-        "XDEBUG_MCP_BACKEND": "lsf",
-        "XDEBUG_LSF_SESSION_QUEUE": "interactive"
+        "XVERIF_MCP_BACKEND": "lsf",
+        "XVERIF_LSF_SESSION_QUEUE": "interactive"
       }
     }
   }
@@ -44,11 +44,11 @@ LSF 和 direct 共用 `XdebugLoopSession`，区别仅在于进程启动方式：
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `XDEBUG_MCP_BACKEND` | 必须是 `lsf` | `direct` |
-| `XDEBUG_LSF_BSUB` | bsub 命令 | `bsub` |
-| `XDEBUG_LSF_SESSION_QUEUE` | session job 队列 | `interactive` |
-| `XDEBUG_LSF_BKILL` | bkill 命令 | `bkill` |
-| `XDEBUG_MCP_FAKE_LSF` | 设为 `1` 使用 fake bsub（本地测试） | — |
+| `XVERIF_MCP_BACKEND` | 必须是 `lsf` | `direct` |
+| `XVERIF_LSF_BSUB` | bsub 命令 | `bsub` |
+| `XVERIF_LSF_SESSION_QUEUE` | session job 队列 | `interactive` |
+| `XVERIF_LSF_BKILL` | bkill 命令 | `bkill` |
+| `XVERIF_MCP_FAKE_LSF` | 设为 `1` 使用 fake bsub（本地测试） | — |
 
 ## 生命周期
 
@@ -69,12 +69,12 @@ session_close("case_a")→ 发送 session.close + stdio.quit
 
 ```bash
 # fake LSF 本地自检
-PYTHONPATH=xdebug_mcp/src XDEBUG_MCP_FAKE_LSF=1 python -m xdebug_lsf.doctor --fake
+PYTHONPATH=xverif_mcp/src XVERIF_MCP_FAKE_LSF=1 python -m xdebug_lsf.doctor --fake
 
 # 真实 LSF 自检
-PYTHONPATH=xdebug_mcp/src python -m xdebug_lsf.doctor
+PYTHONPATH=xverif_mcp/src python -m xdebug_lsf.doctor
 
 # 全量 action 测试
-PYTHONPATH=xdebug_mcp/src XDEBUG_MCP_BACKEND=lsf XDEBUG_MCP_FAKE_LSF=1 \
+PYTHONPATH=xverif_mcp/src XVERIF_MCP_BACKEND=lsf XVERIF_MCP_FAKE_LSF=1 \
   python xdebug_mcp/tools/test_actions.py
 ```
