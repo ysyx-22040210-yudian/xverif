@@ -47,3 +47,4 @@ xeda-runner run --action <name> --target <t> --option KEY=VALUE
 - 禁止自行拼接底层 EDA command
 - 禁止绕过 xeda-runner 调用 make/vcs/simv/urg 等命令
 - `describe-action` 输出的 `command`/`fixed_args` 仅供审计，不可绕过 runner 直接使用
+- xeda-runner 是阻塞式命令，如果预估执行时间超过 **5 分钟**，必须建议用户使用 `tmux` 或 `nohup`：`tmux new -d -s <name> "xeda-runner run ..."` 或 `nohup xeda-runner run ... &`。xeda-runner 只负责启动进程，不负责后台监控。

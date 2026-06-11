@@ -371,9 +371,11 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     # dry-run: no snapshot needed
     if args.dry_run:
-        print(f"[xeda-runner] DRY-RUN cwd={workdir}", file=sys.stderr)
-        print(f"[xeda-runner] DRY-RUN argv={shlex.join(argv)}",
+        print(f"[xeda-runner] DRY-RUN pid={os.getpid()} pgid={os.getpgid(0)}",
               file=sys.stderr)
+        print(f"[xeda-runner] DRY-RUN cmd={' '.join(argv)}",
+              file=sys.stderr)
+        print(f"[xeda-runner] DRY-RUN cwd={workdir}", file=sys.stderr)
         return 0
 
     # real run: snapshot required
@@ -389,11 +391,13 @@ def cmd_run(args: argparse.Namespace) -> int:
     env = load_env0(str(snapshot))
 
     if not args.quiet:
+        print(f"[xeda-runner] pid={os.getpid()} pgid={os.getpgid(0)}",
+              file=sys.stderr)
         print(f"[xeda-runner] action={args.action} "
               f"target={args.target or ''}",
               file=sys.stderr)
+        print(f"[xeda-runner] cmd={' '.join(argv)}", file=sys.stderr)
         print(f"[xeda-runner] cwd={workdir}", file=sys.stderr)
-        print(f"[xeda-runner] argv={shlex.join(argv)}", file=sys.stderr)
 
     result = subprocess.run(argv, cwd=workdir, env=env)
     return result.returncode
