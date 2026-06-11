@@ -373,7 +373,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.dry_run:
         print(f"[xeda-runner] DRY-RUN pid={os.getpid()} pgid={os.getpgid(0)}",
               file=sys.stderr)
-        print(f"[xeda-runner] DRY-RUN cmd={' '.join(argv)}",
+        print(f"[xeda-runner] DRY-RUN command: {' '.join(argv)}",
               file=sys.stderr)
         print(f"[xeda-runner] DRY-RUN cwd={workdir}", file=sys.stderr)
         return 0
@@ -396,7 +396,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"[xeda-runner] action={args.action} "
               f"target={args.target or ''}",
               file=sys.stderr)
-        print(f"[xeda-runner] cmd={' '.join(argv)}", file=sys.stderr)
+        print(f"[xeda-runner] command: {' '.join(argv)}", file=sys.stderr)
         print(f"[xeda-runner] cwd={workdir}", file=sys.stderr)
 
     result = subprocess.run(argv, cwd=workdir, env=env)
