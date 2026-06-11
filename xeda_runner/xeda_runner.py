@@ -16,7 +16,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, TextIO
 
 # ---------------------------------------------------------------------------
 # config
@@ -34,6 +34,33 @@ def find_config() -> str:
 def load_config(path: str) -> dict[str, Any]:
     with open(path, "r") as f:
         return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# runner log
+# ---------------------------------------------------------------------------
+
+_RUNNER_LOG_DIR = Path.home() / ".xeda_runner"
+_RUNNER_LOG: TextIO | None = None
+
+
+def _init_runner_log() -> TextIO:
+    global _RUNNER_LOG
+    if _RUNNER_LOG is not None:
+        return _RUNNER_LOG
+    _RUNNER_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = _RUNNER_LOG_DIR / f"{os.getpid()}.log"
+    _RUNNER_LOG = open(log_path, "w")
+    # stderr pointer so user knows where to look
+    print(f"[xeda-runner] log: {log_path}", file=sys.stderr)
+    return _RUNNER_LOG
+
+
+def _runner_print(msg: str) -> None:
+    """Print to both stderr and the runner log file."""
+    print(msg, file=sys.stderr)
+    log = _init_runner_log()
+    print(msg, file=log, flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -371,22 +398,17 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     # dry-run: no snapshot needed
     if args.dry_run:
-        print(f"[xeda-runner] DRY-RUN runner_pid={os.getpid()} "
-              f"runner_pgid={os.getpgid(0)}",
-              file=sys.stderr)
-        print(f"[xeda-runner] DRY-RUN command: {' '.join(argv)}",
-              file=sys.stderr)
-        print(f"[xeda-runner] DRY-RUN cwd={workdir}", file=sys.stderr)
+        _runner_print(f"[xeda-runner] DRY-RUN runner_pid={os.getpid()} "
+                      f"runner_pgid={os.getpgid(0)}")
+        _runner_print(f"[xeda-runner] DRY-RUN command: {' '.join(argv)}")
+        _runner_print(f"[xeda-runner] DRY-RUN cwd={workdir}")
         return 0
 
     # real run: snapshot required
     snapshot = env0_path(cfg, workdir)
     if not snapshot.exists():
-        print(
-            f"[xeda-runner] env snapshot not found: {snapshot}\n"
-            f"[xeda-runner] run: xeda-runner init",
-            file=sys.stderr,
-        )
+        _runner_print(f"[xeda-runner] env snapshot not found: {snapshot}")
+        _runner_print(f"[xeda-runner] run: xeda-runner init")
         return 2
 
     env = load_env0(str(snapshot))
@@ -395,19 +417,17 @@ def cmd_run(args: argparse.Namespace) -> int:
     proc = subprocess.Popen(argv, cwd=workdir, env=env)
 
     if not args.quiet:
-        print(f"[xeda-runner] runner_pid={os.getpid()} "
-              f"runner_pgid={os.getpgid(0)}",
-              file=sys.stderr)
-        print(f"[xeda-runner] child_pid={proc.pid} "
-              f"child_pgid={os.getpgid(proc.pid)}",
-              file=sys.stderr)
-        print(f"[xeda-runner] action={args.action} "
-              f"target={args.target or ''}",
-              file=sys.stderr)
-        print(f"[xeda-runner] command: {' '.join(argv)}", file=sys.stderr)
-        print(f"[xeda-runner] cwd={workdir}", file=sys.stderr)
+        _runner_print(f"[xeda-runner] runner_pid={os.getpid()} "
+                      f"runner_pgid={os.getpgid(0)}")
+        _runner_print(f"[xeda-runner] child_pid={proc.pid} "
+                      f"child_pgid={os.getpgid(proc.pid)}")
+        _runner_print(f"[xeda-runner] action={args.action} "
+                      f"target={args.target or ''}")
+        _runner_print(f"[xeda-runner] command: {' '.join(argv)}")
+        _runner_print(f"[xeda-runner] cwd={workdir}")
 
     proc.wait()
+    _runner_print(f"[xeda-runner] exit_code={proc.returncode}")
     return proc.returncode
 
 
