@@ -92,6 +92,17 @@ MCP 场景使用 `tools/xverif-mcp`（统一入口 `python -m xverif_mcp.server`
 - `truncated: true` 时，先用 `output.verbosity:"full"` 或增大对应 `limits.max_items/max_depth` 重试；仍截断则缩小 `time_range` 或 `path` 分批查询。不要假设 `truncated: false` 的结果是全量；`scope.list` 在大 scope 下必然截断。
 - 不要直接调用 `xverif_debug_request`（它只走 one-shot direct backend，不会用 MCP session）；始终用 `xverif_debug_query`。
 
+### SESSION_LOST 超时处理
+
+当 `xverif_debug_query` 返回 `error.code=SESSION_LOST` 且消息包含 "timeout" 时：
+
+- 检查 `terminal_source` 和 `message`，判断是 open 超时还是 query 超时
+- **不要直接建议用户"加大超时"**，先分析可能原因：
+  - 文件太大 / 查询范围过宽 / trace 深度过高 → 建议缩小 `time_range` 或 `limits`
+  - LSF 队列紧张导致 job 启动延迟 → 关注队列状态
+- 如果用户确认需要加长超时：`XVERIF_MCP_STARTUP_TIMEOUT_SEC`（open，默认 180s）或 `XVERIF_MCP_REQUEST_TIMEOUT_SEC`（query，默认 360s）
+- session 已被清理，需要显式 `xverif_session_open` 重建后重试
+
 ## 资源 target 决策
 
 | target | 能力 |

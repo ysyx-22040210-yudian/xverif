@@ -30,7 +30,10 @@ Typical workflow:
 3. For stateless queries: call the tool directly (e.g., xverif_bit_eval).
 
 If xverif_debug_query returns error.code=SESSION_LOST:
-  - the MCP server has already terminated the broken subprocess / LSF job
+  - check error.terminal_source: "transport" means subprocess/LSF crash or timeout
+  - if timeout: inform user of possible causes (large data, LSF queue delay)
+    and let user decide — narrow query scope or increase timeout env vars
+  - the MCP server has already cleaned up the subprocess/LSF job
   - the session mapping has been evicted
   - the agent must explicitly call xverif_session_open before retrying
 No automatic retry or reopen is performed by the server.

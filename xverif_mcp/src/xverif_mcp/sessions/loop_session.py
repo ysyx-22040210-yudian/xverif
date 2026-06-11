@@ -90,13 +90,34 @@ class XdebugLoopSession:
     def _session_lost_error(self, message: str, *, source: str,
                              backend_response: Optional[Json] = None,
                              cleanup: Optional[Json] = None) -> Json:
+        # Build recovery hint — for timeouts, include contextual advice
+        if source == "transport" and "timeout" in message.lower():
+            reason = (
+                "session lost due to timeout — "
+                "possible causes: large FSDB / deep trace / complex query, "
+                "or LSF queue congestion delaying job start. "
+                "If caused by large data, try narrowing time_range or limits. "
+                "If caused by LSF queue delay, consider increasing "
+                "XVERIF_MCP_STARTUP_TIMEOUT_SEC (session open, default 180s) "
+                "or XVERIF_MCP_REQUEST_TIMEOUT_SEC (query, default 360s). "
+                "Reopen session explicitly before retrying."
+            )
+        else:
+            reason = "session is no longer reusable; reopen explicitly"
+
         return _error("SESSION_LOST", message, alias=self.alias,
                        session_id=self.session_id, mode=self.launcher.mode,
                        terminal_source=source, backend_response=backend_response,
                        cleanup=cleanup or self.last_cleanup,
                        recovery_hint={
                            "action": "xverif_session_open",
-                           "reason": "session is no longer reusable; reopen explicitly",
+                           "reason": reason,
+                           "env_vars": {
+                               "XVERIF_MCP_STARTUP_TIMEOUT_SEC":
+                                   "session open timeout (default 180s)",
+                               "XVERIF_MCP_REQUEST_TIMEOUT_SEC":
+                                   "query timeout (default 360s)",
+                           },
                        })
 
     def open(self) -> Json:
