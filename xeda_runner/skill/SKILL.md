@@ -45,7 +45,7 @@ xeda-runner run --action <name> --target <t> --option KEY=VALUE
 
 ## 配置
 
-配置文件为当前工作目录下的 `.xeda-runner.json`。如不在当前目录，可通过 `--config` 显式指定。
+配置文件为当前工作目录下的 `.xeda-runner.yaml`。如不在当前目录，可通过 `--config` 显式指定。
 
 - `workdir`：工作目录，runner 自动 `cd`，**不要在 `init_steps` 里手动写 `cd`**
 - `init_steps`：每步失败即退出（fail-fast），不成功的 init 不会生成有效 env 快照

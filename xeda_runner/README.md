@@ -46,7 +46,7 @@ xeda-runner run --action sim --target compile --option TEST=smoke_test --option 
 
 ## 配置文件
 
-`.xeda-runner.json`，详细格式见目录下示例文件。主要字段：
+`.xeda-runner.yaml`，详细格式见目录下示例文件。主要字段：
 
 - `shell`：`tcsh` / `bash` / `zsh`
 - `workdir`：工作目录（runner 自动 `cd`，**不要在 init_steps 里手动写**）

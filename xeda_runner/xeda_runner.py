@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """xeda-runner — 带环境快照缓存的阻塞式 allowlist command runner.
 
-纯 Python 标准库，零 pip 依赖。
+需要 PyYAML (pip install pyyaml)。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import yaml
 import os
 import re
 import shlex
@@ -25,15 +26,15 @@ from typing import Any, Optional, TextIO
 
 def find_config() -> str:
     """Find config file in current directory."""
-    path = os.path.join(os.getcwd(), ".xeda-runner.json")
+    path = os.path.join(os.getcwd(), ".xeda-runner.yaml")
     if os.path.isfile(path):
         return path
-    return ".xeda-runner.json"
+    return ".xeda-runner.yaml"
 
 
 def load_config(path: str) -> dict[str, Any]:
     with open(path, "r") as f:
-        return json.load(f)
+        return yaml.safe_load(f)
 
 
 # ---------------------------------------------------------------------------
