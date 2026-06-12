@@ -151,6 +151,55 @@ Source map:
 - `covered()` 和 `count()` 不是同义词；coverage pct 用 `covered/coverable`。
 - `excluded/unreachable/illegal` 必须作为 status 显式保留，不要静默丢弃。
 
+## Coverage 字段语义
+
+NPI coverage 类型要按层级读：
+
+- `npiCovCovergroup`：functional covergroup。
+- `npiCovCoverpoint`：coverpoint，也可能在 report 里叫 variable。
+- `npiCovCross`：cross，表示多个 coverpoint/bin 的组合空间。
+- `npiCovCoverBin`：cover bin；在 coverpoint 下是普通 bin，在 cross 下是
+  cross bin。
+- code coverage 的常见 leaf 包括 `npiCovStmtBin`、`npiCovToggleBin`、
+  `npiCovBranchBin`、`npiCovConditionBin`、`npiCovStateBin`、
+  `npiCovTransBin`。
+
+计数和覆盖率：
+
+- `covered` 是已覆盖对象数，`coverable` 是可覆盖对象数；判断 hole 用
+  `covered < coverable` 或 `missing > 0`。
+- `coverage_pct` 来自 `covered / coverable`，不要用 `count` 算覆盖率。
+- `count` 是命中计数，主要对 bin 有意义；`count=0` 通常说明该 bin 没有
+  被 sample/hit。
+- `status` 是状态标签；即使 `coverage_pct` 很低，也要保留
+  `excluded/unreachable/illegal` 等状态，避免误判为需要补测。
+
+functional 名字解释：
+
+- `covergroup` 字段给出所属 covergroup；`coverpoint` 和 `cross` 二选一或
+  都为空；`bin` 给出具体 bin 名。
+- `type=npiCovCoverBin` 且有 `coverpoint=CP bin=B` 时，含义是 coverpoint
+  `CP` 下的普通 bin `B`。
+- `type=npiCovCoverBin` 且有 `cross=CR bin=[a|b]` 时，含义是 cross `CR`
+  中由参与 coverpoint/bin 组成的组合 bin，不是 `a` 和 `b` 两个 bin 分别
+  未覆盖。
+- 看到 `bin=[write|err]` 这类名字时，应解释为 cross 组合：
+  `write` 这一档与 `err` 这一档同时出现的场景；参与维度以父 `cross`
+  的源码或 report 中的 `Samples crossed` 为准。
+- 自动生成的 cross bin 可能显示为 `auto`、`subsumed` 或 `[a|b|...]`。
+  `auto` 仍是某个自动 cross 组合，不要当成普通字符串标签解释。
+
+源码定位：
+
+- code coverage item 通常直接有 `file/line`。
+- functional 的 covergroup、coverpoint、cross 通常有 `file/line`。
+- xcov 会为缺少源码位置的 functional bin 自动继承最近父 coverpoint/cross
+  的 `file/line`，所以 AI 直接读取 item 的 `evidence.file/line` 即可。
+- 如果 `evidence_source.inherited=true`，说明该 `file/line` 来自父
+  coverpoint/cross；`evidence_source.type/name/full_name` 指明继承来源。
+- 对 cross bin 解释时，使用 item 自带的 `cross`、`bin` 和继承后的
+  `evidence.file/line` 判断组合维度，不要再额外发起父节点查询。
+
 ## MCP 注意事项
 
 - `XVERIF_MCP_ENABLE_COV=0` 会隐藏 xcov 工具。

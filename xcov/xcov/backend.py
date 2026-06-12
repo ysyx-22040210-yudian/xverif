@@ -79,12 +79,26 @@ class FakeCoverageBackend(CoverageBackend):
              "covered": 0, "coverable": 1, "missing": 1, "count": 0,
              "coverage_pct": 0.0, "status": ["not_covered"],
              "evidence": {"file": "rtl/ctrl.sv", "line": 88}},
+            {"metric": "functional", "type": "npiCovCovergroup", "scope": "top.u_dut",
+             "name": "cg_credit", "full_name": "top.u_dut.cg_credit",
+             "covergroup": "cg_credit", "covered": 0, "coverable": 1, "missing": 1,
+             "count": -1, "coverage_pct": 0.0, "status": ["not_covered"],
+             "evidence": {"file": "verif/env/uart_coverage.sv", "line": 21}},
+            {"metric": "functional", "type": "npiCovCoverpoint", "scope": "top.u_dut",
+             "name": "cp_level", "full_name": "top.u_dut.cg_credit.cp_level",
+             "covergroup": "cg_credit", "coverpoint": "cp_level", "covered": 0,
+             "coverable": 1, "missing": 1, "count": -1, "coverage_pct": 0.0,
+             "status": ["not_covered"],
+             "evidence": {"file": "verif/env/uart_coverage.sv", "line": 22}},
             {"metric": "functional", "type": "npiCovCoverBin", "scope": "top.u_dut",
              "name": "zero_credit", "full_name": "top.u_dut.cg_credit.cp_level.zero_credit",
              "covergroup": "cg_credit", "coverpoint": "cp_level", "cross": None,
              "bin": "zero_credit", "covered": 0, "coverable": 1, "missing": 1,
              "count": 0, "coverage_pct": 0.0, "status": ["not_covered"],
-             "evidence": {"file": "verif/env/uart_coverage.sv", "line": 23}},
+             "evidence": {"file": "verif/env/uart_coverage.sv", "line": 22},
+             "evidence_source": {"inherited": True, "type": "npiCovCoverpoint",
+                                 "name": "cp_level",
+                                 "full_name": "top.u_dut.cg_credit.cp_level"}},
         ]
 
     def tests(self) -> List[Json]:
@@ -263,9 +277,13 @@ class NpiCoverageBackend(CoverageBackend):
         if functional_only and "functional" not in wanted:
             wanted = ["functional"]
         rows: List[Json] = []
-        for inst in self.db.instance_handles():
-            self._walk_items(inst, test_hdl, wanted, scope, rows)
-            self.cov.release_handle(inst)
+        design_metrics = [metric for metric in wanted if metric != "functional"]
+        if design_metrics and not functional_only:
+            for inst in self.db.instance_handles():
+                self._walk_items(inst, test_hdl, design_metrics, scope, rows)
+                self.cov.release_handle(inst)
+        if "functional" in wanted:
+            self._walk_functional_items(test_hdl, scope, rows)
         return rows
 
     def _walk_items(self, inst: Any, test_hdl: Any, wanted: List[str],
@@ -297,6 +315,72 @@ class NpiCoverageBackend(CoverageBackend):
                      rows: List[Json]) -> None:
         for child in _safe_list(hdl, "child_handles"):
             self._walk_leaf(child, metric, scope, test_hdl, rows, {})
+            self.cov.release_handle(child)
+
+    def _walk_functional_items(self, test_hdl: Any, scope: Optional[str],
+                               rows: List[Json]) -> None:
+        metric_hdl = _safe_call(test_hdl, "testbench_metric_handle")
+        if not metric_hdl:
+            return
+        try:
+            for child in _safe_list(metric_hdl, "child_handles"):
+                self._walk_functional_leaf(child, test_hdl, rows, {}, scope, None)
+                self.cov.release_handle(child)
+        finally:
+            self.release_if_handle(metric_hdl)
+
+    def _walk_functional_leaf(self, hdl: Any, test_hdl: Any, rows: List[Json],
+                              functional_path: Json, scope_filter: Optional[str],
+                              parent_source: Optional[Json]) -> None:
+        typ = _safe_call(hdl, "type")
+        name = _safe_call(hdl, "name")
+        path = dict(functional_path)
+        if typ == "npiCovCovergroup":
+            path = {"covergroup": name}
+        elif typ == "npiCovCoverpoint":
+            path["coverpoint"] = name
+        elif typ == "npiCovCross":
+            path["cross"] = name
+        elif typ == "npiCovCoverBin":
+            path["bin"] = name
+        scope = _functional_scope(path.get("covergroup"))
+        full_name = _functional_full_name(path, _safe_call(hdl, "full_name") or name)
+        raw_evidence = {"file": _safe_call(hdl, "file_name"),
+                        "line": _safe_call(hdl, "line_no", test_hdl)}
+        own_source = _functional_source(typ, name, full_name, raw_evidence)
+        row_source = own_source or parent_source
+        evidence = dict(row_source["evidence"]) if row_source else raw_evidence
+        if scope_filter is None or str(scope or full_name).startswith(scope_filter):
+            covered = _safe_call(hdl, "covered", test_hdl)
+            coverable = _safe_call(hdl, "coverable", test_hdl)
+            count = _safe_call(hdl, "count", test_hdl)
+            if coverable is not None:
+                status = _status_flags(hdl, test_hdl, covered, coverable)
+                rows.append({
+                    "metric": "functional",
+                    "type": typ,
+                    "scope": scope,
+                    "name": name,
+                    "full_name": full_name,
+                    "covered": covered,
+                    "coverable": coverable,
+                    "missing": _missing(covered, coverable),
+                    "count": count,
+                    "coverage_pct": coverage_pct(covered, coverable),
+                    "status": status,
+                    "evidence": evidence,
+                    **path,
+                })
+                if row_source and row_source is not own_source:
+                    rows[-1]["evidence_source"] = {
+                        "inherited": True,
+                        "type": row_source.get("type"),
+                        "name": row_source.get("name"),
+                        "full_name": row_source.get("full_name"),
+                    }
+        for child in _safe_list(hdl, "child_handles"):
+            self._walk_functional_leaf(child, test_hdl, rows, path, scope_filter,
+                                       own_source or parent_source)
             self.cov.release_handle(child)
 
     def _walk_leaf(self, hdl: Any, metric: str, scope: str, test_hdl: Any,
@@ -386,6 +470,48 @@ def _scope_closure(scopes: Iterable[str]) -> List[str]:
         for idx in range(1, len(parts) + 1):
             names.add(".".join(parts[:idx]))
     return sorted(names)
+
+
+def _functional_scope(covergroup: Any) -> str | None:
+    if not covergroup:
+        return None
+    name = str(covergroup)
+    if "::" not in name:
+        return name.rsplit(".", 1)[0] if "." in name else None
+    prefix = name.split("::", 1)[0]
+    return prefix if "." in prefix else None
+
+
+def _functional_full_name(path: Json, fallback: Any) -> str:
+    parts = [
+        path.get("covergroup"),
+        path.get("coverpoint") or path.get("cross"),
+        path.get("bin"),
+    ]
+    names = [str(part) for part in parts if part not in (None, "")]
+    if names:
+        return ".".join(names)
+    return str(fallback or "")
+
+
+def _functional_source(typ: Any, name: Any, full_name: Any, evidence: Json) -> Json | None:
+    if not _valid_evidence(evidence):
+        return None
+    return {
+        "type": typ,
+        "name": name,
+        "full_name": full_name,
+        "evidence": dict(evidence),
+    }
+
+
+def _valid_evidence(evidence: Json) -> bool:
+    if not evidence.get("file"):
+        return False
+    try:
+        return int(evidence.get("line") or 0) > 0
+    except Exception:
+        return False
 
 
 def _status_flags(hdl: Any, test_hdl: Any, covered: Any, coverable: Any) -> List[str]:

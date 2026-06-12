@@ -220,7 +220,8 @@ class Dispatcher:
         if action == "functional.holes":
             rows = [r for r in rows if int(r.get("missing") or 0) > 0]
         else:
-            rows = _summary_from_items(rows, str(args.get("group_by", "covergroup")))
+            group_by = str(args.get("group_by", "covergroup"))
+            rows = _summary_from_items(_functional_summary_level_rows(rows, group_by), group_by)
         rows = filter_items(rows, query)
         rows = sort_items(rows, args.get("sort"))
         summary, inline, warnings = apply_output(action, args, rows)
@@ -435,6 +436,8 @@ def _scope_coverage(items: List[Json], metrics: List[str]) -> Dict[str, Json]:
         total_coverable = 0
         for metric in metrics:
             subset = by_metric.get(metric, [])
+            if metric == "functional":
+                subset = _functional_summary_level_rows(subset, "covergroup")
             if not subset:
                 continue
             coverable = sum(int(i.get("coverable") or 0) for i in subset)
@@ -525,3 +528,9 @@ def _filter_functional_levels(rows: List[Json], levels: Any) -> List[Json]:
         return rows
     wanted = {str(level) for level in levels}
     return [row for row in rows if _functional_level(row) in wanted]
+
+
+def _functional_summary_level_rows(rows: List[Json], group_by: str) -> List[Json]:
+    if group_by not in {"covergroup", "coverpoint", "cross", "bin"}:
+        return rows
+    return [row for row in rows if _functional_level(row) == group_by]

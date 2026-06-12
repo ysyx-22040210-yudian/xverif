@@ -84,6 +84,10 @@ def _keyvals(item: Json) -> str:
             if evidence.get("line") is not None:
                 flat.append(f"line={_scalar(evidence.get('line'))}")
             continue
+        if key == "evidence_source" and isinstance(value, dict):
+            for src_key, src_value in value.items():
+                flat.append(f"evidence_source.{src_key}={_scalar(src_value)}")
+            continue
         flat.append(f"{key}={_scalar(value)}")
     return " ".join(flat)
 

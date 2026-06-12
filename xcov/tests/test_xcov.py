@@ -9,6 +9,7 @@ from pathlib import Path
 from xcov.actions import Dispatcher
 from xcov.backend import CoverageBackend
 from xcov.logging import sanitize_for_log
+from xcov.protocol import render_xout
 from xcov.schemas import schema_actions
 from xcov.session import XcovSession
 
@@ -344,7 +345,47 @@ def test_functional_levels_filter():
         "output": {"format": "json"},
     })
     assert bins["summary"]["matched_count"] == 1
-    assert cps["summary"]["matched_count"] == 0
+    assert cps["summary"]["matched_count"] == 1
+
+
+def test_functional_summary_uses_requested_level_only():
+    dispatcher = _dispatch_opened()
+    rsp = dispatcher.dispatch({
+        "api_version": "xcov.v1", "request_id": "func-summary",
+        "action": "functional.summary", "target": {"session_id": "cov0"},
+        "output": {"format": "json"},
+    })
+    assert rsp["ok"] is True
+    assert rsp["summary"]["matched_count"] == 1
+    assert rsp["data"]["items"][0]["coverable"] == 1
+
+
+def test_functional_bin_evidence_is_inherited_from_parent():
+    dispatcher = _dispatch_opened()
+    rsp = dispatcher.dispatch({
+        "api_version": "xcov.v1", "request_id": "func-bin-evidence",
+        "action": "functional.holes", "target": {"session_id": "cov0"},
+        "args": {"levels": ["bin"]},
+        "output": {"format": "json"},
+    })
+    assert rsp["ok"] is True
+    item = rsp["data"]["items"][0]
+    assert item["evidence"] == {"file": "verif/env/uart_coverage.sv", "line": 22}
+    assert item["evidence_source"]["inherited"] is True
+    assert item["evidence_source"]["type"] == "npiCovCoverpoint"
+
+
+def test_xout_flattens_evidence_source():
+    dispatcher = _dispatch_opened()
+    rsp = dispatcher.dispatch({
+        "api_version": "xcov.v1", "request_id": "func-bin-xout",
+        "action": "functional.holes", "target": {"session_id": "cov0"},
+        "args": {"levels": ["bin"]},
+    })
+    xout = render_xout(rsp)
+    assert "evidence_source={" not in xout
+    assert "evidence_source.inherited=true" in xout
+    assert "evidence_source.type=npiCovCoverpoint" in xout
 
 
 def test_test_each_is_explicitly_unsupported():
