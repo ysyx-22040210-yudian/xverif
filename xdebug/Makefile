@@ -28,6 +28,7 @@ CORE_SRCS = src/core/common/tool_config.cpp \
             src/core/transport/file_exchange.cpp \
             src/core/logging/action_log.cpp \
             src/core/session/session_types.cpp \
+            src/core/process/process_runner.cpp \
             src/core/ai/ai_response.cpp
 
 API_SUPPORT_SRCS = src/api/action_spec.cpp \
@@ -50,6 +51,7 @@ APP_SRCS = src/main.cpp \
            $(API_SUPPORT_SRCS) \
            src/session/session_store.cpp \
            src/backend/engine_adapter.cpp \
+           src/backend/engine_request_mapper.cpp \
            src/runtime/work_dir.cpp \
            src/combined/active_trace_service.cpp
 
@@ -86,6 +88,12 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/service/config_support.cpp \
                 src/waveform/service/query_expression_support.cpp \
                 src/waveform/service/rc_generator.cpp \
+                src/waveform/service/action_registry.cpp \
+                src/waveform/service/actions/value_query_actions.cpp \
+                src/waveform/service/actions/list_actions.cpp \
+                src/waveform/service/actions/rc_generate_action.cpp \
+                src/waveform/service/actions/verify_conditions_action.cpp \
+                src/waveform/service/actions/ai_query_actions.cpp \
                 src/waveform/service/session_actions.cpp \
                 src/waveform/service/protocol_actions.cpp \
                 src/waveform/service/router.cpp \
@@ -96,6 +104,7 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/server/service/signal_inspect.cpp \
                 src/waveform/server/service/query_actions.cpp \
                 src/waveform/server/service/event_handlers.cpp \
+                src/waveform/server/service/command_parser.cpp \
                 src/waveform/server/service/request_router.cpp \
                 src/waveform/server/fsdb_value_reader.cpp \
                 src/waveform/server/fsdb_scan_utils.cpp \

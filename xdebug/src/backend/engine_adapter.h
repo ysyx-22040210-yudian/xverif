@@ -26,6 +26,4 @@ private:
     std::string executable_dir_;
 };
 
-Json engine_request(EngineKind kind, const Json& request);
-
 } // namespace xdebug

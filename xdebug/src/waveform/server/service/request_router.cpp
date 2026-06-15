@@ -1,4 +1,5 @@
 #include "../server_internal.h"
+#include "command_parser.h"
 
 namespace xdebug_waveform {
 
@@ -49,19 +50,20 @@ bool handle_client(int client_fd, bool& should_quit) {
     SessionRegistry registry;
     registry.touch(g_session_id, time(nullptr));
 
+    // Parse command line into structured form for cleaner argument access
+    CommandLine cl = parse_command_line(cmd);
+
     // Handle TIME_RESOLVE <time_spec> [allow_max]
-    if (strncmp(cmd, CMD_TIME_RESOLVE, strlen(CMD_TIME_RESOLVE)) == 0) {
-        char time_str[256] = {};
-        char allow_str[16] = {};
-        if (sscanf(cmd + strlen(CMD_TIME_RESOLVE), " %255s %15s", time_str, allow_str) >= 1) {
+    if (cl.verb == CMD_TIME_RESOLVE) {
+        if (cl.positional.size() >= 1) {
             npiFsdbTime t = 0;
             std::string error;
-            bool allow_max = strcmp(allow_str, "allow_max") == 0;
-            if (!parse_user_time(time_str, allow_max, t, error)) {
+            bool allow_max = cl.positional.size() >= 2 && cl.positional[1] == "allow_max";
+            if (!parse_user_time(cl.positional[0].c_str(), allow_max, t, error)) {
                 send_error(client_fd, error);
                 return true;
             }
-            Json out = resolved_time_json(time_str, t);
+            Json out = resolved_time_json(cl.positional[0], t);
             std::string payload = json_response(out);
             send_all(client_fd, payload.c_str(), payload.size());
         } else {
@@ -71,18 +73,15 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle VALUE <signal> <time> <fmt>
-    if (strncmp(cmd, CMD_VALUE, strlen(CMD_VALUE)) == 0) {
-        char signal_path[1024];
-        char time_str[256];
-        char fmt;
-        if (sscanf(cmd + strlen(CMD_VALUE), " %1023s %255s %c", signal_path, time_str, &fmt) == 3) {
+    if (cl.verb == CMD_VALUE) {
+        if (cl.positional.size() >= 3 && cl.positional[2].size() == 1) {
             npiFsdbTime t = 0;
             std::string error;
-            if (!parse_user_time(time_str, false, t, error)) {
+            if (!parse_user_time(cl.positional[1].c_str(), false, t, error)) {
                 send_error(client_fd, error);
                 return true;
             }
-            handle_value(client_fd, signal_path, t, fmt);
+            handle_value(client_fd, cl.positional[0].c_str(), t, cl.positional[2][0]);
         } else {
             const char* err = ERROR_PREFIX "Usage: VALUE <signal> <time> <fmt>\n" END_MARKER;
             send_all(client_fd, err, strlen(err));
@@ -91,19 +90,16 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle LIST_VALUE <list_name> <time> <fmt> [json]
-    if (strncmp(cmd, CMD_LIST_VALUE, strlen(CMD_LIST_VALUE)) == 0) {
-        char list_name[256];
-        char time_str[256];
-        char fmt[16];
-        if (sscanf(cmd + strlen(CMD_LIST_VALUE), " %255s %255s %15s", list_name, time_str, fmt) >= 3) {
+    if (cl.verb == CMD_LIST_VALUE) {
+        if (cl.positional.size() >= 3) {
             npiFsdbTime t = 0;
             std::string error;
-            if (!parse_user_time(time_str, false, t, error)) {
+            if (!parse_user_time(cl.positional[1].c_str(), false, t, error)) {
                 send_error(client_fd, error);
                 return true;
             }
-            bool json = (strstr(cmd, "json") != nullptr);
-            handle_list_value(client_fd, list_name, t, fmt[0], json);
+            bool use_json = cl.has_flag("json");
+            handle_list_value(client_fd, cl.positional[0].c_str(), t, cl.positional[2][0], use_json);
         } else {
             const char* err = ERROR_PREFIX "Usage: LIST_VALUE <list> <time> <fmt> [json]\n" END_MARKER;
             send_all(client_fd, err, strlen(err));
@@ -112,10 +108,9 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle SIGNAL_CHECK <signal>
-    if (strncmp(cmd, CMD_SIGNAL_CHECK, strlen(CMD_SIGNAL_CHECK)) == 0) {
-        char signal_path[1024];
-        if (sscanf(cmd + strlen(CMD_SIGNAL_CHECK), " %1023s", signal_path) == 1) {
-            handle_signal_check(client_fd, signal_path);
+    if (cl.verb == CMD_SIGNAL_CHECK) {
+        if (cl.positional.size() >= 1) {
+            handle_signal_check(client_fd, cl.positional[0].c_str());
         } else {
             const char* err = ERROR_PREFIX "Usage: SIGNAL_CHECK <signal>\n" END_MARKER;
             send_all(client_fd, err, strlen(err));
@@ -124,11 +119,10 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle LIST_VALIDATE <list_name> [json]
-    if (strncmp(cmd, CMD_LIST_VALIDATE, strlen(CMD_LIST_VALIDATE)) == 0) {
-        char list_name[256];
-        if (sscanf(cmd + strlen(CMD_LIST_VALIDATE), " %255s", list_name) == 1) {
-            bool json = (strstr(cmd, "json") != nullptr);
-            handle_list_validate(client_fd, list_name, json);
+    if (cl.verb == CMD_LIST_VALIDATE) {
+        if (cl.positional.size() >= 1) {
+            bool use_json = cl.has_flag("json");
+            handle_list_validate(client_fd, cl.positional[0].c_str(), use_json);
         } else {
             const char* err = ERROR_PREFIX "Usage: LIST_VALIDATE <list> [json]\n" END_MARKER;
             send_all(client_fd, err, strlen(err));
@@ -137,12 +131,11 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle SCOPE <scope_path> <recursive> <json|text>
-    if (strncmp(cmd, CMD_SCOPE, strlen(CMD_SCOPE)) == 0) {
-        char scope_path[1024];
-        int recursive = 0;
-        char mode[16] = {};
-        if (sscanf(cmd + strlen(CMD_SCOPE), " %1023s %d %15s", scope_path, &recursive, mode) >= 2) {
-            handle_scope(client_fd, scope_path, recursive != 0, strcmp(mode, "json") == 0);
+    if (cl.verb == CMD_SCOPE) {
+        if (cl.positional.size() >= 2) {
+            int recursive = (cl.positional[1] == "1");
+            bool use_json = cl.positional.size() >= 3 && cl.positional[2] == "json";
+            handle_scope(client_fd, cl.positional[0].c_str(), recursive != 0, use_json);
         } else {
             const char* err = ERROR_PREFIX "Usage: SCOPE <scope> <recursive> <json|text>\n" END_MARKER;
             send_all(client_fd, err, strlen(err));
@@ -151,26 +144,28 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle LIST_DIFF <list_name> <begin_time> <end_time>
-    if (strncmp(cmd, CMD_LIST_DIFF, strlen(CMD_LIST_DIFF)) == 0) {
-        char list_name[256];
-        char begin_str[256];
-        char end_str[256];
-        if (sscanf(cmd + strlen(CMD_LIST_DIFF), " %255s %255s %255s", list_name, begin_str, end_str) == 3) {
+    if (cl.verb == CMD_LIST_DIFF) {
+        if (cl.positional.size() >= 3) {
             npiFsdbTime begin = 0;
             npiFsdbTime end = 0;
             std::string error;
-            if (!parse_user_time(begin_str, false, begin, error) ||
-                !parse_user_time(end_str, true, end, error)) {
+            if (!parse_user_time(cl.positional[1].c_str(), false, begin, error) ||
+                !parse_user_time(cl.positional[2].c_str(), true, end, error)) {
                 send_error(client_fd, error);
                 return true;
             }
-            handle_list_diff(client_fd, list_name, begin, end);
+            handle_list_diff(client_fd, cl.positional[0].c_str(), begin, end);
         } else {
             const char* err = ERROR_PREFIX "Usage: LIST_DIFF <list> <begin> <end>\n" END_MARKER;
             send_all(client_fd, err, strlen(err));
         }
         return true;
     }
+
+    // --- APB/AXI/Event handlers: keep existing sscanf-based parsing ---
+    // These are more complex (mixed positional + keyword flags) and the
+    // CommandParser currently treats keywords as positional; deferring full
+    // migration until Phase 2D (JSON internal command).
 
     // Handle APB_WR <name> [addr <addr>] [num <x>] [last] [json]
     if (strncmp(cmd, CMD_APB_WR, strlen(CMD_APB_WR)) == 0) {
@@ -437,7 +432,9 @@ bool handle_client(int client_fd, bool& should_quit) {
     }
 
     // Handle AI_QUERY <json>
-    if (strncmp(cmd, CMD_AI_QUERY, strlen(CMD_AI_QUERY)) == 0) {
+    if (cl.verb == CMD_AI_QUERY) {
+        // AI_QUERY has the entire JSON request as a single argument;
+        // use the raw command line to extract the JSON portion
         const char* json_p = cmd + strlen(CMD_AI_QUERY);
         while (*json_p == ' ' || *json_p == '\t') json_p++;
         try {
