@@ -4,6 +4,7 @@
 #include "api/action_spec.h"
 #include "backend/engine_adapter.h"
 #include "combined/active_trace_service.h"
+#include "combined/active_trace_chain.h"
 #include "session/session_store.h"
 
 #include <string>
@@ -27,6 +28,7 @@ private:
 
     EngineAdapter adapter_;
     ActiveTraceService active_trace_;
+    ActiveTraceChainService active_trace_chain_;
     SessionStore sessions_;
 };
 

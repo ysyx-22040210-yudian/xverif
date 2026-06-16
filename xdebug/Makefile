@@ -53,7 +53,8 @@ APP_SRCS = src/main.cpp \
            src/backend/engine_adapter.cpp \
            src/backend/engine_request_mapper.cpp \
            src/runtime/work_dir.cpp \
-           src/combined/active_trace_service.cpp
+           src/combined/active_trace_service.cpp \
+           src/combined/active_trace_chain.cpp
 
 DESIGN_SRCS = src/design/main.cpp \
               src/design/session/session_registry.cpp \

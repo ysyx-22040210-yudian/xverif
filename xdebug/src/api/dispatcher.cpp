@@ -430,6 +430,12 @@ Json Dispatcher::dispatch_impl(const Json& request) {
         if (!error_response.is_null()) return error_response;
         return active_trace_.run(request, target);
     }
+    if (spec->handler_kind == "active_trace_chain") {
+        Json target = resolve_target(request);
+        Json error_response = resource_error(request, *spec, target);
+        if (!error_response.is_null()) return error_response;
+        return active_trace_chain_.run(request, target);
+    }
     if (spec->handler_kind == "engine_forward") {
         if (spec->category == "design") return handle_engine_forward(request, *spec, EngineKind::Design);
         if (spec->category == "waveform") return handle_engine_forward(request, *spec, EngineKind::Waveform);

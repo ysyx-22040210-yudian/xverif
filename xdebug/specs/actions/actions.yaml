@@ -1360,6 +1360,29 @@
       ]
     },
     {
+      "name": "trace.active_driver_chain",
+      "category": "combined",
+      "status": "stable",
+      "requires": "combined",
+      "handler_kind": "active_trace_chain",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.active_driver_chain.request.schema.json",
+        "response": "schemas/v1/actions/trace.active_driver_chain.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.active_driver_chain.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.active_driver_chain.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal",
+        "requested_time"
+      ]
+    },
+    {
       "name": "trace.driver",
       "category": "design",
       "status": "stable",

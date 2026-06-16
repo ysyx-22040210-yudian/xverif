@@ -154,6 +154,12 @@ void register_combined(ActionRegistry& r) {
     active.response_examples.push_back("examples/responses/trace.active_driver.exact_assignment.json");
     active.response_examples.push_back("examples/responses/trace.active_driver.control_only.json");
     register_spec(r, active);
+
+    ActionSpec chain = stable_spec("trace.active_driver_chain", "combined",
+                                    ResourceRequirement::Combined, "active_trace_chain");
+    chain.args.required.push_back("signal");
+    chain.args.required.push_back("requested_time");
+    register_spec(r, chain);
 }
 
 void register_removed(ActionRegistry& r) {
