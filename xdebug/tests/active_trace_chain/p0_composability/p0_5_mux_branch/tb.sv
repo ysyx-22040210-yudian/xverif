@@ -1,10 +1,8 @@
 `timescale 1ns/1ps
 
-// P0-5: mux branch handling
+// P0-5: mux branch — 8 scenes covering simultaneous changes
 //   assign y = sel ? a : b;
-// Scene A (10ns): sel=1, only a toggles → expect continue to a
-// Scene B (30ns): sel=1, both a and b toggle → native decides or stops
-// Scene C (50ns): a/b stable, sel toggles → control-caused transition
+//   Scenes A-H: precisely timed independent/simultaneous toggles
 
 module top;
   logic a, b, sel, y;
@@ -12,33 +10,32 @@ module top;
   assign y = sel ? a : b;
 
   initial begin
-    a   = 1'b0;
-    b   = 1'b0;
-    sel = 1'b0;
+    a=0; b=0; sel=0;
 
-    // Scene A: sel=1, only a toggles at 10ns
-    #10;
-    sel = 1'b1;
-    a   = 1'b1;  // only a changes; b stays 0
+    // Scene A: sel=1, only a toggles @10ns
+    #10; sel=1; a=1;        // a:0→1, b:stable 0, sel:0→1
 
-    // Scene B: sel=1, both a and b toggle at 30ns
-    #20;
-    a = 1'b0;
-    b = 1'b0;  // both change
-    #1;
-    a = 1'b1;
-    b = 1'b0;  // a high, b low, sel=1 → y=a
+    // Scene B: sel=1, both a and b toggle @20ns
+    #10; a=0; b=1;          // a:1→0, b:0→1
 
-    // Scene C: a/b stable, sel toggles at 50ns
-    #19;  // ~50ns
-    a = 1'b0;
-    b = 1'b1;
-    sel = 1'b0;  // sel=0 selects b
-    #2;
-    sel = 1'b1;  // sel toggles → selects a
-    // a=0, b=1: y transitions from 1 to 0 due to sel change
+    // Scene C: only sel toggles @30ns
+    #10; sel=0;             // sel:1→0, a/b stable
 
-    #20;
-    $finish;
+    // Scene D: sel=0, only b toggles @40ns
+    #10; b=0;               // b:1→0
+
+    // Scene E: sel=0, b and sel toggle @50ns
+    #10; sel=1; b=1;        // sel:0→1, b:0→1
+
+    // Scene F: sel=1, a and sel toggle @60ns
+    #10; sel=0; a=1;        // sel:1→0, a:0→1
+
+    // Scene G: sel=0, both a and b toggle @70ns
+    #10; a=0; b=0;          // sel=0 stable, a:1→0, b:1→0
+
+    // Scene H: all toggle @80ns
+    #10; sel=1; a=1; b=1;   // all toggling
+
+    #10; $finish;
   end
 endmodule
