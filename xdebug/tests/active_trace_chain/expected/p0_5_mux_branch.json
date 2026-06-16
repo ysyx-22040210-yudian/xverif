@@ -1,0 +1,21 @@
+{
+  "_case": "P0-5: mux branch handling",
+  "_query_scene_a": "top.y @ 12ns (sel=1, only a toggled)",
+  "_query_scene_b": "top.y @ 32ns (sel=1, both a and b toggled)",
+  "_query_scene_c": "top.y @ 53ns (a/b stable, sel toggled)",
+  "expected_termination": "resolved",
+  "expected_temporal_boundaries": 0,
+  "expected_verdict": "PASS",
+  "_note": "Scene A should auto-continue to a. Scene B may stop with branch_evidence. Scene C may identify control-caused transition.",
+  "expected_chain": [
+    {
+      "hop": 0,
+      "signal_ends_with": "y",
+      "hop_type": "same_time",
+      "driver_kind": "assignment"
+    }
+  ],
+  "expected_branch_evidence": false,
+  "_scene_b_note": "If both a and b toggle, native may return unique or multiple → acceptable to stop with branch_evidence",
+  "_scene_c_note": "If sel toggle causes y change, native may point to sel → identify as control-caused"
+}

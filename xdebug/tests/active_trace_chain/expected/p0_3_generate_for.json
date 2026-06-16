@@ -1,0 +1,30 @@
+{
+  "_case": "P0-3: generate for + module instance",
+  "_query": "top.y[2] @ 10ns",
+  "expected_termination": "primary_input",
+  "expected_temporal_boundaries": 0,
+  "expected_verdict": "PASS",
+  "expected_chain": [
+    {
+      "hop": 0,
+      "signal_ends_with": "y[2]",
+      "hop_type": "same_time",
+      "driver_kind": "assignment",
+      "next_signal_ends_with": "u_leaf.y"
+    },
+    {
+      "hop": 1,
+      "signal_ends_with": "u_leaf.y",
+      "hop_type": "same_time",
+      "driver_kind": "assignment",
+      "next_signal_ends_with": "a"
+    },
+    {
+      "hop": 2,
+      "signal_ends_with": "a",
+      "hop_type": "same_time",
+      "driver_kind": "primary_input"
+    }
+  ],
+  "expected_branch_evidence": false
+}

@@ -1,0 +1,17 @@
+{
+  "_case": "P0-6: procedural for mux",
+  "_query": "top.y @ 15ns (sel=2, a[2]=1)",
+  "expected_termination": "resolved",
+  "expected_temporal_boundaries": 0,
+  "expected_verdict": "PARTIAL",
+  "_note": "If native returns a[sel] → FULL PASS. If only always_comb block → PARTIAL PASS is acceptable. Must not return wrong source.",
+  "expected_chain": [
+    {
+      "hop": 0,
+      "signal_ends_with": "y",
+      "hop_type": "same_time",
+      "driver_kind": "assignment"
+    }
+  ],
+  "expected_branch_evidence": false
+}
