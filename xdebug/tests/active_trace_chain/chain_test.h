@@ -47,6 +47,10 @@ struct ChainResult {
                                  // "ambiguous","limit","loop_detected",
                                  // "signal_not_found","control_only",
                                  // "unresolved"
+    int active_trace_call_count = 0;
+    int edgecheck_direct_count = 0;   // NPI returned unique candidate
+    int fallback_0_5ns_count = 0;     // needed ±0.5ns disambiguation
+    int temporal_boundary_stops = 0;  // stopped due to activeTime != T0
     int temporal_boundary_count = 0;
     int total_hops = 0;
     bool truncated = false;

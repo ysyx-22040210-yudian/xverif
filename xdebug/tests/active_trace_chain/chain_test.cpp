@@ -304,6 +304,7 @@ static ChainResult build_chain(npiFsdbFileHandle fsdb,
         opt.reportControl = true;
         int active_count = npi_active_trace_driver_by_hdl(
             hdl, active, cur.t.c_str(), opt);
+        result.active_trace_call_count++;
         npi_release_handle(hdl);
 
         bool temporal = (active.activeTime != cur.t);
@@ -357,7 +358,9 @@ static ChainResult build_chain(npiFsdbFileHandle fsdb,
 
         if (data_candidates.size() == 1) {
             next_signal = data_candidates[0].name;
+            result.edgecheck_direct_count++;
         } else if (data_candidates.size() > 1) {
+            result.fallback_0_5ns_count++;
             // edgeCheck=true still returned multiple → ±0.5ns fallback
             auto toggled = filter_toggled(fsdb, data_candidates, cur.t);
             int toggled_count = 0;
@@ -490,6 +493,10 @@ static void print_chain_json(const ChainResult& r) {
     }
     std::cout << "],\n"
               << "  \"termination\": \"" << r.termination << "\",\n"
+              << "  \"active_trace_calls\": " << r.active_trace_call_count << ",\n"
+              << "  \"edgecheck_direct_count\": " << r.edgecheck_direct_count << ",\n"
+              << "  \"fallback_0_5ns_count\": " << r.fallback_0_5ns_count << ",\n"
+              << "  \"temporal_boundary_stops\": " << r.temporal_boundary_stops << ",\n"
               << "  \"temporal_boundaries\": " << r.temporal_boundary_count << ",\n"
               << "  \"total_hops\": " << r.total_hops << ",\n"
               << "  \"truncated\": " << (r.truncated ? "true" : "false") << "\n"
