@@ -64,6 +64,17 @@ module top;
         #10; mask_a[3] = 0;  // @100ns: flag[3] drops, flag[2] should NOT change
         #1;  mask_a[3] = 1;
 
+        // ── S11: settle ctrl_sel=0 at 105ns, only src_b changes at 110ns ──
+        #5;  ctrl_sel=0;    // @105ns: settle, no query
+        #5;  src_b=8'hB5;   // @110ns: only src_b toggles
+
+        // ── S12: settle ctrl_mode at 115ns, only src_a changes at 120ns ──
+        #5;  ctrl_mode=1;   // @115ns: settle
+        #5;  src_a=8'hA5;   // @120ns: ternary true path, only src_a toggles
+
+        // ── S13 @130ns: special lane, only sp_val changes ──
+        #10; sp_val=8'h55;  // @130ns
+
         #10; $finish;
     end
 endmodule

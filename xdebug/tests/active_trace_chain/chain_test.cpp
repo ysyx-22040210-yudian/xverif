@@ -413,6 +413,24 @@ static ChainResult build_chain(npiFsdbFileHandle fsdb,
         node.next_time = next_signal.empty() ? "" : active.activeTime;
         result.chain.push_back(node);
 
+        // ── control_only upgrade: scan branch_evidence ──
+        if (result.termination == "control_only") {
+            for (auto& be : result.branch_evidence) {
+                int toggled = 0;
+                std::string last;
+                for (auto& c : be.candidates) {
+                    if (c.toggled) { toggled++; last = c.name; }
+                }
+                if (toggled == 1) {
+                    result.control_boundary_kind = "single_candidate_toggled";
+                    result.likely_source = last;
+                } else if (toggled > 1)
+                    result.control_boundary_kind = "multiple_candidates_toggled";
+                else
+                    result.control_boundary_kind = "no_causal_toggle";
+            }
+        }
+
         // ── termination check ──
         if (!result.termination.empty()) break;
 
@@ -493,6 +511,8 @@ static void print_chain_json(const ChainResult& r) {
     }
     std::cout << "],\n"
               << "  \"termination\": \"" << r.termination << "\",\n"
+              << "  \"control_boundary_kind\": \"" << r.control_boundary_kind << "\",\n"
+              << "  \"likely_source\": \"" << r.likely_source << "\",\n"
               << "  \"active_trace_calls\": " << r.active_trace_call_count << ",\n"
               << "  \"edgecheck_direct_count\": " << r.edgecheck_direct_count << ",\n"
               << "  \"fallback_0_5ns_count\": " << r.fallback_0_5ns_count << ",\n"
