@@ -8,111 +8,240 @@
 - 8 lanes, ternary expression, function call fn_op, multi-source OR
 - 10 scenes, 每个 scene 查询 chain_test
 
+## termination 含义
+
+| termination | 含义 | 是否错误 |
+|-------------|------|---------|
+| `primary_input` | 链追到了最上游（input port / initial block），成功 | 正常结束 |
+| `ambiguous` | ≥2 个 data candidate 同时跳变，无法唯一确定根因，保守停止 | 正确行为 |
+| `control_only` | NPI 只返回了 if/case/event_control，没有具体赋值源 | 预期行为 |
+
+### ambiguous 详解
+
+以 S1 为例，`dout[2]` 的 RHS 有 6 个信号。NPI 返回全部 6 个，chain_test 对每个做 ±0.5ns 值比较。
+结果 `ctrl_sel` 和 `src_b` 两个信号同时跳变，无法确定唯一根因，`termination="ambiguous"`。
+
+这是**正确行为**，不是错误。chain_test 的规则是"禁止因为某个 candidate toggled 就无条件选它"。
+
+ambiguous 返回的完整 JSON：
+
+```json
+{
+  "chain": [{
+    "hop": 0,
+    "signal": "top.u_dut.dout[2]",
+    "requested_time": "10ns",
+    "active_time": "10.0n",
+    "value": "00000001",
+    "value_known": true,
+    "driver_kind": "proc_assign",
+    "file": ".../phase5/dut.sv",
+    "line": 37,
+    "text": "npiAssignment, top.u_dut.lane_proc...dout[ln] = (en1 & ((ctrl_sel | ctrl_mode) ? src_a : fn_op(src_b, src_c, ctrl_sel)));..."
+  }],
+  "branch_evidence": [{
+    "signal": "top.u_dut.dout[2]",
+    "time": "10ns",
+    "reason": "2 signals toggled simultaneously",
+    "candidates": [
+      {"name": "top.u_dut.en1",       "before": "1",        "after": "1",        "toggled": false},
+      {"name": "top.u_dut.src_a",     "before": "10100000", "after": "10100000", "toggled": false},
+      {"name": "top.u_dut.ctrl_sel",  "before": "1",        "after": "0",        "toggled": true},
+      {"name": "top.u_dut.ctrl_mode", "before": "0",        "after": "0",        "toggled": false},
+      {"name": "top.u_dut.src_b",     "before": "10110000", "after": "10110001", "toggled": true},
+      {"name": "top.u_dut.src_c",     "before": "11000000", "after": "11000000", "toggled": false}
+    ]
+  }],
+  "termination": "ambiguous",
+  "active_trace_calls": 1,
+  "edgecheck_direct_count": 0,
+  "fallback_0_5ns_count": 1
+}
+```
+
+AI 可从 `branch_evidence` 中直接读取:
+- `ctrl_sel` 从 1→0，`src_b` 从 B0→B1，两个同时跳变
+- `chain[0].text` 给出了完整的 RTL 赋值语句
+- `chain[0].line` 指向 dut.sv:37（normal lane else 分支）
+- 结论：不是"无法分析"，而是"两个信号同时变化，不应臆断"
+
 ## 结果汇总
 
-| Scene | Target | Time | Hops | Termination | edgecheck | fallback | 判定 |
-|-------|--------|------|------|-------------|-----------|----------|------|
-| S1 | dout[2] | 10ns | 1 | ambiguous | 0 | 1 | ACCEPTABLE |
-| S2 | dout[2] | 20ns | 2 | primary_input | 0 | 1 | PASS |
-| S3 | dout[2] | 30ns | 2 | primary_input | 0 | 1 | PASS |
-| S4 | dout[2] | 41ns | 2 | primary_input | 0 | 1 | PASS |
-| S5 | dout[1] | 50ns | 1 | control_only | 0 | 1 | ACCEPTABLE |
-| S6 | dout[1] | 60ns | 1 | control_only | 0 | 1 | PASS |
-| S7 | flag[2] | 71ns | 1 | control_only | 0 | 1 | ACCEPTABLE |
-| S8 | flag[2] | 81ns | 1 | control_only | 0 | 1 | ACCEPTABLE |
-| S9 | dout[2] | 90ns | 2 | primary_input | 0 | 1 | PASS |
-| S10 | flag[2] | 100ns | 1 | control_only | 0 | 1 | PASS |
+| Scene | Target | Time | Hops | Termination | 判定 |
+|-------|--------|------|------|-------------|------|
+| S1 | dout[2] | 10ns | 1 | ambiguous | ACCEPTABLE |
+| S2 | dout[2] | 20ns | 2 | primary_input | PASS |
+| S3 | dout[2] | 30ns | 2 | primary_input | PASS |
+| S4 | dout[2] | 41ns | 2 | primary_input | PASS |
+| S5 | dout[1] | 50ns | 1 | control_only | ACCEPTABLE |
+| S6 | dout[1] | 60ns | 1 | control_only | PASS |
+| S7 | flag[2] | 71ns | 1 | control_only | ACCEPTABLE |
+| S8 | flag[2] | 81ns | 1 | control_only | ACCEPTABLE |
+| S9 | dout[2] | 90ns | 2 | primary_input | PASS |
+| S10 | flag[2] | 100ns | 1 | control_only | PASS |
 
 PASS: 5, ACCEPTABLE: 5, FAIL: 0
 
-## 逐场景分析
+## 逐场景实际返回
 
-### S1 (dout[2] @10ns): ACCEPTABLE
-- ctrl_sel 和 src_b 在 10ns 同时跳变 → 2 signals toggled → ambiguous
-- 正确: 不应在此情况下臆断唯一 cause
-- Candidates: en1, src_a, ctrl_sel, ctrl_mode, src_b, src_c (全部 RHS 信号)
-- Toggled: ctrl_sel (1→0), src_b (B0→B1)
+### S1 (dout[2] @10ns): ambiguous → ACCEPTABLE
 
-### S2 (dout[2] @20ns): PASS
-- 仅 ctrl_sel 跳变 (0→1) → 唯一 candidate → 继续追踪
-- Chain: dout[2] → 追到 primary_input
-- 正确识别 control signal 变化
+```
+ctrl_sel: 1→0  src_b: B0→B1  同时跳变 → ambiguous
+```
 
-### S3 (dout[2] @30ns): PASS
-- 仅 src_a 跳变 → 唯一 candidate → primary_input
-- 正确追到 data source
+candidates: en1, src_a, ctrl_sel, ctrl_mode, src_b, src_c（全部 RHS 信号）
+toggled: ctrl_sel, src_b
 
-### S4 (dout[2] @41ns): PASS
-- en1 跳变 → 唯一 enable candidate → primary_input
-- 正确追到 enable signal
+完整 JSON 见上文"ambiguous 详解"。
 
-### S5 (dout[1] @50ns): ACCEPTABLE
-- Special lane (SP_IDX0=1), sp_val 跳变
-- native trace 返回 proc_assign，candidates 仅包含 sp_val
-- 未误入 normal lane else 分支 ✓
+### S2 (dout[2] @20ns): primary_input → PASS
 
-### S6 (dout[1] @60ns): PASS
-- Special lane, src_a/src_b 变化（normal lane signals）
-- dout[1] 不受影响 → native trace 返回 control_only
-- 未误报 normal lane signals 为 cause ✓
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.u_dut.dout[2]", "driver_kind":"proc_assign",
+     "next_signal":"top.u_dut.ctrl_sel", "active_time":"20.0n"},
+    {"hop":1, "signal":"top.u_dut.ctrl_sel", "driver_kind":"proc_assign",
+     "next_signal":"", "hop_type":"temporal_boundary"}
+  ],
+  "termination": "primary_input",
+  "active_trace_calls": 2,
+  "edgecheck_direct_count": 0,
+  "fallback_0_5ns_count": 1
+}
+```
 
-### S7 (flag[2] @71ns): ACCEPTABLE
-- mask_a[2] 跳变 → control_only（always_comb block 内多源 OR）
-- candidate 包含 mask_a[2]，lane index 正确
-- 未误追 mask_a[3] ✓
+仅 ctrl_sel 跳变 (0→1)，唯一 candidate → 链正确追到 ctrl_sel → primary_input。
 
-### S8 (flag[2] @81ns): ACCEPTABLE
-- OR 双分支，en1 跳变 → control_only
-- 正确输出 branch evidence（OR 多源无法唯一判定）
+### S3 (dout[2] @30ns): primary_input → PASS
 
-### S9 (dout[2] @90ns): PASS
-- 多 lane 同时变化（src_a 影响全部 normal lane）
-- dout[2] 正确追到 src_a，未受其他 lane 干扰
-- lane isolation ✓
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.u_dut.dout[2]", "next_signal":"top.u_dut.src_a"},
+    {"hop":1, "signal":"top.u_dut.src_a", "driver_kind":"proc_assign"}
+  ],
+  "termination": "primary_input",
+  "active_trace_calls": 2
+}
+```
 
-### S10 (flag[2] @100ns): PASS
-- 仅 mask_a[3] 变化
-- flag[2] 的 trace 返回 control_only（flag[2] 未变）
-- 未误追 mask_a[3] ✓
+仅 src_a 跳变 → 唯一 data source，正确。
+
+### S4 (dout[2] @41ns): primary_input → PASS
+
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.u_dut.dout[2]", "next_signal":"top.u_dut.en1"},
+    {"hop":1, "signal":"top.u_dut.en1", "driver_kind":"proc_assign"}
+  ],
+  "termination": "primary_input"
+}
+```
+
+仅 en1 跳变 → 唯一 enable source。
+
+### S5 (dout[1] @50ns): control_only → ACCEPTABLE
+
+```json
+{
+  "chain": [{"hop":0, "signal":"top.u_dut.dout[1]", "driver_kind":"if",
+             "text":"npiIf, top.u_dut.lane_proc...if ((ln == SP_IDX0) || (ln == SP_IDX1))..."}],
+  "termination": "control_only",
+  "branch_evidence": [{"reason":"no data toggled, control ambiguous",
+    "candidates":[{"name":"top.u_dut.sp_val","before":"01010000","after":"01010001","toggled":true}]}]
+}
+```
+
+Special lane。NPI 返回 if 语句（不是具体赋值），sp_val toggled 但落在 control_only 分支。
+未误入 normal else ✓
+
+### S6 (dout[1] @60ns): control_only → PASS
+
+```json
+{
+  "chain": [{"hop":0, "signal":"top.u_dut.dout[1]", "driver_kind":"if"}],
+  "termination": "control_only"
+}
+```
+
+Special lane，normal lane signals (src_a, src_b) 变化。dout[1] 不受影响 → NPI 返回 if。
+未误报 normal signals 为 cause ✓
+
+### S7 (flag[2] @71ns): control_only → ACCEPTABLE
+
+```json
+{
+  "chain": [{"hop":0, "signal":"top.u_dut.flag[2]", "driver_kind":"if_else"}],
+  "termination": "control_only",
+  "branch_evidence": [{"reason":"no data toggled, control ambiguous",
+    "candidates":[
+      {"name":"top.u_dut.en2","toggled":false},
+      {"name":"top.u_dut.mask_a[2]","before":"1","after":"0","toggled":true},
+      {"name":"top.u_dut.mask_b[2]","toggled":false},
+      {"name":"top.u_dut.en1","toggled":false},
+      {"name":"top.u_dut.ctrl_sel","toggled":false},
+      {"name":"top.u_dut.ctrl_mode","toggled":false}
+    ]}]
+}
+```
+
+mask_a[2] toggled。candidate 包含 mask_a[2]（lane index 正确），未误追 mask_a[3] ✓
+
+### S8 (flag[2] @81ns): control_only → ACCEPTABLE
+
+```json
+{
+  "chain": [{"hop":0, "signal":"top.u_dut.flag[2]", "driver_kind":"if_else"}],
+  "termination": "control_only",
+  "branch_evidence": [{"reason":"no data toggled, control ambiguous",
+    "candidates":[
+      {"name":"top.u_dut.en1","before":"0","after":"1","toggled":true},
+      {"name":"top.u_dut.ctrl_sel","toggled":false},
+      {"name":"top.u_dut.ctrl_mode","toggled":false}
+    ]}]
+}
+```
+
+OR 第二路 en1 跳变。en1 是唯一 toggled signal。但因 always_comb 的 NPI 返回的是 control statement（if_else），终止为 control_only。
+
+### S9 (dout[2] @90ns): primary_input → PASS
+
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.u_dut.dout[2]", "next_signal":"top.u_dut.src_a"},
+    {"hop":1, "signal":"top.u_dut.src_a"}
+  ],
+  "termination": "primary_input"
+}
+```
+
+多 lane 同时变化（src_a 影响全部 normal lane），dout[2] 正确追到 src_a。
+Lane isolation: 其他 lane 的同时变化未造成误判 ✓
+
+### S10 (flag[2] @100ns): control_only → PASS
+
+```json
+{
+  "chain": [{"hop":0, "signal":"top.u_dut.flag[2]", "driver_kind":"if_else"}],
+  "termination": "control_only"
+}
+```
+
+仅 mask_a[3] 变化。flag[2] 未变 → NPI 返回 if_else → control_only。
+未误追 mask_a[3] ✓
 
 ## 关键发现
 
-### 1. Lane index 保持 ✓
-
-所有 candidate signal name 正确保留 lane index:
-- `mask_a[2]` vs `mask_a[3]` 正确区分
-- `dout[2]` 的 trace 不会错误追到 lane 3 的 source
-- native trace 返回的 signal handle 的 npiFullName 包含完整的 `[N]` 索引
-
-### 2. Special/normal branch 不混淆 ✓
-
-- S5/S6: special lane (dout[1]) 不受 normal lane signal 变化影响
-- S1-S4: normal lane (dout[2]) 不受 special lane signal 影响
-- 验证: 0 次误入错误分支
-
-### 3. Control/enable cause 识别 ✓
-
-- S2: ctrl_sel 单独跳变 → 正确识别为唯一 cause
-- S4: en1 单独跳变 → 正确追到 enable signal
-- S1: ctrl_sel + src_b 同时跳变 → 保守 ambiguous（正确）
-
-### 4. Function call 处理 ⚠️
-
-- fn_op function 在 NPI elaboration 中被内联
-- native trace 直接返回 fn_op 的输入信号 (src_b, src_c, ctrl_sel)
-- 未出现独立的 function_boundary 节点
-- 这意味着 NPI 对简单 function 做了 inline 展开，chain 可以穿透
-
-### 5. 多 lane 同时变化不误判 ✓
-
-- S9: 所有 normal lane 同时变化，dout[2] 正确追到 src_a
-- Lane isolation: chain 只关注 target lane 的因果链
-
-### 6. 始终保守安全 ✓
-
-- 所有 ambiguous 的情况都正确停止，输出完整 branch evidence
-- 所有 control_only 的情况都正确标记，不臆断
-- 0 次输出错误 cause
+1. **Lane index 保持**: `mask_a[2]` vs `mask_a[3]` 正确区分，0 次误追
+2. **Branch 不混淆**: special/normal lane 0 次混淆
+3. **Control cause 识别**: ctrl_sel 单独跳变 → 正确追到 primary_input
+4. **Function inline**: NPI 对 fn_op 做了内联展开，无 function_boundary
+5. **多 lane 同时变不误判**: S9 所有 normal lane 同时变，dout[2] 正确隔离
+6. **保守安全**: 0 次错误 cause，ambiguous/control_only 均正确停止
 
 ## 统计
 
@@ -124,18 +253,3 @@ PASS: 5, ACCEPTABLE: 5, FAIL: 0
 | FAIL | 0 |
 | 分支混淆 | 0 |
 | 误追 lane | 0 |
-| edgecheck_direct | 0 (always_comb block 不适用) |
-| fallback_0_5ns | 10 (全部 hop 都触发) |
-
-## 结论
-
-Repeated native active trace 在 procedural for + lane select 场景下:
-- **Lane-specific 保持**: 100% 正确
-- **Branch 不混淆**: 100% 正确
-- **保守安全**: 多源时 ambiguous stop，不臆断
-- **Function inline**: NPI 对简单 function 做了内联展开
-
-改进建议:
-1. 对 always_comb procedural block，NPI 返回的是整个 block 的 RHS 信号集合，
-   可以在 xdebug 层做 lane-specific 裁剪（只保留匹配 target lane index 的 candidate）
-2. role classification（data/control/enable/mask）可辅助 branch disambiguation

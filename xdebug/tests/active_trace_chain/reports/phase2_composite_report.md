@@ -78,6 +78,72 @@ TB = temporal_boundaries, BE = branch_evidence count
 5. **无崩溃**: 所有 20 个 case 全部运行成功
 6. **分支消歧一致**: branch_evidence 只在 generate 场景触发，且每次都输出 8 个 toggled bit
 
+## 典型返回示例
+
+### case_01 (A×5): primary_input, 11 hops
+
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.data_out", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_p",
+     "active_time":"50.0n"},
+    {"hop":1, "signal":"top.u_dut.s_p", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_b",
+     "active_time":"50.0n", "hop_type":"same_time"},
+    {"hop":2, "signal":"top.u_dut.s_b", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_i",
+     "hop_type":"same_time"},
+    {"hop":3, "signal":"top.u_dut.s_i", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_g",
+     "hop_type":"same_time"},
+    {"hop":4, "signal":"top.u_dut.s_g", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_m",
+     "hop_type":"same_time"},
+    {"hop":5, "signal":"top.u_dut.s_m", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_f",
+     "hop_type":"same_time"},
+    {"hop":6, "signal":"top.u_dut.s_f", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_a",
+     "hop_type":"temporal_boundary"},
+    {"hop":7, "signal":"top.u_dut.s_a", "driver_kind":"cont_assign", "next_signal":"top.u_dut.s_in",
+     "hop_type":"same_time"},
+    {"hop":8, "signal":"top.u_dut.s_in", "driver_kind":"cont_assign", "next_signal":"top.data_in",
+     "hop_type":"same_time"},
+    {"hop":9, "signal":"top.data_in", "driver_kind":"proc_assign", "next_signal":"",
+     "hop_type":"same_time"}
+  ],
+  "termination": "primary_input",
+  "active_trace_calls": 11,
+  "edgecheck_direct_count": 10,
+  "fallback_0_5ns_count": 1
+}
+```
+
+链完整穿越 7 种 stage（含 bypass），每跳 next_signal 正确指向上一级。
+
+### case_06 (G-A-F-G-A): ambiguous, 6 hops
+
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.data_out", "driver_kind":"cont_assign",
+     "next_signal":"top.u_dut.s_p", "active_time":"50.0n"},
+    ...
+    {"hop":5, "signal":"top.u_dut.gen_u[0].u_leaf.y", "driver_kind":"cont_assign",
+     "next_signal":"", "hop_type":"same_time"}
+  ],
+  "branch_evidence": [{
+    "signal":"top.u_dut.gen_u[0].u_leaf.y",
+    "reason":"8 signals toggled simultaneously",
+    "candidates":[
+      {"name":"top.a[0]","toggled":true},
+      {"name":"top.a[1]","toggled":true},
+      ... 8 bit-level signals ...
+    ]
+  }],
+  "termination": "ambiguous",
+  "active_trace_calls": 6,
+  "edgecheck_direct_count": 4,
+  "fallback_0_5ns_count": 2
+}
+```
+
+Generate stage 的 gen_bit[i] 产生 8 个并行 assign，±0.5ns 检测全部同时跳变 → ambiguous stop。
+
 ## 结论
 
 - Repeated native active trace **在 5-7 层复杂链上稳定可组合**

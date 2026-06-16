@@ -76,6 +76,70 @@ TB = temporal_boundaries
 - 在纯 assign/flop/module/interface 链上，edgeCheck 100% 有效
 - ±0.5ns fallback 仅在多源场景（per-bit generate、mux branch）触发
 
+## 典型返回示例
+
+### case_01 (A×5 pre): primary_input, 16 hops
+
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.data_out", "driver_kind":"cont_assign",
+     "next_signal":"top.u_dut.p1", "active_time":"25.0n"},
+    {"hop":1, "signal":"top.u_dut.p1", "driver_kind":"cont_assign",
+     "next_signal":"top.u_dut.mid", "hop_type":"temporal_boundary"},
+    {"hop":2, "signal":"top.u_dut.mid", "driver_kind":"proc_assign",
+     "next_signal":"top.u_dut.pre_out", "hop_type":"temporal_boundary"},
+    {"hop":3, "signal":"top.u_dut.pre_out", "driver_kind":"cont_assign",
+     "next_signal":"top.u_dut.u_pre.s_p", "hop_type":"same_time"},
+    ... 12 more hops through chain_dut ...
+    {"hop":15, "signal":"top.u_dut.u_pre.data_in", "driver_kind":"cont_assign",
+     "next_signal":"", "hop_type":"same_time"}
+  ],
+  "termination": "primary_input",
+  "active_trace_calls": 16,
+  "edgecheck_direct_count": 15,
+  "fallback_0_5ns_count": 0,
+  "temporal_boundaries": 2
+}
+```
+
+关键路径: data_out → post assign(3层) → mid(flop, temporal_boundary) → pre_out → chain_dut 内部 → data_in(primary_input)。
+edgecheck_direct=15/16 (94%)，fallback=0。
+
+### case_13 (A-F-M-G-B pre): ambiguous, 11 hops
+
+```json
+{
+  "chain": [
+    {"hop":0, "signal":"top.data_out", "driver_kind":"cont_assign",
+     "next_signal":"top.u_dut.p1"},
+    {"hop":1, "signal":"top.u_dut.p1", "driver_kind":"cont_assign",
+     "next_signal":"top.u_dut.mid", "hop_type":"temporal_boundary"},
+    {"hop":2, "signal":"top.u_dut.mid", "driver_kind":"proc_assign",
+     "next_signal":"top.u_dut.pre_out", "hop_type":"temporal_boundary"},
+    ... through chain_dut to generate stage ...
+    {"hop":10, "signal":"top.u_dut.u_pre.gen_u[2].u_leaf.y",
+     "driver_kind":"cont_assign", "next_signal":""}
+  ],
+  "branch_evidence": [{
+    "signal":"top.u_dut.u_pre.gen_u[2].u_leaf.y",
+    "reason":"8 signals toggled simultaneously",
+    "candidates":[
+      {"name":"top.a[0]","toggled":true},
+      ... 8 bit-level signals ...
+    ]
+  }],
+  "termination": "ambiguous",
+  "active_trace_calls": 11,
+  "edgecheck_direct_count": 9,
+  "fallback_0_5ns_count": 2,
+  "temporal_boundaries": 2
+}
+```
+
+链穿越 post + flop + pre 前半段，在 generate 的 gen_bit[i] 处因 8 bit 同时跳变 → ambiguous stop。
+fallback_0_5ns=2: generate stage + mux stage 各触发一次。
+
 ## 结论
 
 1. **复合 pre 链 + flop + post 链: 20/20 成功**
