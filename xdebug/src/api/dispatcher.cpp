@@ -163,6 +163,19 @@ Json Dispatcher::handle_engine_forward(const Json& request, const ActionSpec& sp
     }
 
     Json response = forward_action(routed);
+
+    // Update socket_path if the response has a (possibly new) session socket.
+    if (response.value("ok", false) && !sid.empty()) {
+        std::string new_socket = response.value("session", Json::object()).value("socket_path", "");
+        if (!new_socket.empty()) {
+            SessionRecord rec;
+            if (sessions_.get(sid, rec)) {
+                rec.socket_path = new_socket;
+                sessions_.put(rec);
+            }
+        }
+    }
+
     // Auto-register session for ad-hoc queries (no session_id).
     if (response.value("ok", false) && !has_string(target, "session_id") &&
         !requested_name(request).empty()) {
@@ -171,6 +184,7 @@ Json Dispatcher::handle_engine_forward(const Json& request, const ActionSpec& sp
         record.mode = mode_for_target(target);
         record.daidir = target.value("daidir", std::string());
         record.fsdb = target.value("fsdb", std::string());
+        record.socket_path = response.value("session", Json::object()).value("socket_path", "");
         sessions_.put(record);
         xdebug_core::update_public_session_manifest(record.id, record.mode, record.daidir, record.fsdb);
     }
