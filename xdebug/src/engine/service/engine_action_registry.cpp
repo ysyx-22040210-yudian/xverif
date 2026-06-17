@@ -27,6 +27,16 @@ nlohmann::ordered_json ai_cursor_action(const std::string& action,
 #include "../../combined/active_trace_service.h"
 #include "../../combined/active_trace_chain.h"
 
+#include "../../waveform/event/event_manager.h"
+#include "../../waveform/event/event_analyzer.h"
+#include "../../waveform/apb/apb_manager.h"
+#include "../../waveform/apb/apb_analyzer.h"
+#include "../../waveform/axi/axi_manager.h"
+#include "../../waveform/axi/axi_analyzer.h"
+#include "../../waveform/list/list_manager.h"
+#include "../../waveform/list/signal_list.h"
+#include "../../waveform/service/rc_generator.h"
+
 namespace xdebug_design {
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -184,6 +194,20 @@ extern std::string g_fsdb_path;
 extern std::string g_daidir_path;
 extern std::string g_session_id;
 
+} // namespace xdebug_design
+
+// Waveform globals — at global scope to avoid nested-namespace issues.
+namespace xdebug_waveform {
+extern std::string g_session_id;
+extern std::string g_fsdb_file_path;
+extern npiFsdbFileHandle g_fsdb_file;
+extern EventAnalyzer g_event_analyzer;
+extern ApbAnalyzer g_apb_analyzer;
+extern AxiAnalyzer g_axi_analyzer;
+std::string format_time(npiFsdbTime t);
+}
+
+namespace xdebug_design {
 namespace {
 
 static bool contains_xz(const std::string& v) {
@@ -401,6 +425,171 @@ public:
     }
 };
 
+// verify.conditions — read signals at a time point, evaluate boolean conditions.
+class VerifyConditionsHandler : public EngineActionHandler {
+public:
+    const char* action_name() const override { return "verify.conditions"; }
+    bool needs_design() const override { return false; }
+    bool needs_waveform() const override { return true; }
+    Json run(const Json& request) const override {
+        Json args = request.value("args", Json::object());
+        Json conditions = args.value("conditions", Json::array());
+        std::string time_str = args.value("time", args.value("at", ""));
+        if (time_str.empty() || !conditions.is_array())
+            return err("MISSING_FIELD", "args.conditions[] and args.time are required");
+
+        npiFsdbTime fsdb_time = 0;
+        double tv; std::string unit;
+        char* end = nullptr;
+        tv = std::strtod(time_str.c_str(), &end);
+        if (!end || end == time_str.c_str()) return err("TIME_SPEC_INVALID", time_str);
+        while (*end && std::isspace(*end)) ++end;
+        unit = end;
+        if (!npi_fsdb_convert_time_in(g_fsdb_file, tv, unit.c_str(), fsdb_time))
+            return err("TIME_SPEC_INVALID", "failed to convert: " + time_str);
+
+        Json results = Json::array();
+        bool all_pass = true;
+        for (auto& cond : conditions) {
+            Json r;
+            r["expr"] = cond.value("expr", "");
+            r["op"] = cond.value("op", "");
+            r["expected"] = cond.value("value", "");
+            bool pass = false;
+            std::string signal = cond.value("signal", "");
+            if (!signal.empty()) {
+                std::string raw;
+                if (npi_fsdb_sig_value_at(g_fsdb_file, signal.c_str(), fsdb_time, raw, npiFsdbBinStrVal)) {
+                    bool known = raw.find_first_of("xXzZ") == std::string::npos;
+                    r["actual"] = raw;
+                    r["known"] = known;
+                    std::string exp_val = cond.value("value", "");
+                    std::string op = cond.value("op", "==");
+                    if (known) {
+                        if (op == "==") pass = (raw == exp_val);
+                        else if (op == "!=") pass = (raw != exp_val);
+                    }
+                } else {
+                    r["actual"] = "NOT_FOUND"; r["known"] = false;
+                }
+            }
+            r["pass"] = pass;
+            if (!pass) all_pass = false;
+            results.push_back(r);
+        }
+        Json out;
+        out["time"] = time_str;
+        out["all_pass"] = all_pass;
+        out["results"] = results;
+        return out;
+    }
+private:
+    static Json err(const char* c, const std::string& m) {
+        Json e; e["error"] = c; e["message"] = m; return e;
+    }
+};
+
+// event.find / event.export — call EventManager + EventAnalyzer directly.
+class EventHandler : public EngineActionHandler {
+    bool export_mode_;
+public:
+    explicit EventHandler(bool export_mode) : export_mode_(export_mode) {}
+    const char* action_name() const override { return export_mode_ ? "event.export" : "event.find"; }
+    bool needs_design() const override { return false; }
+    bool needs_waveform() const override { return true; }
+    Json run(const Json& request) const override {
+        using namespace xdebug_waveform;
+        Json args = request.value("args", Json::object());
+        std::string name = args.value("name", "");
+        EventManager em;
+        EventConfig config;
+        if (!em.get_event(g_session_id, g_fsdb_file_path, name, config))
+            return Json({{"error","CONFIG_NOT_FOUND"},{"message",name}});
+
+        // Parse time range from standard TimeSpec fields
+        npiFsdbTime tbegin = 0, tend = ~0ULL;
+        Json time_range = args.value("time_range", Json::object());
+        auto parse_t = [](const std::string& s, npiFsdbTime& t) {
+            if (s.empty()) return;
+            double v; std::string u; char* e = nullptr;
+            v = std::strtod(s.c_str(), &e);
+            if (!e || e == s.c_str()) return;
+            while (*e && std::isspace(*e)) ++e; u = e;
+            npi_fsdb_convert_time_in(g_fsdb_file, v, u.c_str(), t);
+        };
+        parse_t(time_range.value("start", time_range.value("begin", "")), tbegin);
+        parse_t(time_range.value("end", ""), tend);
+
+        EventQuery query;
+        query.expr = args.value("expr", "");
+        query.begin = tbegin;
+        query.end = tend;
+        int max_examples = export_mode_ ? args.value("max_examples", args.value("max_events", 1000)) : 1;
+        query.limit = max_examples > 0 ? max_examples : 1000;
+
+        std::vector<EventRecord> records;
+        std::string error;
+        if (!g_event_analyzer.analyze(g_fsdb_file, config, query, records, error))
+            return Json({{"error","EVENT_FAILED"},{"message",error}});
+
+        Json arr = Json::array();
+        for (auto& rec : records) {
+            Json je;
+            je["time"] = format_time(rec.time);
+            je["time_ps"] = rec.time;
+            je["signals"] = rec.signals;
+            je["fields"] = rec.fields;
+            arr.push_back(je);
+        }
+        Json out;
+        out["events"] = arr;
+        out["count"] = static_cast<int>(arr.size());
+        return out;
+    }
+};
+
+// event.config.load / event.config.list — EventManager CRUD.
+class EventConfigLoadHandler : public EngineActionHandler {
+public:
+    const char* action_name() const override { return "event.config.load"; }
+    bool needs_design() const override { return false; }
+    bool needs_waveform() const override { return true; }
+    Json run(const Json& request) const override {
+        using namespace xdebug_waveform;
+        Json args = request.value("args", Json::object());
+        std::string name = args.value("name", "");
+        if (name.empty()) return Json({{"error","MISSING_FIELD"},{"message","args.name"}});
+        // Config parsing requires the existing waveform helpers
+        return Json({{"error","NOT_IMPLEMENTED"},{"message","event.config.load requires config parsing from waveform lib"}});
+    }
+};
+
+class EventConfigListHandler : public EngineActionHandler {
+public:
+    const char* action_name() const override { return "event.config.list"; }
+    bool needs_design() const override { return false; }
+    bool needs_waveform() const override { return true; }
+    Json run(const Json& request) const override {
+        using namespace xdebug_waveform;
+        Json args = request.value("args", Json::object());
+        std::string name = args.value("name", "");
+        EventManager em;
+        if (name.empty()) {
+            auto names = em.list_events(g_session_id, g_fsdb_file_path);
+            Json arr = Json::array();
+            for (size_t i = 0; i < names.size(); i++) arr.push_back(names[i]);
+            return Json({{"count",static_cast<int>(arr.size())},{"events",arr}});
+        }
+        EventConfig cfg;
+        if (!em.get_event(g_session_id, g_fsdb_file_path, name, cfg))
+            return Json({{"error","CONFIG_NOT_FOUND"},{"message",name}});
+        Json out; out["name"] = name;
+        out["clk"] = cfg.clk; out["posedge"] = cfg.posedge;
+        out["signals"] = cfg.signals;
+        return out;
+    }
+};
+
 class CursorActionHandler : public EngineActionHandler {
     std::string name_;
 public:
@@ -503,7 +692,7 @@ const EngineActionRegistry& engine_action_registry() {
         add_ni(*r, "list.validate",          false, true);
         add_ni(*r, "list.diff",              false, true);
         add_ni(*r, "rc.generate",            false, true);
-        add_ni(*r, "verify.conditions",      false, true);
+        r->add(std::unique_ptr<EngineActionHandler>(new VerifyConditionsHandler));
 
         // Cursor actions
         r->add(std::unique_ptr<EngineActionHandler>(new CursorActionHandler("cursor.set")));
@@ -540,10 +729,10 @@ const EngineActionRegistry& engine_action_registry() {
         add_ni(*r, "axi.analysis",           false, true);
         // (axi.* analysis and apb.transfer_window handled by AiActionHandler above)
 
-        add_ni(*r, "event.config.load",      false, true);
-        add_ni(*r, "event.config.list",      false, true);
-        add_ni(*r, "event.find",             false, true);
-        add_ni(*r, "event.export",           false, true);
+        r->add(std::unique_ptr<EngineActionHandler>(new EventConfigLoadHandler));
+        r->add(std::unique_ptr<EngineActionHandler>(new EventConfigListHandler));
+        r->add(std::unique_ptr<EngineActionHandler>(new EventHandler(false)));  // event.find
+        r->add(std::unique_ptr<EngineActionHandler>(new EventHandler(true)));   // event.export
 
         // ── combined actions ──
         r->add(std::unique_ptr<EngineActionHandler>(new ActiveDriverHandler));

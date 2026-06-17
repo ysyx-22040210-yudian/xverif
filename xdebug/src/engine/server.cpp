@@ -31,7 +31,7 @@
 #include "npi_fsdb.h"
 #include "service/engine_action_registry.h"
 
-namespace xdebug_waveform { extern std::string g_session_id; extern npiFsdbFileHandle g_fsdb_file; }
+namespace xdebug_waveform { extern std::string g_session_id; extern npiFsdbFileHandle g_fsdb_file; extern std::string g_fsdb_file_path; }
 
 namespace xdebug_design {
 
@@ -425,7 +425,8 @@ int server_main(int argc, char** argv) {
             npi_end(); delete[] npi_argv; return 1;
         }
         g_has_waveform = true;
-        xdebug_waveform::g_fsdb_file = g_fsdb_file;  // sync for waveform library
+        xdebug_waveform::g_fsdb_file = g_fsdb_file;
+        xdebug_waveform::g_fsdb_file_path = g_fsdb_path;
         server_debug_log("npi_fsdb_open: ok");
         xdebug_core::log_lifecycle_event("engine", g_session_id, "npi_fsdb_open.ok", true,
                                          {{"fsdb", g_fsdb_path}});
