@@ -169,32 +169,34 @@ bool SessionManager::dbdir_metadata_matches(const SessionInfo& expected, const S
                                                  current.dbdir_size);
 }
 
-bool SessionManager::parse_open_args(const std::vector<std::string>& design_args,
+bool SessionManager::parse_open_args(const std::vector<std::string>& args,
                                      std::string& canonical_dbdir,
                                      std::vector<std::string>& canonical_args) const {
-    if (design_args.size() < 2 || design_args[0] != "-dbdir") {
+    // The unified engine accepts both -dbdir and/or -fsdb.
+    // Validate daidir if present; fsdb is validated by the engine at startup.
+    canonical_args = args;
+    bool has_daidir = false;
+
+    for (size_t i = 0; i + 1 < args.size(); ++i) {
+        if (args[i] == "-dbdir") {
+            std::string dbdir = args[i + 1];
+            while (dbdir.size() > 1 && dbdir.back() == '/') dbdir.pop_back();
+            const std::string suffix = ".daidir";
+            if (dbdir.size() < suffix.size() ||
+                dbdir.compare(dbdir.size() - suffix.size(), suffix.size(), suffix) != 0)
+                return false;
+            canonical_dbdir = canonicalize_dbdir_path(dbdir);
+            SessionInfo metadata;
+            if (!populate_dbdir_metadata(canonical_dbdir, metadata))
+                return false;
+            canonical_args[i + 1] = canonical_dbdir;
+            has_daidir = true;
+        }
+    }
+
+    // At least one resource is required.
+    if (!has_daidir && canonical_args.empty())
         return false;
-    }
-
-    std::string dbdir = design_args[1];
-    while (dbdir.size() > 1 && dbdir.back() == '/') {
-        dbdir.pop_back();
-    }
-
-    const std::string suffix = ".daidir";
-    if (dbdir.size() < suffix.size() ||
-        dbdir.compare(dbdir.size() - suffix.size(), suffix.size(), suffix) != 0) {
-        return false;
-    }
-
-    canonical_dbdir = canonicalize_dbdir_path(dbdir);
-    SessionInfo metadata;
-    if (!populate_dbdir_metadata(canonical_dbdir, metadata)) {
-        return false;
-    }
-
-    canonical_args = design_args;
-    canonical_args[1] = canonical_dbdir;
     return true;
 }
 
@@ -310,7 +312,7 @@ SessionEnsureResult SessionManager::ensure_session(const std::vector<std::string
         debug_log("ensure_session: reason=invalid_args");
         xdebug_core::log_lifecycle_event("design", session_name, "ensure_session.invalid_args", false);
         result.status = "invalid_args";
-        result.message = "Usage: open -dbdir <simv.daidir> [args...]";
+        result.message = "Usage: open [-dbdir <simv.daidir>] [-fsdb <waves.fsdb>] ...";
         return result;
     }
     debug_log("ensure_session: canonical_dbdir=%s", canonical_dbdir.c_str());

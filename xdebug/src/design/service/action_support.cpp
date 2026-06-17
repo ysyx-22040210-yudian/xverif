@@ -174,10 +174,15 @@ std::vector<std::string> target_dbdir_args(const json& request) {
     std::vector<std::string> args;
     if (!request.contains("target") || !request["target"].is_object()) return args;
     const json& target = request["target"];
-    std::string dbdir = target.value("dbdir", "");
+    std::string dbdir = target.value("dbdir", target.value("daidir", ""));
     if (!dbdir.empty()) {
         args.push_back("-dbdir");
         args.push_back(dbdir);
+    }
+    std::string fsdb = target.value("fsdb", "");
+    if (!fsdb.empty()) {
+        args.push_back("-fsdb");
+        args.push_back(fsdb);
     }
     return args;
 }

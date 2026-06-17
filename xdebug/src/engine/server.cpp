@@ -1,13 +1,10 @@
 #include "server.h"
-#include "../common/xdebug_design_paths.h"
-#include "../protocol/protocol.h"
-#include "../trace/trace_engine.h"
-#include "../signal/signal_finder.h"
-#include "../port/port_analyzer.h"
-#include "../session/session_registry.h"
-#include "../session/session_transport.h"
-#include "logging/action_log.h"
-#include "transport/file_exchange.h"
+#include "../design/common/xdebug_design_paths.h"
+#include "../design/protocol/protocol.h"
+#include "../design/session/session_registry.h"
+#include "../design/session/session_transport.h"
+#include "core/logging/action_log.h"
+#include "core/transport/file_exchange.h"
 #include "json.hpp"
 
 #include <cstdio>
@@ -32,7 +29,7 @@
 
 #include "npi.h"
 #include "npi_fsdb.h"
-#include "../service/engine_action_registry.h"
+#include "service/engine_action_registry.h"
 
 namespace xdebug_waveform { extern std::string g_session_id; }
 
@@ -128,17 +125,6 @@ static bool read_command_line(int fd, char* line, size_t line_size) {
     }
     line[total] = '\0';
     return true;
-}
-
-static TraceOptions parse_trace_options(const Json& args) {
-    TraceOptions options;
-    options.limit = args.value("limit", 0);
-    options.role = args.value("role", std::string());
-    options.no_statement_only = args.value("no_statement_only", false);
-    if (args.contains("include_statement_only") && args["include_statement_only"].is_boolean()) {
-        options.no_statement_only = !args["include_statement_only"].get<bool>();
-    }
-    return options;
 }
 
 static Json ok_response(const Json& data = Json::object()) {
@@ -253,38 +239,6 @@ static int file_transport_loop(const std::string& file_dir) {
     return 0;
 }
 
-static Json trace_request(const Json& args, TraceMode mode) {
-    std::string signal = args.value("signal", std::string());
-    if (signal.empty()) return error_response("MISSING_FIELD", "args.signal is required");
-    TraceEngine engine;
-    TraceResult result = engine.trace(signal, mode, parse_trace_options(args));
-    return ok_response(Json::parse(engine.render_ai_json(result)));
-}
-
-static Json signal_resolve_request(const Json& args) {
-    std::string signal = args.value("signal", std::string());
-    if (signal.empty()) return error_response("MISSING_FIELD", "args.signal is required");
-    SignalFinder finder;
-    SignalResolveResult result = finder.resolve(signal);
-    return ok_response(Json::parse(finder.render_json(result)));
-}
-
-static Json port_request(const Json& args, const std::string& action) {
-    std::string path = args.value("path", std::string());
-    if (path.empty()) return error_response("MISSING_FIELD", "args.path is required");
-    int limit = args.value("limit", 0);
-    PortAnalyzer analyzer;
-    std::string payload;
-    if (action == "port.trace") {
-        payload = analyzer.render_port_trace(path, limit);
-    } else if (action == "instance.map") {
-        payload = analyzer.render_instance_map(path);
-    } else {
-        payload = analyzer.render_interface_resolve(path);
-    }
-    return ok_response(Json::parse(payload));
-}
-
 static bool handle_client(int client_fd, bool& should_quit) {
     should_quit = false;
     char line[1024 * 1024] = {};
@@ -295,8 +249,10 @@ static bool handle_client(int client_fd, bool& should_quit) {
     } catch (...) {
         return send_response(client_fd, error_response("INVALID_JSON", "request must be a JSON object"));
     }
-    if (request.value("api_version", std::string()) != INTERNAL_API_VERSION) {
-        return send_response(client_fd, error_response("UNSUPPORTED_API_VERSION", "expected xdebug.internal.v1"));
+    std::string api_ver = request.value("api_version", std::string());
+    if (api_ver != INTERNAL_API_VERSION && api_ver != "xdebug.v1") {
+        return send_response(client_fd, error_response("UNSUPPORTED_API_VERSION",
+            "expected xdebug.internal.v1 or xdebug.v1, got " + api_ver));
     }
     if (g_transport == "tcp" && request.value("auth_token", std::string()) != g_auth_token) {
         return send_response(client_fd, error_response("AUTH_FAILED", "authentication failed"));

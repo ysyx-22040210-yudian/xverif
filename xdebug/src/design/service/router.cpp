@@ -132,8 +132,10 @@ std::string log_session_id(const json& request) {
 
 json handle_request_impl(const json& request) {
     std::string action = request.value("action", "");
-    if (request.value("api_version", std::string(API_VERSION)) != API_VERSION) {
-        return error_response(request, action, "UNSUPPORTED_API_VERSION", "expected xdebug.internal.v1", false);
+    std::string api_ver = request.value("api_version", std::string(API_VERSION));
+    if (api_ver != API_VERSION && api_ver != "xdebug.v1") {
+        return error_response(request, action, "UNSUPPORTED_API_VERSION",
+            "expected xdebug.internal.v1 or xdebug.v1", false);
     }
     if (action.empty()) return error_response(request, action, "MISSING_FIELD", "action is required");
     if (action == "batch") return run_batch(request);
@@ -157,7 +159,32 @@ json handle_request_impl(const json& request) {
     if (action == "fsm.explain") return run_fsm_explain_action(request);
     if (action == "counter.explain") return run_counter_explain_action(request);
     if (action == "port.trace" || action == "instance.map" || action == "interface.resolve") return run_port_like_action(request, action);
-    return error_response(request, action, "UNKNOWN_ACTION", "unknown action: " + action, true);
+
+    // All other actions (waveform, combined, etc.): forward to engine server
+    // using the same session→socket pattern as design actions.
+    json response = base_response(request, action);
+    std::string session_id;
+    SessionInfo session;
+    if (!ensure_target_session(request, response, session_id, session)) return response;
+    json args = request.value("args", json::object());
+    json result;
+    std::string status, message;
+    if (!send_json_command(session_id, action, args, result, status, message)) {
+        return error_response(request, action, "SESSION_UNHEALTHY",
+            message.empty() ? status : message);
+    }
+    response["ok"] = result.value("ok", true);
+    response["summary"] = result.value("summary", json::object());
+    response["data"] = result.value("data", json::object());
+    if (!response["ok"].get<bool>()) {
+        json err = result.value("error", json::object());
+        response["error"] = {{"code", err.value("code", "ACTION_FAILED")},
+                             {"message", err.value("message", "action failed")},
+                             {"recoverable", true},
+                             {"candidates", json::array()},
+                             {"suggested_actions", json::array()}};
+    }
+    return response;
 }
 
 } // namespace

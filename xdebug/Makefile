@@ -16,7 +16,7 @@ NPI_CXXFLAGS ?=
 NPI_LDFLAGS ?=
 NPI_LIB ?=
 
-CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -pthread -Isrc -Isrc/core -Isrc/design -Isrc/waveform -Ithird_party
+CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -pthread -Isrc -Isrc/core -Isrc/engine -Isrc/design -Isrc/waveform -Ithird_party
 LDFLAGS  = $(NPI_LDFLAGS) -pthread $(if $(NPI_LIB),-Xlinker -rpath -Xlinker $(NPI_LIB),)
 # Frontend does not need NPI (all NPI is in the engine subprocess).
 FRONTEND_LDFLAGS = -pthread
@@ -55,8 +55,17 @@ APP_SRCS = src/main.cpp \
            src/backend/engine_adapter.cpp \
            src/runtime/work_dir.cpp
 
-DESIGN_SRCS = src/design/main.cpp \
-              src/design/session/session_registry.cpp \
+ENGINE_SRCS = src/engine/main.cpp \
+              src/engine/server.cpp \
+              src/engine/service/engine_action_registry.cpp \
+              src/api/response.cpp \
+              src/api/text_response_builder.cpp \
+              src/api/xout_renderer.cpp \
+              src/runtime/work_dir.cpp \
+              src/combined/active_trace_service.cpp \
+              src/combined/active_trace_chain.cpp
+
+DESIGN_SRCS = src/design/session/session_registry.cpp \
               src/design/session/session_manager.cpp \
               src/design/session/session_transport.cpp \
               src/design/client/client.cpp \
@@ -68,20 +77,12 @@ DESIGN_SRCS = src/design/main.cpp \
               src/design/service/semantic_actions.cpp \
               src/design/service/port_actions.cpp \
               src/design/service/router.cpp \
-              src/design/server/server.cpp \
               src/design/common/xdebug_design_paths.cpp \
               src/design/ast/ast_extractor.cpp \
               src/design/port/port_analyzer.cpp \
               src/design/control_dep/control_dep.cpp \
               src/design/trace/trace_engine.cpp \
-              src/design/signal/signal_finder.cpp \
-              src/design/service/engine_action_registry.cpp \
-              src/api/response.cpp \
-              src/api/text_response_builder.cpp \
-              src/api/xout_renderer.cpp \
-              src/runtime/work_dir.cpp \
-              src/combined/active_trace_service.cpp \
-              src/combined/active_trace_chain.cpp
+              src/design/signal/signal_finder.cpp
 
 WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/session/session_registry.cpp \
@@ -104,15 +105,12 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
                 src/waveform/service/session_actions.cpp \
                 src/waveform/service/protocol_actions.cpp \
                 src/waveform/service/router.cpp \
-                src/waveform/server/server.cpp \
                 src/waveform/server/service/context.cpp \
                 src/waveform/server/service/value_scope.cpp \
                 src/waveform/server/service/signal_analysis.cpp \
                 src/waveform/server/service/signal_inspect.cpp \
                 src/waveform/server/service/query_actions.cpp \
                 src/waveform/server/service/event_handlers.cpp \
-                src/waveform/server/service/command_parser.cpp \
-                src/waveform/server/service/request_router.cpp \
                 src/waveform/server/fsdb_value_reader.cpp \
                 src/waveform/server/fsdb_scan_utils.cpp \
                 src/waveform/list/list_manager.cpp \
@@ -131,6 +129,7 @@ WAVEFORM_SRCS = src/waveform/main.cpp \
 CORE_OBJS = $(CORE_SRCS:%.cpp=$(BUILD)/%.o)
 API_SUPPORT_OBJS = $(API_SUPPORT_SRCS:%.cpp=$(BUILD)/%.o)
 APP_OBJS = $(APP_SRCS:%.cpp=$(BUILD)/%.o)
+ENGINE_OBJS = $(ENGINE_SRCS:%.cpp=$(BUILD)/%.o)
 DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
 WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
 
@@ -140,9 +139,8 @@ all: $(EXE) internal-engines
 
 internal-engines: $(LIBEXEC)/xdebug-engine
 
-# Unified engine: all design + waveform objects EXCEPT waveform/main.o
-# (design/main.cpp is the entry point; waveform/main.cpp has its own main).
-UNIFIED_OBJS = $(DESIGN_OBJS) $(filter-out $(BUILD)/src/waveform/main.o,$(WAVEFORM_OBJS))
+# Unified engine: engine + design + waveform objects (excl. waveform/main.o).
+UNIFIED_OBJS = $(ENGINE_OBJS) $(DESIGN_OBJS) $(filter-out $(BUILD)/src/waveform/main.o,$(WAVEFORM_OBJS))
 $(LIBEXEC)/xdebug-engine: $(CORE_OBJS) $(UNIFIED_OBJS)
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -DXDEBUG_INTERNAL_ENGINE -o $@ $^ $(LDFLAGS)

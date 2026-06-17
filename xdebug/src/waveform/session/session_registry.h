@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/session/session_types.h"
+
 #include <string>
 #include <vector>
 #include <ctime>
@@ -7,38 +9,8 @@
 
 namespace xdebug_waveform {
 
-// Session information structure
-struct SessionInfo {
-    std::string session_id;         // Unique session name
-    std::string transport;      // uds, tcp, or file
-    std::string socket_path;    // Unix domain socket path
-    std::string file_dir;       // File transport request/response directory
-    std::string host;           // Client-visible TCP host
-    std::string bind_host;      // Server bind address for TCP
-    int port;                   // TCP port, 0 for UDS
-    std::string server_host;    // Host where server was spawned
-    std::string auth_token;     // TCP auth token
-    std::string fsdb_file;      // FSDB file opened
-    pid_t server_pid;           // Server process ID
-    time_t created_at;          // Creation timestamp
-    time_t last_active;         // Last command activity timestamp
-    long fsdb_mtime;            // FSDB modification timestamp
-    long long fsdb_size;        // FSDB size in bytes
-    unsigned long long fsdb_dev;    // FSDB device ID
-    unsigned long long fsdb_inode;  // FSDB inode
-
-    SessionInfo()
-        : session_id(),
-          transport("uds"),
-          port(0),
-          server_pid(0),
-          created_at(0),
-          last_active(0),
-          fsdb_mtime(0),
-          fsdb_size(0),
-          fsdb_dev(0),
-          fsdb_inode(0) {}
-};
+// Unified SessionInfo from core — waveform fields are fsdb_*.
+using SessionInfo = xdebug_core::SessionInfo;
 
 // Session registry - manages persistent storage of session info
 class SessionRegistry {

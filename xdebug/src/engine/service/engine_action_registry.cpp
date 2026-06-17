@@ -1,9 +1,9 @@
 #include "engine_action_registry.h"
 
-#include "../trace/trace_engine.h"
-#include "../signal/signal_finder.h"
-#include "../port/port_analyzer.h"
-#include "../protocol/protocol.h"
+#include "../../design/trace/trace_engine.h"
+#include "../../design/signal/signal_finder.h"
+#include "../../design/port/port_analyzer.h"
+#include "../../design/protocol/protocol.h"
 
 // Waveform value-reader (lightweight header, no text-protocol deps).
 #include "../../waveform/server/fsdb_value_reader.h"

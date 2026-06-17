@@ -1,5 +1,5 @@
-#include "commands/cmd_ai.h"
-#include "server/server.h"
+#include "../design/commands/cmd_ai.h"
+#include "server.h"
 
 #include <cstdio>
 #include <cstdlib>

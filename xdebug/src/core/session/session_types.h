@@ -30,22 +30,40 @@ struct DatabaseRef {
 };
 
 struct SessionInfo {
+    // Common fields
     std::string session_id;
     std::string transport;
     std::string socket_path;
+    std::string file_dir;
     std::string host;
     std::string bind_host;
-    int port;
+    int port = 0;
     std::string server_host;
     std::string auth_token;
-    std::string database_path;
-    DatabaseKind database_kind;
-    Fingerprint fingerprint;
-    pid_t server_pid;
-    time_t created_at;
-    time_t last_active;
+    pid_t server_pid = 0;
+    time_t created_at = 0;
+    time_t last_active = 0;
 
-    SessionInfo();
+    // Design resource fields
+    std::string design_file;
+    std::string dbdir_path;
+    long dbdir_mtime = 0;
+    long long dbdir_size = 0;
+    unsigned long long dbdir_dev = 0;
+    unsigned long long dbdir_inode = 0;
+
+    // Waveform resource fields
+    std::string fsdb_file;
+    long fsdb_mtime = 0;
+    long long fsdb_size = 0;
+    unsigned long long fsdb_dev = 0;
+    unsigned long long fsdb_inode = 0;
+
+    // Legacy alias for compatibility
+    std::string database_path() const { return dbdir_path.empty() ? fsdb_file : dbdir_path; }
+    DatabaseKind database_kind() const {
+        return dbdir_path.empty() ? DatabaseKind::Fsdb : DatabaseKind::Daidir;
+    }
 };
 
 const char* database_kind_name(DatabaseKind kind);

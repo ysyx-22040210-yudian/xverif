@@ -11,13 +11,7 @@ Fingerprint::Fingerprint()
 DatabaseRef::DatabaseRef()
     : kind(DatabaseKind::Fsdb) {}
 
-SessionInfo::SessionInfo()
-    : transport("uds"),
-      port(0),
-      database_kind(DatabaseKind::Fsdb),
-      server_pid(0),
-      created_at(0),
-      last_active(0) {}
+// SessionInfo uses in-class default initializers — no out-of-line ctor needed.
 
 const char* database_kind_name(DatabaseKind kind) {
     switch (kind) {
