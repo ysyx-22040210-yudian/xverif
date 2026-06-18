@@ -139,10 +139,19 @@
           "type": "string"
         },
         "mode": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "first",
+            "last",
+            "all",
+            "head",
+            "tail"
+          ],
+          "default": "first"
         },
         "scan_limit": {
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         },
         "include_source": {
           "type": "boolean"

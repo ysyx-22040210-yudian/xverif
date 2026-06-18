@@ -263,13 +263,45 @@ public:
         query.expr = args.value("expr", "");
         query.begin = tbegin;
         query.end = tend;
-        int max_examples = export_mode_ ? args.value("max_examples", args.value("max_events", 1000)) : 1;
-        query.limit = max_examples > 0 ? max_examples : 1000;
+        Json limits = request.value("limits", Json::object());
+        std::string mode = args.value("mode", export_mode_ ? "export" : "first");
+        if (mode == "head") mode = "first";
+        if (mode == "tail") mode = "last";
+        if (!export_mode_ && mode != "first" && mode != "last" && mode != "all") {
+            return Json({{"error","INVALID_REQUEST"},
+                         {"message","args.mode must be first, last, or all"}});
+        }
+
+        int scan_limit = 0;
+        if (export_mode_) {
+            int max_examples = args.value(
+                "max_examples",
+                args.value("max_events", limits.value("max_rows", 1000)));
+            query.limit = max_examples > 0 ? max_examples : 1000;
+        } else if (mode == "first") {
+            query.limit = 1;
+            // The candidate-change fast path can skip a match when a sampled
+            // signal changes on the same timestamp as the clock edge. Use the
+            // full clock-edge scan here so "first" is semantically exact.
+            query.fast_find = false;
+        } else if (mode == "last") {
+            scan_limit = args.value("scan_limit", limits.value("max_rows", 10000));
+            query.limit = scan_limit > 0 ? scan_limit : 10000;
+        } else {
+            int max_events = args.value(
+                "limit",
+                args.value("max_events", limits.value("max_rows", 1000)));
+            query.limit = max_events > 0 ? max_events : 1000;
+        }
 
         std::vector<EventRecord> records;
         std::string error;
         if (!g_event_analyzer.analyze(g_fsdb_file, config, query, records, error))
             return Json({{"error","EVENT_FAILED"},{"message",error}});
+        if (!export_mode_ && mode == "last" && records.size() > 1) {
+            EventRecord last = records.back();
+            records.assign(1, last);
+        }
 
         Json arr = Json::array();
         for (auto& rec : records) {
@@ -291,15 +323,18 @@ public:
         }
         out["begin"] = time_range.value("start", time_range.value("begin", ""));
         out["end"] = time_range.value("end", "");
-        out["mode"] = args.value("mode", export_mode_ ? "export" : "first");
+        out["mode"] = mode;
+        if (scan_limit > 0) out["scan_limit"] = scan_limit;
         out["sampling_mode"] = "clock_edge";
         out["inline"] = name.empty();
         out["summary"] = {
             {"event_count", out["event_count"]},
             {"first", out.value("first", Json())},
             {"last", out.value("last", Json())},
-            {"count", out["count"]}
+            {"count", out["count"]},
+            {"mode", mode}
         };
+        if (scan_limit > 0) out["summary"]["scan_limit"] = scan_limit;
         return out;
     }
 };
