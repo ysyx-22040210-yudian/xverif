@@ -80,6 +80,10 @@ void TextResponseBuilder::emit_kv(const std::string& key, long long value) {
 }
 
 void TextResponseBuilder::emit_row(std::initializer_list<std::string> columns) {
+    emit_row(std::vector<std::string>(columns.begin(), columns.end()));
+}
+
+void TextResponseBuilder::emit_row(const std::vector<std::string>& columns) {
     std::string row;
     for (const auto& col : columns) {
         std::string text = collapse_row_column(sanitize_xout_value(col));
@@ -96,6 +100,11 @@ void TextResponseBuilder::emit_row(std::initializer_list<std::string> columns) {
 void TextResponseBuilder::emit_warning(const std::string& code, const std::string& message) {
     emit_section("warnings");
     emit_row({code, message});
+}
+
+void TextResponseBuilder::emit_raw(const std::string& text) {
+    wrote_content_ = true;
+    out_ << text;
 }
 
 void TextResponseBuilder::emit_error(const Json& error) {

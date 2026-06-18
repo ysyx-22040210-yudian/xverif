@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace xdebug {
 
@@ -21,8 +22,10 @@ public:
     void emit_kv(const std::string& key, int value);
     void emit_kv(const std::string& key, long long value);
     void emit_row(std::initializer_list<std::string> columns);
+    void emit_row(const std::vector<std::string>& columns);
     void emit_warning(const std::string& code, const std::string& message);
     void emit_error(const Json& error);
+    void emit_raw(const std::string& text);
     std::string str() const;
 
 private:

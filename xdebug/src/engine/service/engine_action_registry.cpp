@@ -3,8 +3,10 @@
 
 #include "../../combined/active_trace_service.h"
 #include "../../combined/active_trace_chain.h"
+#include "../../api/text_response_builder.h"
 
 #include <memory>
+#include <sstream>
 
 namespace xdebug_design {
 
@@ -27,6 +29,32 @@ public:
     Json run(const Json& request) const override {
         xdebug::ActiveTraceService svc;
         return svc.run_engine(request, g_daidir_path, g_fsdb_path, g_fsdb_file);
+    }
+    std::string render_xout(const Json& r) const override {
+        std::string base = EngineActionHandler::render_xout(r);
+        const Json& data = r.value("data", Json::object());
+        xdebug::TextResponseBuilder out("xdebug");
+        out.emit_header(action_name());
+        // Render base content then append driver detail
+        std::ostringstream oss;
+        oss << base << "\n";
+        for (const char* key : {"driver","path","statements","controls","events"}) {
+            if (!data.contains(key)) continue;
+            oss << key << ":\n";
+            if (data[key].is_array()) {
+                for (const auto& item : data[key])
+                    oss << "  " << xdebug::json_to_xout_value(item) << "\n";
+            } else if (data[key].is_object()) {
+                for (auto it = data[key].begin(); it != data[key].end(); ++it)
+                    oss << "  " << it.key() << ": " << xdebug::json_to_xout_value(it.value()) << "\n";
+            }
+        }
+        if (data.contains("limitations") && data["limitations"].is_array() && !data["limitations"].empty()) {
+            oss << "limitations:\n";
+            for (const auto& l : data["limitations"])
+                oss << "  " << l.get<std::string>() << "\n";
+        }
+        return oss.str();
     }
 };
 

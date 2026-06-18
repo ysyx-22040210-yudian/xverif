@@ -304,6 +304,11 @@ static bool handle_client(int client_fd, bool& should_quit) {
     // Propagate truncation flag from handler to response envelope.
     if (data.contains("truncated") && data["truncated"].is_boolean())
         resp["meta"] = {{"truncated", data["truncated"].get<bool>()}};
+    // Let handler generate XOUT text
+    Json xout_resp;
+    xout_resp["data"] = data;
+    if (data.contains("summary")) xout_resp["summary"] = data["summary"];
+    resp["text"] = h->render_xout(xout_resp);
     return send_response(client_fd, resp);
 }
 

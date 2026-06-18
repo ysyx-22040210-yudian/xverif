@@ -2,6 +2,7 @@
 #include "engine_action_registry.h"
 #include "engine_globals.h"
 
+#include "../../api/text_response_builder.h"
 #include "../../design/protocol/protocol.h"
 #include "../../waveform/server/fsdb_value_reader.h"
 #include "../../waveform/event/event_manager.h"
@@ -80,6 +81,19 @@ private:
     static Json err(const char* code, const std::string& msg) {
         Json e; e["error"] = code; e["message"] = msg; return e;
     }
+    std::string render_xout(const Json& r) const override {
+        xdebug::TextResponseBuilder out("xdebug");
+        out.emit_header(action_name());
+        const Json& d = r.value("data", Json::object());
+        out.emit_section("target");
+        if (d.contains("signal")) out.emit_kv("signal", d["signal"]);
+        if (d.contains("time")) out.emit_kv("time", d["time"]);
+        out.emit_section("summary");
+        if (d.contains("value")) out.emit_kv("value", d["value"]);
+        if (d.contains("known")) out.emit_kv("known", d["known"]);
+        if (d.contains("width")) out.emit_kv("width", d["width"]);
+        return out.str();
+    }
 };
 
 class ValueBatchAtHandler : public EngineActionHandler {
@@ -131,6 +145,21 @@ public:
 private:
     static Json err(const char* code, const std::string& msg) {
         Json e; e["error"] = code; e["message"] = msg; return e;
+    }
+    std::string render_xout(const Json& r) const override {
+        xdebug::TextResponseBuilder out("xdebug");
+        out.emit_header(action_name());
+        const Json& d = r.value("data", Json::object());
+        const Json& s = r.value("summary", Json::object());
+        out.emit_section("target");
+        if (s.contains("time")) out.emit_kv("time", s["time"]);
+        if (s.contains("signal_count")) out.emit_kv("signal_count", s["signal_count"]);
+        out.emit_section("values");
+        if (d.contains("signals") && d["signals"].is_object()) {
+            for (auto it = d["signals"].begin(); it != d["signals"].end(); ++it)
+                out.emit_row({it.key(), xdebug::json_to_xout_value(it.value())});
+        }
+        return out.str();
     }
 };
 

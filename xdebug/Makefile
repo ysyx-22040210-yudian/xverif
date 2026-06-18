@@ -58,6 +58,7 @@ APP_SRCS = src/main.cpp \
 ENGINE_SRCS = src/engine/main.cpp \
               src/engine/server.cpp \
               src/engine/service/engine_action_registry.cpp \
+              src/engine/service/engine_action_handler.cpp \
               src/engine/service/engine_waveform_handlers.cpp \
               src/engine/service/engine_protocol_handlers.cpp \
               src/engine/service/engine_design_handlers.cpp \
