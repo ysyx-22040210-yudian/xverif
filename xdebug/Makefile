@@ -139,7 +139,7 @@ ENGINE_OBJS = $(ENGINE_SRCS:%.cpp=$(BUILD)/%.o)
 DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
 WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
 
-.PHONY: all internal-engines unit-test mcp-test schema-test contract-test combined-test clean
+.PHONY: all internal-engines unit-test test-infra mcp-test schema-test contract-test combined-test clean
 
 all: $(EXE) internal-engines
 
@@ -176,6 +176,9 @@ unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o $(BUILD)
 	$(BUILD)/tests/test_text_response_builder
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/tests/test_rc_generator tests/unit/test_rc_generator.cpp $(BUILD)/src/waveform/service/rc_generator.o
 	$(BUILD)/tests/test_rc_generator
+
+test-infra:
+	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/unit/test_test_infra.py
 
 schema-test:
 	$(PYTHON) tools/validate_schema.py schemas/v1
