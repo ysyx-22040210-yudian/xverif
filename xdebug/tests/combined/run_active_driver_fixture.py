@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+import atexit
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -37,6 +38,7 @@ IF_PORT_ROOT_FSDB = str(IF_PORT_ROOT_DIR / "out" / "waves.fsdb")
 failed = 0
 passed = 0
 skipped = 0
+opened_sessions = []
 
 
 def _has_license_issue(output: str) -> bool:
@@ -57,12 +59,36 @@ def run_xdebug(request_body: str) -> "tuple[int, str]":
     proc = subprocess.run(
         [XDEBUG, "--json", "-"],
         input=request_body,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
         timeout=120,
     )
     combined = proc.stdout + proc.stderr
     return proc.returncode, combined
+
+
+def cleanup_opened_sessions():
+    for session_id in reversed(opened_sessions):
+        req = json.dumps({
+            "api_version": "xdebug.v1",
+            "action": "session.kill",
+            "target": {"session_id": session_id},
+        })
+        try:
+            subprocess.run(
+                [XDEBUG, "--json", "-"],
+                input=req + "\n",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                timeout=15,
+            )
+        except Exception:
+            pass
+
+
+atexit.register(cleanup_opened_sessions)
 
 
 def open_session(name: str, daidir: str, fsdb: str) -> "tuple[str, str]":
@@ -361,7 +387,12 @@ def main():
 
     # Check xdebug is available
     try:
-        subprocess.run([XDEBUG, "-h"], capture_output=True, timeout=5)
+        subprocess.run(
+            [XDEBUG, "-h"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5,
+        )
     except Exception:
         print(f"SKIP: xdebug binary not available at {XDEBUG}")
         print(f"  Build with: make -C xdebug")
@@ -376,7 +407,8 @@ def main():
             try:
                 subprocess.run(
                     ["make", "-C", str(fixture_dir), "fixture"],
-                    capture_output=True, text=True, timeout=300,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True, timeout=300,
                     cwd=str(REPO_ROOT),
                 )
             except Exception as e:
@@ -397,6 +429,7 @@ def main():
         failed += 1
     else:
         print(f"  active_driver session: {ad_sid}")
+        opened_sessions.append(ad_sid)
 
     if_sid, if_err = open_session(
         f"if_port_root_py_{os.getpid()}", IF_PORT_ROOT_DAIDIR, IF_PORT_ROOT_FSDB)
@@ -411,6 +444,7 @@ def main():
         failed += 1
     else:
         print(f"  interface_port_root session: {if_sid}")
+        opened_sessions.append(if_sid)
 
     if failed > 0:
         sys.exit(1)
