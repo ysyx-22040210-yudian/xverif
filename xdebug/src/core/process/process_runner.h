@@ -21,9 +21,10 @@ struct ProcessRequest {
     std::vector<std::string> argv;
     std::string stdin_text;
     std::string working_dir;
+    int timeout_ms = 0;
 };
 
-// Runs a child process, pipes stdin to it, captures stdout.
+// Runs a child process, pipes stdin to it, captures stdout/stderr.
 // Encapsulates the fork/exec/pipe/waitpid lifecycle in RAII style.
 class ProcessRunner {
 public:

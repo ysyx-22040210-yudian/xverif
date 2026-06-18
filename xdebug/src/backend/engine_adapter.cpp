@@ -65,6 +65,8 @@ bool EngineAdapter::invoke(const Json& xdebug_request,
     process_req.argv = {"ai", "query", "-"};
     process_req.stdin_text = stdin_text;
     process_req.working_dir = workdir;
+    process_req.timeout_ms = xdebug_request.value("limits", Json::object())
+                                 .value("timeout_ms", 0);
 
     xdebug_core::log_lifecycle_event(component, log_sid, "engine.spawning", true,
                                      {{"engine_path", path}, {"workdir", workdir},
@@ -72,6 +74,15 @@ bool EngineAdapter::invoke(const Json& xdebug_request,
 
     ProcessRunner runner;
     ProcessResult result = runner.run(process_req);
+
+    if (result.timed_out) {
+        error = "internal engine timed out";
+        if (!result.stderr_text.empty()) error += ": " + result.stderr_text;
+        xdebug_core::log_lifecycle_event(component, log_sid, "engine.process_timeout", false,
+                                         {{"timeout_ms", process_req.timeout_ms},
+                                          {"message", error}, {"engine_path", path}});
+        return false;
+    }
 
     if (result.exit_code != 0 && !result.stderr_text.empty()) {
         error = result.stderr_text;
