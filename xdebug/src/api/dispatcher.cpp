@@ -155,8 +155,8 @@ Json Dispatcher::handle_engine_forward(const Json& request, const ActionSpec& sp
     if (!sid.empty()) {
         SessionRecord record;
         if (sessions_.get(sid, record) && !record.socket_path.empty()) {
-            Json response = send_to_socket(record.socket_path, routed);
-            if (!response.contains("error") || response.value("ok", false)) {
+            Json response;
+            if (send_to_socket(record.socket_path, routed, response)) {
                 return response;
             }
         }
@@ -449,10 +449,12 @@ Json Dispatcher::dispatch(const Json& request) {
     return response;
 }
 
-Json Dispatcher::send_to_socket(const std::string& socket_path, const Json& request) const {
+bool Dispatcher::send_to_socket(const std::string& socket_path,
+                                const Json& request,
+                                Json& response) const {
     const std::string action = request.value("action", std::string());
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (fd < 0) return engine_error(request, action, "socket create failed");
+    if (fd < 0) return false;
 
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
@@ -461,7 +463,7 @@ Json Dispatcher::send_to_socket(const std::string& socket_path, const Json& requ
 
     if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         close(fd);
-        return engine_error(request, action, "socket connect failed: " + socket_path);
+        return false;
     }
 
     // Build internal request for engine server
@@ -470,7 +472,7 @@ Json Dispatcher::send_to_socket(const std::string& socket_path, const Json& requ
     std::string wire = rpc.dump() + "\n";
     if (write(fd, wire.c_str(), wire.size()) != static_cast<ssize_t>(wire.size())) {
         close(fd);
-        return engine_error(request, action, "socket write failed");
+        return false;
     }
 
     // Read response — engine server closes fd after sending.
@@ -487,19 +489,20 @@ Json Dispatcher::send_to_socket(const std::string& socket_path, const Json& requ
     try {
         engine_resp = Json::parse(line);
     } catch (...) {
-        return engine_error(request, action, "invalid engine response");
+        return false;
     }
 
     if (!engine_resp.value("ok", false)) {
         Json err = engine_resp.value("error", Json::object());
-        return make_error(request, action,
+        response = make_error(request, action,
             err.value("code", "INTERNAL_ENGINE_FAILED"),
             err.value("message", "engine server error"), true);
+        return true;
     }
 
     // Wrap engine response into xdebug.v1 format
     Json data_payload = engine_resp.value("data", Json::object());
-    Json response = make_response(request, action, true);
+    response = make_response(request, action, true);
     // Build summary from data's top-level scalar fields (same logic as router.cpp)
     Json result_summary = data_payload.value("summary", Json::object());
     if (result_summary.empty()) {
@@ -512,7 +515,7 @@ Json Dispatcher::send_to_socket(const std::string& socket_path, const Json& requ
     response["data"] = data_payload;
     if (data_payload.contains("truncated") && data_payload["truncated"].is_boolean())
         response["meta"] = {{"truncated", data_payload["truncated"].get<bool>()}};
-    return response;
+    return true;
 }
 
 } // namespace xdebug
