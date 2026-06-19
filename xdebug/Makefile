@@ -18,6 +18,7 @@ NPI_LIB ?=
 
 CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -pthread -Isrc -Isrc/core -Isrc/engine -Isrc/design -Isrc/waveform -Ithird_party
 LDFLAGS  = $(NPI_LDFLAGS) -pthread $(if $(NPI_LIB),-Xlinker -rpath -Xlinker $(NPI_LIB),)
+DEPFLAGS = -MMD -MP
 # Frontend does not need NPI (all NPI is in the engine subprocess).
 FRONTEND_LDFLAGS = -pthread
 BUILD    = build
@@ -141,6 +142,12 @@ APP_OBJS = $(APP_SRCS:%.cpp=$(BUILD)/%.o)
 ENGINE_OBJS = $(ENGINE_SRCS:%.cpp=$(BUILD)/%.o)
 DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
 WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
+DEPS = $(sort $(CORE_OBJS:.o=.d) \
+       $(API_SUPPORT_OBJS:.o=.d) \
+       $(APP_OBJS:.o=.d) \
+       $(ENGINE_OBJS:.o=.d) \
+       $(DESIGN_OBJS:.o=.d) \
+       $(WAVEFORM_OBJS:.o=.d))
 
 .PHONY: all internal-engines unit-test test-infra pytest-contract pytest-synthetic-existing pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast test-contract test-synthetic test-vip test-active-trace test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke test-regression test-nightly test-mcp-real-lsf mcp-test schema-test contract-test combined-test clean
 
@@ -159,7 +166,7 @@ $(EXE): $(CORE_OBJS) $(APP_OBJS)
 
 $(BUILD)/%.o: %.cpp
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -DXDEBUG_INTERNAL_ENGINE -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -DXDEBUG_INTERNAL_ENGINE -c -o $@ $<
 
 unit-test: $(CORE_OBJS) $(API_SUPPORT_OBJS) $(BUILD)/src/api/response.o $(BUILD)/src/api/text_response_builder.o $(BUILD)/src/api/xout_renderer.o $(BUILD)/src/waveform/service/rc_generator.o $(BUILD)/src/session/session_catalog.o
 	mkdir -p $(BUILD)/tests
@@ -281,3 +288,5 @@ combined-test: $(EXE)
 
 clean:
 	rm -rf $(BUILD) $(LIBEXEC) $(EXE)
+
+-include $(DEPS)
