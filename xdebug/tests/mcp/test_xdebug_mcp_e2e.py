@@ -11,6 +11,7 @@ from typing import Any
 
 import anyio
 import pytest
+from runner import CliRunner, NormalizeOptions, normalize_response
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -304,6 +305,92 @@ def test_mcp_direct_real_waveform_design_and_combined_sessions(
                 _call(server, "xverif_debug_session_close", {"name": name})
             )
             assert closed["ok"] is True
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_direct
+def test_mcp_direct_matches_cli_normalized_json_response(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+    cli_runner: CliRunner,
+) -> None:
+    server = _load_server(monkeypatch, isolated_home, backend="direct")
+    try:
+        opened = _json(
+            _call(
+                server,
+                "xverif_debug_session_open",
+                {"name": "mcp_cli_equiv", "fsdb": mcp_resources["fsdb"]},
+            )
+        )
+        assert opened["ok"] is True
+
+        mcp_response = _json(
+            _call(
+                server,
+                "xverif_debug_query",
+                {
+                    "session": "mcp_cli_equiv",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                        "format": "hex",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert mcp_response["ok"] is True
+
+        cli_response = cli_runner.run(
+            {
+                "api_version": "xdebug.v1",
+                "action": "value.at",
+                "target": {"session_id": "mcp_cli_equiv"},
+                "args": {
+                    "signal": "ai_complex_top.sig_a",
+                    "time": "75ns",
+                    "format": "hex",
+                },
+                "output": {"format": "json"},
+            },
+            output_format="json",
+            env={"HOME": str(isolated_home), "XVERIF_HOME": str(REPO_ROOT)},
+        )
+        assert cli_response.ok, cli_response.response
+
+        opts = NormalizeOptions(
+            volatile_keys={
+                "created_at",
+                "elapsed_ms",
+                "elapsed_us",
+                "ended_at",
+                "job_id",
+                "last_active",
+                "pid",
+                "ppid",
+                "request_id",
+                "server_host",
+                "socket_path",
+                "started_at",
+                "timestamp",
+                "updated_at",
+            }
+        )
+        assert normalize_response(mcp_response, opts) == normalize_response(
+            cli_response.response,
+            opts,
+        )
+
+        closed = _json(
+            _call(server, "xverif_debug_session_close", {"name": "mcp_cli_equiv"})
+        )
+        assert closed["ok"] is True
     finally:
         _close_loaded_server()
         _kill_native_sessions(isolated_home)
