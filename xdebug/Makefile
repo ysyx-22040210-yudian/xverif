@@ -195,6 +195,8 @@ log-test: $(CORE_OBJS) $(EXE)
 	$(BUILD)/tests/test_action_log
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/session/test_stdio_loop_lifecycle.py
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/session/test_session_lifecycle.py -k "uds_direct_query_times_out_without_spawn_fallback"
+	PYTHONPATH=$(CURDIR)/../xverif_mcp/src:$(CURDIR)/.. \
+		$(PYTHON) -m pytest -q $(CURDIR)/../xverif_mcp/tests/test_stdio_loop_session_lifecycle.py
 
 test-infra:
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/unit/test_test_infra.py

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
 from .protocol import JsonlProcess
+from xverif_mcp.logging import argv_hash, log_lsf_event
 
 
 # LSF typical output: "Job <123456> is submitted to queue <interactive>."
@@ -55,8 +56,14 @@ class BsubRunner:
         base.extend(list(command))
         return base
 
-    def start(self, command: Iterable[str], opts: Optional[BsubOptions] = None) -> JsonlProcess:
+    def start(self, command: Iterable[str], opts: Optional[BsubOptions] = None,
+              log_context: Optional[dict] = None) -> JsonlProcess:
         opts = opts or BsubOptions()
-        proc = JsonlProcess.start(self.build(command, opts))
+        argv = self.build(command, opts)
+        alias = (log_context or {}).get("alias")
+        log_lsf_event(alias, "bsub.start", True,
+                      argv_hash=argv_hash(argv), queue=opts.queue,
+                      resource=opts.resource, job_name=opts.job_name)
+        proc = JsonlProcess.start(argv, log_context=log_context)
         proc.job_name = opts.job_name
         return proc

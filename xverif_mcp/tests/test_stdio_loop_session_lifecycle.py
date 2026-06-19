@@ -19,7 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from xverif_mcp.sessions.launchers import DirectLauncher
+from xverif_mcp.lsf.bsub import BsubRunner
+from xverif_mcp.sessions.launchers import DirectLauncher, LsfLauncher
 from xverif_mcp.sessions.loop_session import XdebugLoopSession
 from xverif_mcp.sessions.session_manager import McpSessionManager
 from xverif_mcp.lsf.protocol import JsonlProcess
@@ -138,6 +139,24 @@ def _cleanup(s: XdebugLoopSession):
         pass
 
 
+@pytest.fixture(autouse=True)
+def _isolated_mcp_logs(tmp_path, monkeypatch):
+    monkeypatch.setenv("XVERIF_MCP_LOG_DIR", str(tmp_path / "mcp_logs"))
+
+
+def _read_ndjson(path: Path) -> list[dict]:
+    assert path.exists(), path
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
+def _session_events(tmp_path: Path, alias: str, name: str = "session") -> list[dict]:
+    return _read_ndjson(tmp_path / "mcp_logs" / "sessions" / alias / f"{name}.ndjson")
+
+
 # ---------------------------------------------------------------------------
 # tests
 # ---------------------------------------------------------------------------
@@ -159,6 +178,11 @@ class TestOpenFailure:
         assert r["error"]["code"] == "SESSION_OPEN_FAILED"
         assert s.state == "dead"
         assert s.process_alive() is False
+        session_events = _session_events(tmp_path, "test")
+        stdio_events = _session_events(tmp_path, "test", "stdio")
+        assert any(e["phase"] == "session.open.begin" for e in session_events)
+        assert any(e["phase"] == "session.open.end" and not e["ok"] for e in session_events)
+        assert any(e["phase"] == "ready.process_exited" for e in stdio_events)
 
     def test_no_session_after_failure(self, tmp_path):
         fake = _fake_loop_script(tmp_path, fail_open=True)
@@ -181,6 +205,11 @@ class TestQueryFailure:
         assert r["error"]["code"] == "SESSION_LOST"
         assert r["error"]["terminal_source"] in ("transport", "unexpected")
         assert s.state == "dead"
+        session_events = _session_events(tmp_path, "test")
+        stdio_events = _session_events(tmp_path, "test", "stdio")
+        assert any(e["phase"] == "query.begin" and e["action"] == "value.at" for e in session_events)
+        assert any(e["phase"] == "query.end" and not e["ok"] for e in session_events)
+        assert any(e["phase"] == "request.error" and not e["ok"] for e in stdio_events)
 
 
 class TestBackendSessionDead:
@@ -373,3 +402,32 @@ class TestTimeoutSessionLost:
 
         # Manager must have evicted the dead session
         assert "slow" not in mgr.sessions
+        session_events = _session_events(tmp_path, "slow")
+        stdio_events = _session_events(tmp_path, "slow", "stdio")
+        assert any(e["phase"] == "manager.evict" for e in session_events)
+        assert any(e["phase"] == "response.timeout" for e in stdio_events)
+
+
+class TestLsfStructuredLog:
+    def test_fake_lsf_logs_bsub_job_and_cleanup(self, tmp_path, monkeypatch):
+        fake = _fake_loop_script(tmp_path)
+        monkeypatch.setenv("FAKE_BSUB_STDOUT_NOISE_BEFORE_READY", "1")
+        runner = BsubRunner(f"{sys.executable} -m xverif_mcp.lsf.fake_bsub")
+        s = XdebugLoopSession(
+            alias="lsf_log", fsdb="t.fsdb", daidir=None,
+            launcher=LsfLauncher(runner), xdebug_bin=fake,
+            startup_timeout_sec=3.0, request_timeout_sec=3.0,
+            queue="interactive", resource="select[type==any]",
+            job_name="xverif_lsf_log_test",
+        )
+        r = s.open()
+        assert r.get("ok"), r
+        s.close()
+
+        lsf_events = _session_events(tmp_path, "lsf_log", "lsf")
+        phases = [e["phase"] for e in lsf_events]
+        assert "launcher.lsf.start" in phases
+        assert "bsub.start" in phases
+        assert "job_id.detected" in phases
+        assert any(e.get("job_id") == "123" for e in lsf_events)
+        assert any(e.get("queue") == "interactive" for e in lsf_events)

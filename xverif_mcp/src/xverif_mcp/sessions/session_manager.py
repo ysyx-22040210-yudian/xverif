@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 from xverif_mcp.lsf.bsub import BsubRunner
 
 from xverif_mcp.config import default_xdebug_bin, startup_timeout, request_timeout
+from xverif_mcp.logging import log_server_event, log_session_event
 from xverif_mcp.sessions.launchers import DirectLauncher, Launcher, LsfLauncher
 from xverif_mcp.sessions.loop_session import XdebugLoopSession
 
@@ -68,25 +69,39 @@ class McpSessionManager:
             f"{_uuid.uuid4().hex[:8]}"
         )
         self.sessions: Dict[str, XdebugLoopSession] = {}
+        log_server_event("manager.init", True, backend=self.backend,
+                         launcher=self.mode, xdebug_bin=self.xdebug_bin)
 
     def open_session(self, name: str, fsdb: Optional[str] = None,
                      daidir: Optional[str] = None,
                      queue: Optional[str] = None, resource: Optional[str] = None,
                      **kwargs: Any) -> Json:
         if not _valid_session_name(name):
+            log_session_event(name, "manager.open.rejected", False,
+                              backend=self.backend, launcher=self.mode,
+                              error_code="INVALID_SESSION_NAME")
             return _error(
                 "INVALID_SESSION_NAME",
                 "session name must start with an ASCII letter and contain only "
                 "ASCII letters, digits, and underscores, with maximum length 64",
             )
         if not fsdb and not daidir:
+            log_session_event(name, "manager.open.rejected", False,
+                              backend=self.backend, launcher=self.mode,
+                              error_code="RESOURCE_REQUIRED")
             return _error("RESOURCE_REQUIRED", "provide fsdb or daidir")
         if name in self.sessions:
             existing = self.sessions[name]
             if existing.state == "alive":
                 if existing.process_alive():
+                    log_session_event(name, "manager.open.rejected", False,
+                                      backend=self.backend, launcher=self.mode,
+                                      error_code="SESSION_ID_EXISTS")
                     return _error("SESSION_ID_EXISTS",
                                   f"session id already exists: {name}")
+                log_session_event(name, "manager.open.rejected", False,
+                                  backend=self.backend, launcher=self.mode,
+                                  error_code="SESSION_STALE")
                 return _error("SESSION_STALE",
                               "session id exists but is stale: "
                               f"{name}; close it explicitly before opening again")
@@ -95,6 +110,11 @@ class McpSessionManager:
         actual_resource = resource or (self._session_resource if self.mode == "lsf" else None)
         if self.mode == "lsf":
             job_name = f"{self._job_prefix}_{_safe_name(self.backend)}_{_safe_name(name)}"
+        log_session_event(name, "manager.open.begin", True,
+                          backend=self.backend, launcher=self.mode,
+                          fsdb=fsdb, daidir=daidir,
+                          queue=actual_queue, resource=actual_resource,
+                          job_name=job_name)
         session = XdebugLoopSession(
             alias=name, fsdb=fsdb, daidir=daidir, launcher=self.launcher,
             xdebug_bin=self.xdebug_bin, queue=actual_queue,
@@ -106,32 +126,56 @@ class McpSessionManager:
             recovery_tool=self.recovery_tool)
         result = session.open()
         if not result.get("ok"):
+            log_session_event(name, "manager.open.end", False,
+                              backend=self.backend, launcher=self.mode,
+                              response=result)
             return result
         self.sessions[name] = session
         if session.session_id:
             self.sessions[session.session_id] = session
+        log_session_event(name, "manager.open.end", True,
+                          backend=self.backend, launcher=self.mode,
+                          session_id=session.session_id,
+                          public=session.public_json())
         return {"ok": True, "session": session.public_json()}
 
     def query(self, session: Optional[str], action: str,
               args: Optional[Json] = None, output_format: str = "xout",
               **kwargs: Any) -> Any:
         if not session:
+            log_session_event("adhoc", "manager.query.rejected", False,
+                              backend=self.backend, launcher=self.mode,
+                              action=action, error_code="SESSION_REQUIRED")
             return _error("SESSION_REQUIRED",
                           "explicit session is required")
         key = session
         s = self.sessions.get(key)
         if not s:
+            log_session_event(key, "manager.query.rejected", False,
+                              backend=self.backend, launcher=self.mode,
+                              action=action, error_code="SESSION_NOT_FOUND")
             return _error("SESSION_NOT_FOUND", f"session not found: {key}")
+        log_session_event(s.alias, "manager.query.begin", True,
+                          backend=self.backend, launcher=self.mode,
+                          session_id=s.session_id, action=action)
         rsp = s.query(action=action, args=args,
                        limits=kwargs.get("limits"), output=kwargs.get("output"),
                        output_format=output_format)
         if s.state == "dead":
             self._evict_session(s)
+        log_session_event(s.alias, "manager.query.end",
+                          not (isinstance(rsp, dict) and not rsp.get("ok", True)),
+                          backend=self.backend, launcher=self.mode,
+                          session_id=s.session_id, action=action,
+                          response=rsp if isinstance(rsp, dict) else None)
         return rsp
 
     def close_session(self, session: str) -> Json:
         s = self.sessions.get(session)
         if not s:
+            log_session_event(session, "manager.close.rejected", False,
+                              backend=self.backend, launcher=self.mode,
+                              error_code="SESSION_NOT_FOUND")
             return _error("SESSION_NOT_FOUND", f"session not found: {session}")
         old_state = s.state
         if s.state == "alive":
@@ -140,6 +184,9 @@ class McpSessionManager:
             s.abort(f"close requested for non-alive session: {old_state}",
                     source="close_dead")
         self._evict_session(s)
+        log_session_event(s.alias, "manager.close.end", True,
+                          backend=self.backend, launcher=self.mode,
+                          session_id=s.session_id, previous_state=old_state)
         return {"ok": True, "closed": s.public_json(),
                 "previous_state": old_state}
 
@@ -151,9 +198,14 @@ class McpSessionManager:
                 continue
             seen.add(id(s))
             rows.append(s.public_json())
+        log_server_event("manager.list", True, backend=self.backend,
+                         launcher=self.mode, session_count=len(rows))
         return {"ok": True, "sessions": rows}
 
     def _evict_session(self, s: XdebugLoopSession) -> None:
+        log_session_event(s.alias, "manager.evict", True,
+                          backend=self.backend, launcher=self.mode,
+                          session_id=s.session_id, state=s.state)
         self.sessions.pop(s.alias, None)
         if s.session_id:
             self.sessions.pop(s.session_id, None)

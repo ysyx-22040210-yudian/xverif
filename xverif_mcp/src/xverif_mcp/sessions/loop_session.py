@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from xverif_mcp.lsf.protocol import JsonlProcess, ProtocolError
+from xverif_mcp.logging import log_session_event
 
 from xverif_mcp.config import default_xdebug_bin, startup_timeout, request_timeout, close_timeout
 from xverif_mcp.sessions.launchers import LaunchConfig, Launcher
@@ -35,6 +37,10 @@ def _extract_session_id(response: Json) -> Optional[str]:
             if isinstance(sid, str) and sid:
                 return sid
     return None
+
+
+def _trace_id(alias: str, request_id: str) -> str:
+    return f"mcp-{_safe_name(alias)}-{request_id}"
 
 
 @dataclass
@@ -76,6 +82,10 @@ class XdebugLoopSession:
         self.last_error = reason
         cleanup: Json = {"source": source, "subprocess": "not_started",
                           "lsf_job": "not_applicable"}
+        log_session_event(self.alias, "session.abort.begin", False,
+                          backend=self.backend, launcher=self.launcher.mode,
+                          session_id=self.session_id, reason=reason,
+                          source=source, state=self.state)
         handle = self.handle
         self.handle = None
         if handle is not None:
@@ -88,6 +98,11 @@ class XdebugLoopSession:
                 cleanup["subprocess"] = "cleanup_failed"
                 cleanup["cleanup_error"] = str(exc)
         self.last_cleanup = cleanup
+        log_session_event(self.alias, "session.abort.end", cleanup.get("subprocess") != "cleanup_failed",
+                          backend=self.backend, launcher=self.launcher.mode,
+                          session_id=self.session_id, cleanup=cleanup,
+                          job_id=getattr(handle, "job_id", None) if handle else None,
+                          job_name=getattr(handle, "job_name", None) if handle else None)
         return cleanup
 
     def _session_lost_error(self, message: str, *, source: str,
@@ -126,7 +141,14 @@ class XdebugLoopSession:
     def open(self) -> Json:
         if self.state not in ("new", "closed", "dead"):
             return _error("SESSION_EXISTS", f"session already opened: {self.alias}")
+        t0 = time.monotonic()
+        log_session_event(self.alias, "session.open.begin", True,
+                          backend=self.backend, launcher=self.launcher.mode,
+                          fsdb=self.fsdb, daidir=self.daidir,
+                          queue=self.queue, resource=self.resource,
+                          job_name=self.job_name)
         cfg = LaunchConfig(alias=self.alias, xdebug_bin=self.xdebug_bin,
+                           backend=self.backend,
                            tool_bin=self.xdebug_bin,
                            queue=self.queue, resource=self.resource,
                            job_name=self.job_name,
@@ -143,6 +165,7 @@ class XdebugLoopSession:
                 "output": {"response_format": "json"} if self.backend == "xcov"
                 else {"format": "json"},
             }
+            open_req["trace_id"] = _trace_id(self.alias, open_req["request_id"])
             if self.backend == "xdebug":
                 open_req["args"]["transport"] = "uds"
             if self.fsdb:
@@ -152,6 +175,10 @@ class XdebugLoopSession:
             rsp = self._call_raw(open_req, timeout=self.startup_timeout_sec)
             if not rsp.get("ok"):
                 self.state = "dead"
+                log_session_event(self.alias, "session.open.end", False,
+                                  backend=self.backend, launcher=self.launcher.mode,
+                                  elapsed_ms=int((time.monotonic() - t0) * 1000),
+                                  response=rsp)
                 return rsp
             payload = rsp.get("json", rsp)
             self.session_id = _extract_session_id(payload)
@@ -166,28 +193,46 @@ class XdebugLoopSession:
                     backend_response=payload,
                 )
             self.state = "alive"
+            log_session_event(self.alias, "session.open.end", True,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id, pid=self.pid,
+                              elapsed_ms=int((time.monotonic() - t0) * 1000),
+                              job_id=getattr(self.handle, "job_id", None) if self.handle else None,
+                              job_name=getattr(self.handle, "job_name", None) if self.handle else None)
             return {"ok": True, "session": self.public_json()}
         except Exception as e:
             cleanup = self.abort(str(e), source="open")
+            log_session_event(self.alias, "session.open.end", False,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              elapsed_ms=int((time.monotonic() - t0) * 1000),
+                              error=str(e), cleanup=cleanup)
             return _error("SESSION_OPEN_FAILED", str(e), cleanup=cleanup)
 
     def close(self, force: bool = False) -> Json:
+        log_session_event(self.alias, "session.close.begin", True,
+                          backend=self.backend, launcher=self.launcher.mode,
+                          session_id=self.session_id, force=force,
+                          state=self.state)
         if self.handle and self.state == "alive" and self.session_id and not force:
             try:
-                self._call_raw({
+                req = {
                     "request_id": f"close-{_safe_name(self.alias)}",
+                    "trace_id": _trace_id(self.alias, f"close-{_safe_name(self.alias)}"),
                     "api_version": self.api_version, "action": "session.close",
                     "target": {"session_id": self.session_id},
                     "output": {"response_format": "json"} if self.backend == "xcov"
                     else {"format": "json"},
-                }, timeout=close_timeout())
+                }
+                self._call_raw(req, timeout=close_timeout())
             except Exception:
                 pass
             try:
-                self._call_raw({
+                req = {
                     "request_id": f"quit-{_safe_name(self.alias)}",
+                    "trace_id": _trace_id(self.alias, f"quit-{_safe_name(self.alias)}"),
                     "api_version": "xdebug.v1", "action": "stdio.quit",
-                }, timeout=close_timeout() / 2)
+                }
+                self._call_raw(req, timeout=close_timeout() / 2)
             except Exception:
                 pass
         if self.handle:
@@ -196,6 +241,9 @@ class XdebugLoopSession:
             except Exception:
                 pass
         self.state = "closed"
+        log_session_event(self.alias, "session.close.end", True,
+                          backend=self.backend, launcher=self.launcher.mode,
+                          session_id=self.session_id, state=self.state)
         return {"ok": True, "closed": self.public_json()}
 
     def query(self, action: str, args: Optional[Json] = None,
@@ -208,6 +256,7 @@ class XdebugLoopSession:
             "request_id": f"{_safe_name(self.alias)}-{self._seq}",
             "api_version": self.api_version, "action": action,
         }
+        req["trace_id"] = _trace_id(self.alias, req["request_id"])
         if args:
             req["args"] = args
         req["target"] = {"session_id": self.session_id}
@@ -220,19 +269,42 @@ class XdebugLoopSession:
             else:
                 req["output"]["format"] = "json"
         try:
+            log_session_event(self.alias, "query.begin", True,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id,
+                              request_id=req["request_id"],
+                              trace_id=req["trace_id"], action=action)
             rsp = self._call_raw(req)
         except ProtocolError as exc:
             cleanup = self.abort(str(exc), source="transport")
+            log_session_event(self.alias, "query.end", False,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id,
+                              request_id=req["request_id"], action=action,
+                              terminal_source="transport", cleanup=cleanup,
+                              error=str(exc))
             return self._session_lost_error(
                 f"{self.backend} stdio-loop transport lost: {exc}",
                 source="transport", cleanup=cleanup)
         except OSError as exc:
             cleanup = self.abort(str(exc), source="io")
+            log_session_event(self.alias, "query.end", False,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id,
+                              request_id=req["request_id"], action=action,
+                              terminal_source="io", cleanup=cleanup,
+                              error=str(exc))
             return self._session_lost_error(
                 f"{self.backend} stdio-loop io error: {exc}",
                 source="io", cleanup=cleanup)
         except Exception as exc:
             cleanup = self.abort(str(exc), source="unexpected")
+            log_session_event(self.alias, "query.end", False,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id,
+                              request_id=req["request_id"], action=action,
+                              terminal_source="unexpected", cleanup=cleanup,
+                              error=str(exc))
             return self._session_lost_error(
                 f"{self.backend} stdio-loop unexpected failure: {exc}",
                 source="unexpected", cleanup=cleanup)
@@ -240,11 +312,26 @@ class XdebugLoopSession:
             cleanup = self.abort(
                 f"backend reported terminal session after action {action}",
                 source="backend_response")
+            log_session_event(self.alias, "query.end", False,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id,
+                              request_id=req["request_id"], action=action,
+                              terminal_source="backend_response",
+                              backend_response=rsp, cleanup=cleanup)
             return self._session_lost_error(
                 f"{self.backend} backend reported terminal session after action {action}",
                 source="backend_response", backend_response=rsp, cleanup=cleanup)
         if not rsp.get("ok"):
+            log_session_event(self.alias, "query.end", False,
+                              backend=self.backend, launcher=self.launcher.mode,
+                              session_id=self.session_id,
+                              request_id=req["request_id"], action=action,
+                              response=rsp)
             return rsp
+        log_session_event(self.alias, "query.end", True,
+                          backend=self.backend, launcher=self.launcher.mode,
+                          session_id=self.session_id,
+                          request_id=req["request_id"], action=action)
         if output_format == "xout":
             return rsp.get("xout", "")
         if output_format == "json":
