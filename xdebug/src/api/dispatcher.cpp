@@ -179,14 +179,15 @@ Json Dispatcher::handle_engine_forward(const Json& request, const ActionSpec& sp
 }
 
 Json Dispatcher::handle_batch(const Json& request) {
-    Json requests = request.value("args", Json::object()).value("requests", Json::array());
+    Json args = request.value("args", Json::object());
+    Json requests = args.value("requests", Json());
     if (!requests.is_array()) {
         return make_error(request, "batch", "MISSING_FIELD", "args.requests[] is required");
     }
     Json response = make_response(request, "batch");
     Json results = Json::array();
     bool all_ok = true;
-    std::string mode = request.value("args", Json::object()).value("mode", std::string("continue_on_error"));
+    std::string mode = args.value("mode", std::string("continue_on_error"));
     for (auto child : requests) {
         if (!child.contains("api_version")) child["api_version"] = kApiVersion;
         Json result = dispatch(child);
