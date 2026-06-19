@@ -14,11 +14,18 @@ module active_semantics_dut (
   input  logic [7:0] payload,
   input  logic [7:0] payload0,
   input  logic [7:0] payload1,
+  input  logic [7:0] chain_src,
   output logic [7:0] q_en,
   output logic [7:0] mux_y,
   output logic [7:0] handshake_q,
-  output logic [7:0] arb_q
+  output logic [7:0] arb_q,
+  output logic [7:0] chain_out
 );
+
+  logic [7:0] chain_mid;
+
+  assign chain_mid = chain_src;       // CHAIN_MID_ASSIGN
+  assign chain_out = chain_mid;       // CHAIN_OUT_ASSIGN
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)
@@ -71,10 +78,12 @@ module active_semantics_tb;
   logic [7:0] payload;
   logic [7:0] payload0;
   logic [7:0] payload1;
+  logic [7:0] chain_src;
   logic [7:0] q_en;
   logic [7:0] mux_y;
   logic [7:0] handshake_q;
   logic [7:0] arb_q;
+  logic [7:0] chain_out;
 
   active_semantics_dut u_dut (
     .clk(clk),
@@ -90,10 +99,12 @@ module active_semantics_tb;
     .payload(payload),
     .payload0(payload0),
     .payload1(payload1),
+    .chain_src(chain_src),
     .q_en(q_en),
     .mux_y(mux_y),
     .handshake_q(handshake_q),
-    .arb_q(arb_q)
+    .arb_q(arb_q),
+    .chain_out(chain_out)
   );
 
   initial begin
@@ -114,6 +125,7 @@ module active_semantics_tb;
     payload  = 8'h10;
     payload0 = 8'hC0;
     payload1 = 8'hD0;
+    chain_src = 8'h30;
 
     #12;
     rst_n = 1'b1;
@@ -134,6 +146,7 @@ module active_semantics_tb;
     payload = 8'h11;
     payload0 = 8'hC1;
     payload1 = 8'hD1;
+    chain_src = 8'h31;    // CHAIN_SRC_DRIVE
 
     #10;
     en = 1'b1;           // q_en captures new data_a at 35ns
@@ -145,6 +158,7 @@ module active_semantics_tb;
     data_b = 8'hB2;
     payload = 8'h12;
     payload1 = 8'hD2;
+    chain_src = 8'h32;
 
     #20;
     $finish;

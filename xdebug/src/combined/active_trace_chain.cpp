@@ -228,7 +228,12 @@ ChainResult build_chain(npiFsdbFileHandle fsdb,
         depth++;
     }
 
-    if (depth > max_depth) { result.truncated = true; result.termination = "limit"; }
+    if (result.termination == "unresolved"
+        && (depth > max_depth || static_cast<int>(result.chain.size()) >= max_nodes)) {
+        result.truncated = true;
+        result.termination = "limit";
+        result.limitations.push_back("trace limit reached");
+    }
     return result;
 }
 
@@ -327,7 +332,7 @@ Json ActiveTraceChainService::run(const Json& request, const Json& target) const
         return make_error(request, action, "MISSING_FIELD",
                           "requires args.signal and args.requested_time");
 
-    Json limits_j = args.value("limits", Json::object());
+    Json limits_j = request.value("limits", args.value("limits", Json::object()));
     int max_depth = std::max(1, limits_j.value("max_depth", 20));
     int max_nodes = std::max(1, limits_j.value("max_nodes", 50));
 
@@ -388,7 +393,7 @@ nlohmann::ordered_json ActiveTraceChainService::run_engine(const Json& request,
         return nlohmann::ordered_json{{"error", "FSDB_NOT_OPEN"},
             {"message", "FSDB handle is null"}};
 
-    Json limits_j = args.value("limits", Json::object());
+    Json limits_j = request.value("limits", args.value("limits", Json::object()));
     int max_depth = std::max(1, limits_j.value("max_depth", 20));
     int max_nodes = std::max(1, limits_j.value("max_nodes", 50));
 

@@ -146,6 +146,33 @@ def test_active_trace_semantic_branches_and_gates(
             extra={"marker_lines": marker_lines, "args": args},
         )
 
+    def active_driver_chain(
+        signal: str,
+        requested_time: str,
+        *,
+        limits: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        request: dict[str, Any] = {
+            "api_version": "xdebug.v1",
+            "action": "trace.active_driver_chain",
+            "target": {"session_id": session_id},
+            "args": {
+                "signal": signal,
+                "requested_time": requested_time,
+                "clk_period": "10ns",
+            },
+            "output": {"verbosity": "compact"},
+        }
+        if limits is not None:
+            request["limits"] = limits
+        return _query(
+            cli_runner,
+            request,
+            case_name="active-chain-" + signal.rsplit(".", 1)[-1],
+            artifact_root=artifact_root,
+            extra={"marker_lines": marker_lines, "request": request},
+        )
+
     try:
         mux_b = active_driver("active_semantics_tb.u_dut.mux_y", "26ns")
         assert mux_b["data"]["root_driver"]["line"] == marker_lines["MUX_ACTIVE_B"]
@@ -193,6 +220,36 @@ def test_active_trace_semantic_branches_and_gates(
             limits={"max_nodes": 1},
         )
         assert truncated["meta"]["truncated"] is True
+
+        chain = active_driver_chain(
+            "active_semantics_tb.u_dut.chain_out",
+            "26ns",
+        )
+        nodes = chain["data"]["chain"]["chain"]
+        assert chain["summary"]["chain_length"] == 4
+        assert chain["summary"]["termination"] == "primary_input"
+        assert [node["signal"] for node in nodes] == [
+            "active_semantics_tb.u_dut.chain_out",
+            "active_semantics_tb.u_dut.chain_mid",
+            "active_semantics_tb.u_dut.chain_src",
+            "active_semantics_tb.chain_src",
+        ]
+        assert nodes[0]["line"] == marker_lines["CHAIN_OUT_ASSIGN"]
+        assert nodes[1]["line"] == marker_lines["CHAIN_MID_ASSIGN"]
+        assert nodes[2]["line"] == marker_lines["CHAIN_SRC_DRIVE"]
+        assert nodes[3]["line"] == marker_lines["CHAIN_SRC_DRIVE"]
+        assert nodes[0]["hop"] in {"→", "⏱"}
+        assert nodes[1]["hop"] == "→"
+        assert nodes[2]["hop"] == "→"
+        assert nodes[3]["hop"] == "■"
+
+        chain_limited = active_driver_chain(
+            "active_semantics_tb.u_dut.chain_out",
+            "26ns",
+            limits={"max_depth": 8, "max_nodes": 1},
+        )
+        assert chain_limited["summary"]["termination"] == "limit"
+        assert chain_limited["meta"]["truncated"] is True
     finally:
         cli_runner.run(
             {
