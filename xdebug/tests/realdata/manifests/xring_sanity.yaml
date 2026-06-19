@@ -1,0 +1,65 @@
+name: xring_sanity
+fsdb: /home/yian/xring/dv/run/out/sanity/test/tc_sanity_10q_100db/waves.fsdb
+daidir: /home/yian/xring/dv/run/out/sanity/build/simv.daidir
+top: xring_tb_top
+tags: [realdata, smoke, xring, combined]
+timeout_sec: 240
+queries:
+  - name: reset_value
+    action: value.at
+    args:
+      signal: xring_tb_top.rst_n
+      time: 11000ns
+      format: binary
+    expect:
+      ok: true
+      required_paths:
+        - data.value.value
+        - summary.known
+      equals:
+        data.status: ok
+        data.value.known: true
+  - name: clock_changes
+    action: signal.changes
+    args:
+      signal: xring_tb_top.clk
+      time_range:
+        begin: 100ns
+        end: 120ns
+    limits:
+      max_events: 64
+    expect:
+      ok: true
+      min:
+        summary.actual_transition_count: 1
+      equals:
+        summary.truncated: false
+  - name: top_scope_preview
+    action: scope.list
+    args:
+      path: xring_tb_top
+      recursive: false
+    limits:
+      max_rows: 20
+    expect:
+      ok: true
+      required_paths:
+        - data.signals
+      non_empty:
+        - data.signals
+      contains:
+        data.signals:
+          - xring_tb_top.paddr
+          - xring_tb_top.pready
+  - name: reset_driver
+    action: trace.driver
+    args:
+      signal: xring_tb_top.rst_n
+      include_source: false
+    expect:
+      ok: true
+      required_paths:
+        - summary.result_count
+        - data.assignment.location.file
+      min:
+        summary.result_count: 1
