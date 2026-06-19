@@ -4,6 +4,34 @@
 namespace xdebug_design {
 namespace detail {
 
+namespace {
+
+json normalize_trace_error(const json& trace) {
+    json error = trace.value("error", json());
+    if (error.is_object()) {
+        if (!error.contains("code")) error["code"] = "TRACE_QUERY_FAILED";
+        if (!error.contains("message")) error["message"] = "trace query failed during expansion";
+        if (!error.contains("recoverable")) error["recoverable"] = true;
+        return error;
+    }
+
+    std::string message = error.is_string()
+        ? error.get<std::string>()
+        : trace.value("message", std::string("trace query failed during expansion"));
+    std::string code = message.find("Signal not found") != std::string::npos
+        ? "SIGNAL_NOT_FOUND"
+        : "TRACE_QUERY_FAILED";
+    return {
+        {"code", code},
+        {"message", message},
+        {"recoverable", true},
+        {"candidates", json::array()},
+        {"suggested_actions", json::array()}
+    };
+}
+
+}  // namespace
+
 BfsResult run_trace_bfs(const BfsOptions& opts, const SingleTraceFn& trace_fn) {
     BfsResult result;
     std::set<std::string> visited;
@@ -29,7 +57,9 @@ BfsResult run_trace_bfs(const BfsOptions& opts, const SingleTraceFn& trace_fn) {
             result.failed_query_count++;
             if (depth == 0) {
                 // Root trace failed — cannot continue
-                result.warnings.push_back("root trace failed for " + current);
+                result.root_error = normalize_trace_error(trace);
+                result.warnings.push_back(
+                    compact_trace_error_warning(current, depth, trace).dump());
                 break;
             }
             result.warnings.push_back(compact_trace_error_warning(current, depth, trace).dump());

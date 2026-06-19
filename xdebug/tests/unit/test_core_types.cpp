@@ -4,6 +4,7 @@
 #include "session/session_types.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <string>
 
 int main() {
@@ -32,6 +33,16 @@ int main() {
     assert(std::string(xdebug_core::CMD_PING) == "PING");
     assert(xdebug_core::registry_path(config).find(".xdebug/registry.json") != std::string::npos);
     assert(xdebug_core::socket_path(config, "case_a").find(".xdebug/sessions/s_") != std::string::npos);
+    const char* old_home = std::getenv("HOME");
+    const std::string saved_home = old_home ? old_home : "";
+    setenv("HOME",
+           "/tmp/pytest-of-user/pytest-999/test_a_very_long_xdebug_session_home_path/home",
+           1);
+    const std::string short_socket = xdebug_core::socket_path(config, "case_a");
+    assert(short_socket.find("/tmp/xdebug-") == 0);
+    assert(short_socket.size() < 104);
+    if (old_home) setenv("HOME", saved_home.c_str(), 1);
+    else unsetenv("HOME");
 
     assert(xdebug_core::resource_content_matches(100, 4096, 100, 4096));
     assert(!xdebug_core::resource_identity_differs(10, 20, 10, 20));

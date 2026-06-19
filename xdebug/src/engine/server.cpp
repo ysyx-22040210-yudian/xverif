@@ -136,6 +136,25 @@ static Json error_response(const std::string& code, const std::string& message) 
             {"data", nullptr}, {"error", {{"code", code}, {"message", message}}}};
 }
 
+static Json action_error_response(const Json& data) {
+    Json error = data.value("error", Json());
+    std::string code = "ACTION_FAILED";
+    std::string message = data.value("message", std::string("action failed"));
+    if (error.is_object()) {
+        code = error.value("code", code);
+        message = error.value("message", message);
+    } else if (error.is_string()) {
+        code = error.get<std::string>();
+        if (code.find("Signal not found") != std::string::npos) {
+            message = code;
+            code = "SIGNAL_NOT_FOUND";
+        }
+    }
+    Json response = error_response(code, message);
+    response["details"] = data;
+    return response;
+}
+
 static bool send_response(int fd, const Json& response) {
     std::string wire = response.dump() + "\n";
     return send_all(fd, wire.c_str(), wire.size());
@@ -297,9 +316,7 @@ static bool handle_client(int client_fd, bool& should_quit) {
 
     Json data = h->run(request);
     if (data.contains("error"))
-        return send_response(client_fd, error_response(
-            data.value("error", "ACTION_FAILED"),
-            data.value("message", "action failed")));
+        return send_response(client_fd, action_error_response(data));
     Json resp = ok_response(data);
     // Propagate truncation flag from handler to response envelope.
     if (data.contains("truncated") && data["truncated"].is_boolean())

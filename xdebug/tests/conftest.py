@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from runner import CliRunner
+from runner import CliRunner, CommandRunner
 
 
 TESTS_ROOT = Path(__file__).resolve().parent
@@ -69,6 +69,14 @@ def cli_runner(
 ) -> CliRunner:
     return CliRunner(
         xdebug_bin,
+        cwd=repo_root,
+        base_env={"HOME": str(isolated_home), "XVERIF_HOME": str(repo_root)},
+    )
+
+
+@pytest.fixture
+def command_runner(repo_root: Path, isolated_home: Path) -> CommandRunner:
+    return CommandRunner(
         cwd=repo_root,
         base_env={"HOME": str(isolated_home), "XVERIF_HOME": str(repo_root)},
     )

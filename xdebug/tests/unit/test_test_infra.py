@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from runner import (
     ArtifactWriter,
     CliRunner,
+    CommandRunner,
     InvariantError,
     ManifestError,
     NormalizeOptions,
@@ -204,3 +206,21 @@ def test_artifact_writer_redacts_and_writes_diff(tmp_path: Path) -> None:
     env = json.loads((case_dir / "env.json").read_text(encoding="utf-8"))
     assert env["SERVICE_TOKEN"] == "<redacted>"
     assert (case_dir / "trace_tree.json").exists()
+
+
+@pytest.mark.unit
+def test_command_runner_success_and_timeout(tmp_path: Path) -> None:
+    runner = CommandRunner(cwd=tmp_path)
+    success = runner.run(
+        [sys.executable, "-c", "print('fixture-ok')"],
+        timeout_sec=5,
+    )
+    assert success.ok
+    assert success.stdout_raw.strip() == "fixture-ok"
+
+    timeout = runner.run(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        timeout_sec=0.1,
+    )
+    assert timeout.timed_out
+    assert timeout.returncode == -1

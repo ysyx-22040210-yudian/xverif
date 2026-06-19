@@ -44,6 +44,50 @@ static nlohmann::json trace_one_signal(const std::string& signal,
 static TraceMode trace_mode_from_direction(const std::string& dir) {
     return dir == "load" ? TraceMode::Load : TraceMode::Driver;
 }
+
+static bool compact_mode(const Json& request) {
+    return request.value("output", Json::object()).value("verbosity", "") == "compact";
+}
+
+static bool include_arg(const Json& request, const char* name) {
+    return request.value("args", Json::object()).value(name, false);
+}
+
+static Json trace_expand_summary(const std::string& root,
+                                 const std::string& direction,
+                                 const detail::BfsResult& bfs,
+                                 const nlohmann::json& graph,
+                                 const nlohmann::json& relation_edges,
+                                 int aggregated_edge_count,
+                                 bool compact) {
+    if (compact) {
+        return {{"root_signal", root}, {"direction", direction},
+                {"node_count", graph["nodes"].size()}, {"edge_count", graph["edges"].size()},
+                {"truncated", bfs.truncated}};
+    }
+    return {{"root_signal", root}, {"direction", direction},
+            {"depth", bfs.reached_depth}, {"node_count", graph["nodes"].size()},
+            {"edge_count", graph["edges"].size()}, {"raw_edge_count", bfs.raw_edge_count},
+            {"deduped_edge_count", bfs.all_edges.size()},
+            {"duplicate_edge_count", bfs.duplicate_edge_count},
+            {"relation_group_count", relation_edges.size()},
+            {"aggregated_edge_count", aggregated_edge_count},
+            {"failed_query_count", bfs.failed_query_count},
+            {"truncated", bfs.truncated}};
+}
+
+static void append_bfs_warnings(Json& out, const detail::BfsResult& bfs) {
+    if (bfs.warnings.empty()) return;
+    out["warnings"] = Json::array();
+    for (const auto& warning : bfs.warnings) {
+        try {
+            out["warnings"].push_back(Json::parse(warning));
+        } catch (...) {
+            out["warnings"].push_back(warning);
+        }
+    }
+}
+
 class TraceDriverHandler : public EngineActionHandler {
 public:
     const char* action_name() const override { return "trace.driver"; }
@@ -117,7 +161,9 @@ public:
         Json args = request.value("args", Json::object());
         std::string path = args.value("path", std::string());
         if (path.empty()) return err("MISSING_FIELD", "args.path is required");
-        int limit = args.value("limit", 0);
+        Json limits = request.value("limits", Json::object());
+        int limit = args.value("limit",
+            limits.value("max_results", limits.value("max_rows", 0)));
         PortAnalyzer analyzer;
         return Json::parse(analyzer.render_port_trace(path, limit));
     }
@@ -224,24 +270,17 @@ public:
         nlohmann::json graph = detail::graph_from_trace(trace, root);
 
         Json out;
-        bool compact = request.value("output", Json::object()).value("verbosity", "") == "compact";
-        if (compact && !args.value("include_debug", false)) {
-            out["summary"] = {{"root_signal",root},{"direction",direction},
-                {"node_count",graph["nodes"].size()},{"edge_count",graph["edges"].size()},
-                {"truncated",bfs.truncated}};
-        } else {
-            out["summary"] = {{"root_signal",root},{"direction",direction},
-                {"depth",bfs.reached_depth},{"node_count",graph["nodes"].size()},
-                {"edge_count",graph["edges"].size()},{"raw_edge_count",bfs.raw_edge_count},
-                {"deduped_edge_count",bfs.all_edges.size()},
-                {"duplicate_edge_count",bfs.duplicate_edge_count},
-                {"relation_group_count",rel_edges.size()},
-                {"aggregated_edge_count",agg_count},
-                {"failed_query_count",bfs.failed_query_count},
-                {"truncated",bfs.truncated}};
-        }
+        bool compact = compact_mode(request) && !include_arg(request, "include_debug");
+        out["summary"] = trace_expand_summary(
+            root, direction, bfs, graph, rel_edges, agg_count, compact);
         out["truncated"] = bfs.truncated;
-        out["data"] = Json::parse(graph.dump());
+        out["graph"] = Json::parse(graph.dump());
+        if (!compact || include_arg(request, "include_trace"))
+            out["trace"] = Json::parse(trace.dump());
+        if (!compact || include_arg(request, "include_expanded_queries"))
+            out["expanded_queries"] = Json::parse(bfs.expanded_queries.dump());
+        append_bfs_warnings(out, bfs);
+        if (!bfs.root_error.empty()) out["error"] = Json::parse(bfs.root_error.dump());
         return out;
     }
 };
@@ -295,13 +334,27 @@ public:
             if (!expl.is_null()) explanations.push_back(expl);
         }
 
+        nlohmann::json trace;
+        trace["query"] = root;
+        trace["mode"] = direction;
+        trace["dependency_edges"] = rel_edges;
+        trace["confidence"] = bfs.first_confidence;
+        trace["truncated"] = bfs.truncated;
+
         Json out;
+        bool compact = compact_mode(request);
         out["summary"] = {{"root_signal",root},{"direction",direction},
             {"explanation_count",explanations.size()},
             {"edge_count",rel_edges.size()},{"skipped_empty_dependency_count",skipped},
             {"truncated",bfs.truncated}};
         out["truncated"] = bfs.truncated;
-        out["data"] = Json::parse(explanations.dump());
+        out["explanations"] = Json::parse(explanations.dump());
+        if (!compact || include_arg(request, "include_trace"))
+            out["trace"] = Json::parse(trace.dump());
+        if (!compact || include_arg(request, "include_expanded_queries"))
+            out["expanded_queries"] = Json::parse(bfs.expanded_queries.dump());
+        append_bfs_warnings(out, bfs);
+        if (!bfs.root_error.empty()) out["error"] = Json::parse(bfs.root_error.dump());
         return out;
     }
 };
@@ -414,7 +467,7 @@ public:
 
         Json out;
         out["summary"] = {{"signal",signal},{"control_dependency_count",deps.size()}};
-        out["data"] = Json::parse(nlohmann::json{{"control_dependencies", deps}}.dump());
+        out["control_dependencies"] = Json::parse(deps.dump());
         return out;
     }
 };
@@ -435,22 +488,20 @@ public:
             nlohmann::json assignment = trace.value("assignment", nlohmann::json::object());
             out["summary"] = {{"signal",signal},{"source","npi_trace_assignment"},
                 {"confidence",trace.value("confidence","unknown")}};
-            out["data"] = Json::parse(nlohmann::json{
-                {"expr", assignment.value("rhs", nlohmann::json::object())},
-                {"assignment", assignment},
-                {"rhs_signals", assignment.value("rhs_signals", nlohmann::json::array())},
-                {"confidence", trace.value("confidence", "unknown")}
-            }.dump());
+            out["expr"] = Json::parse(
+                assignment.value("rhs", nlohmann::json::object()).dump());
+            out["assignment"] = Json::parse(assignment.dump());
+            out["rhs_signals"] = Json::parse(
+                assignment.value("rhs_signals", nlohmann::json::array()).dump());
+            out["confidence"] = trace.value("confidence", "unknown");
             return out;
         }
         std::string expr = args.value("expr", "");
         if (expr.empty()) return Json({{"error","MISSING_FIELD"},{"message","args.expr or args.signal"}});
         out["summary"] = {{"expr",expr},{"source","string_fallback"},{"confidence","low"}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"expr", nlohmann::json::parse(parse_expr_ast(expr).dump())},
-            {"confidence", "low"},
-            {"confidence_reason", "parsed from raw string without NPI handle"}
-        }.dump());
+        out["expr"] = Json::parse(parse_expr_ast(expr).dump());
+        out["confidence"] = "low";
+        out["confidence_reason"] = "parsed from raw string without NPI handle";
         return out;
     }
 };
@@ -487,14 +538,14 @@ public:
         out["summary"] = {{"signal",signal},{"assignment_count",assignments.size()},
             {"branch_count",branches.size()},{"default_count",defaults.size()},
             {"confidence",trace.value("confidence","unknown")}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"procedural_assignment", {{"target",signal},{"enclosing_block",enclosing},
-                {"assignments",assignments},{"default_assignments",defaults},
-                {"branch_assignments",branches},
-                {"control_dependencies",trace.value("control_dependencies",nlohmann::json::array())},
-                {"dependency_edges",trace.value("dependency_edges",nlohmann::json::array())},
-                {"confidence",trace.value("confidence","unknown")},
-                {"confidence_reason",trace.value("confidence_reason","")}}}
+        out["procedural_assignment"] = Json::parse(nlohmann::json{
+            {"target",signal},{"enclosing_block",enclosing},
+            {"assignments",assignments},{"default_assignments",defaults},
+            {"branch_assignments",branches},
+            {"control_dependencies",trace.value("control_dependencies",nlohmann::json::array())},
+            {"dependency_edges",trace.value("dependency_edges",nlohmann::json::array())},
+            {"confidence",trace.value("confidence","unknown")},
+            {"confidence_reason",trace.value("confidence_reason","")}
         }.dump());
         return out;
     }
@@ -540,12 +591,12 @@ public:
             {"clock", Json::parse(timing["clock"].dump())},
             {"reset", Json::parse(timing["reset"].dump())},
             {"confidence",trace.value("confidence","unknown")}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"sequential_update", {{"target",signal},
-                {"clock", timing["clock"]}, {"reset", timing["reset"]},
-                {"event_controls", timing["event_controls"]},
-                {"rules", rules}, {"confidence", trace.value("confidence","unknown")},
-                {"confidence_reason", trace.value("confidence_reason","")}}}
+        out["sequential_update"] = Json::parse(nlohmann::json{
+            {"target",signal},
+            {"clock", timing["clock"]}, {"reset", timing["reset"]},
+            {"event_controls", timing["event_controls"]},
+            {"rules", rules}, {"confidence", trace.value("confidence","unknown")},
+            {"confidence_reason", trace.value("confidence_reason","")}
         }.dump());
         return out;
     }
@@ -564,8 +615,8 @@ public:
 
         Json args = request.value("args", Json::object());
         std::string signal = args.value("signal", "");
-        nlohmann::json seq_data = nlohmann::json::parse(seq_resp["data"].dump());
-        nlohmann::json seq = seq_data.value("sequential_update", nlohmann::json::object());
+        nlohmann::json seq = nlohmann::json::parse(
+            seq_resp.value("sequential_update", Json::object()).dump());
 
         nlohmann::json transitions = nlohmann::json::array();
         for (const auto& rule : seq.value("rules", nlohmann::json::array())) {
@@ -584,11 +635,11 @@ public:
         Json out;
         out["summary"] = {{"signal",signal},{"transition_count",transitions.size()},
             {"confidence",seq.value("confidence","unknown")}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"fsm", {{"state_signal",signal},{"clock",seq["clock"]},
-                {"reset",seq["reset"]},{"transitions",transitions},
-                {"rules",seq["rules"]},{"confidence",seq.value("confidence","unknown")},
-                {"confidence_reason",seq.value("confidence_reason","")}}}
+        out["fsm"] = Json::parse(nlohmann::json{
+            {"state_signal",signal},{"clock",seq["clock"]},
+            {"reset",seq["reset"]},{"transitions",transitions},
+            {"rules",seq["rules"]},{"confidence",seq.value("confidence","unknown")},
+            {"confidence_reason",seq.value("confidence_reason","")}
         }.dump());
         return out;
     }
@@ -606,8 +657,8 @@ public:
 
         Json args = request.value("args", Json::object());
         std::string signal = args.value("signal", "");
-        nlohmann::json seq_data = nlohmann::json::parse(seq_resp["data"].dump());
-        nlohmann::json seq = seq_data.value("sequential_update", nlohmann::json::object());
+        nlohmann::json seq = nlohmann::json::parse(
+            seq_resp.value("sequential_update", Json::object()).dump());
 
         nlohmann::json counter_rules = nlohmann::json::array();
         bool is_counter_like = false;
@@ -622,13 +673,13 @@ public:
         Json out;
         out["summary"] = {{"signal",signal},{"counter_like",is_counter_like},
             {"rule_count",counter_rules.size()},{"confidence",conf}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"counter", {{"signal",signal},{"clock",seq["clock"]},
-                {"reset",seq["reset"]},{"rules",counter_rules},
-                {"counter_like",is_counter_like},{"confidence",conf},
-                {"confidence_reason", is_counter_like
-                    ? "increment/decrement rule was identified from next-value expression"
-                    : "sequential rules were found but no increment/decrement pattern was proven"}}}
+        out["counter"] = Json::parse(nlohmann::json{
+            {"signal",signal},{"clock",seq["clock"]},
+            {"reset",seq["reset"]},{"rules",counter_rules},
+            {"counter_like",is_counter_like},{"confidence",conf},
+            {"confidence_reason", is_counter_like
+                ? "increment/decrement rule was identified from next-value expression"
+                : "sequential rules were found but no increment/decrement pattern was proven"}
         }.dump());
         return out;
     }
@@ -666,17 +717,16 @@ public:
 
         Json out;
         out["summary"] = {{"file",file},{"line",line}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"file",file},{"line",line},
-            {"symbol", args.value("symbol", "")},
-            {"context_kind", enclosing.value("type", "unknown")},
-            {"enclosing", enclosing}
-        }.dump());
+        out["file"] = file;
+        out["line"] = line;
+        out["symbol"] = args.value("symbol", "");
+        out["context_kind"] = enclosing.value("type", "unknown");
+        out["enclosing"] = Json::parse(enclosing.dump());
         if (!compact || include_src) {
             nlohmann::json ctx = nlohmann::json::array();
             for (int i = begin; i <= end; ++i)
                 ctx.push_back({{"line",i},{"text",lines[i-1]},{"hit",i == line}});
-            out["data"]["context"] = Json::parse(ctx.dump());
+            out["context"] = Json::parse(ctx.dump());
         }
         return out;
     }
@@ -721,12 +771,17 @@ public:
 
         Json out;
         out["summary"] = {{"query",query},{"ambiguous",ambiguous}};
-        out["data"] = Json::parse(nlohmann::json{
-            {"query",query},{"canonical",canonical},{"rtl_path",rtl_path},
-            {"leaf",leaf},{"scope",scope},{"base_signal",base_signal},
-            {"select",select},{"ambiguous",ambiguous},{"aliases",aliases},
-            {"fsdb_candidates",fsdb_candidates},{"port_mappings",port_mappings}
-        }.dump());
+        out["query"] = query;
+        out["canonical"] = Json::parse(canonical.dump());
+        out["rtl_path"] = Json::parse(rtl_path.dump());
+        out["leaf"] = Json::parse(leaf.dump());
+        out["scope"] = Json::parse(scope.dump());
+        out["base_signal"] = Json::parse(base_signal.dump());
+        out["select"] = Json::parse(select.dump());
+        out["ambiguous"] = ambiguous;
+        out["aliases"] = Json::parse(aliases.dump());
+        out["fsdb_candidates"] = Json::parse(fsdb_candidates.dump());
+        out["port_mappings"] = Json::parse(port_mappings.dump());
         return out;
     }
 };

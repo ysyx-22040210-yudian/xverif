@@ -169,6 +169,7 @@ bool xdebug_waveform_remove_session_dir(const std::string& session_id) {
     std::string dir = xdebug_waveform_session_dir(session_id);
     remove_file_if_exists(dir + "/session.json");
     remove_file_if_exists(dir + "/socket");
+    remove_file_if_exists(xdebug_waveform_socket_path(session_id));
     remove_file_if_exists(dir + "/lists.json");
     remove_file_if_exists(dir + "/apb.json");
     remove_file_if_exists(dir + "/axi.json");

@@ -26,6 +26,7 @@ struct BfsOptions {
 struct BfsResult {
     json all_edges;            // raw edges (unaggregated)
     json expanded_queries;     // per-node query metadata
+    json root_error;           // normalized root-query error, when expansion cannot start
     bool truncated = false;
     int reached_depth = 0;
     int raw_edge_count = 0;

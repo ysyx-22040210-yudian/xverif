@@ -479,6 +479,34 @@ bool Dispatcher::send_to_socket(const std::string& socket_path,
         response = make_error(request, action,
             err.value("code", "INTERNAL_ENGINE_FAILED"),
             err.value("message", "engine server error"), true);
+        Json details = engine_resp.value("details", Json::object());
+        if (details.is_object() && !details.empty()) {
+            if (details.contains("summary") && details["summary"].is_object())
+                response["summary"] = details["summary"];
+            Json detail_error = details.value("error", Json());
+            if (detail_error.is_object()) {
+                for (const char* key : {"recoverable", "candidates", "suggested_actions"}) {
+                    if (detail_error.contains(key)) response["error"][key] = detail_error[key];
+                }
+            }
+            if (details.contains("warnings") && details["warnings"].is_array())
+                response["warnings"] = details["warnings"];
+            if (details.contains("suggested_next_actions") &&
+                details["suggested_next_actions"].is_array())
+                response["suggested_next_actions"] = details["suggested_next_actions"];
+            Json public_data = Json::object();
+            for (auto it = details.begin(); it != details.end(); ++it) {
+                const std::string key = it.key();
+                if (key == "error" || key == "message" || key == "summary" ||
+                    key == "truncated" || key == "warnings" ||
+                    key == "suggested_next_actions" || key == "ok" || key == "status")
+                    continue;
+                public_data[key] = it.value();
+            }
+            if (!public_data.empty()) response["data"] = public_data;
+            if (details.contains("truncated") && details["truncated"].is_boolean())
+                response["meta"] = {{"truncated", details["truncated"].get<bool>()}};
+        }
         return true;
     }
 
