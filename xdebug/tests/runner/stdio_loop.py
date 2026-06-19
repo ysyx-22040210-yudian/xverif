@@ -133,6 +133,10 @@ class StdioLoopRunner:
         except StdioLoopError as exc:
             timed_out = "timeout" in str(exc).lower()
             elapsed_ms = int((time.monotonic() - start) * 1000)
+            if timed_out:
+                # A timed-out JSONL stream is no longer safely correlated:
+                # the late response could be mistaken for the next request.
+                self.terminate()
             return RunResult(
                 command=list(self.command),
                 cwd=self.cwd,
@@ -184,6 +188,15 @@ class StdioLoopRunner:
                 "payload_format": payload_format,
             },
         )
+
+    def send_raw(self, line: str, timeout_sec: float = 5.0) -> Json:
+        """Send one protocol line verbatim for malformed/edge-case tests."""
+        if self.proc is None or self.proc.stdin is None:
+            raise StdioLoopError("stdio-loop is not started")
+        self.transcript.append({"direction": "request-raw", "text": line})
+        self.proc.stdin.write(line.rstrip("\n") + "\n")
+        self.proc.stdin.flush()
+        return self._read_message(timeout_sec)
 
     def quit(self, timeout_sec: float = 5.0) -> Optional[RunResult]:
         if self.proc is None or self.proc.poll() is not None:

@@ -41,6 +41,13 @@ if "--stdio-loop" in sys.argv:
                               "json": {"ok": True, "action": "stdio.quit"}}),
                   flush=True)
             break
+        if req.get("args", {}).get("stderr_lines"):
+            for i in range(int(req["args"]["stderr_lines"])):
+                print("diagnostic-%d" % i, file=sys.stderr, flush=True)
+        if req.get("args", {}).get("pollute_stdout"):
+            print("unexpected banner", flush=True)
+        if req.get("args", {}).get("exit_now"):
+            raise SystemExit(17)
         if req.get("args", {}).get("sleep"):
             time.sleep(float(req["args"]["sleep"]))
         payload = {"ok": True, "action": req.get("action"),
@@ -114,6 +121,77 @@ def test_stdio_loop_json_and_quit(tmp_path: Path) -> None:
     assert result.response["summary"]["value"] == 7
     quit_result = loop.quit()
     assert quit_result is not None and quit_result.ok
+
+
+@pytest.mark.unit
+def test_stdio_loop_timeout_terminates_desynchronized_process(tmp_path: Path) -> None:
+    loop = StdioLoopRunner(_fake_xdebug(tmp_path), cwd=tmp_path)
+    loop.start()
+    result = loop.request(
+        {
+            "api_version": "xdebug.v1",
+            "action": "actions",
+            "args": {"sleep": 30},
+        },
+        timeout_sec=0.1,
+    )
+    assert result.timed_out
+    assert loop.proc is not None and loop.proc.poll() is not None
+
+
+@pytest.mark.unit
+def test_stdio_loop_detects_stdout_pollution_after_ready(tmp_path: Path) -> None:
+    loop = StdioLoopRunner(_fake_xdebug(tmp_path), cwd=tmp_path)
+    try:
+        loop.start()
+        result = loop.request(
+            {
+                "api_version": "xdebug.v1",
+                "action": "actions",
+                "args": {"pollute_stdout": True},
+            }
+        )
+        assert not result.ok
+        assert "stdout protocol pollution" in result.stderr_raw
+    finally:
+        loop.terminate()
+
+
+@pytest.mark.unit
+def test_stdio_loop_drains_large_stderr_without_polluting_stdout(
+    tmp_path: Path,
+) -> None:
+    loop = StdioLoopRunner(_fake_xdebug(tmp_path), cwd=tmp_path)
+    try:
+        loop.start()
+        result = loop.request(
+            {
+                "api_version": "xdebug.v1",
+                "action": "actions",
+                "args": {"stderr_lines": 1000},
+                "output": {"format": "json"},
+            }
+        )
+        assert result.ok
+        assert "diagnostic-999" in result.stderr_raw
+        assert result.envelope["payload_format"] == "json"
+    finally:
+        loop.terminate()
+
+
+@pytest.mark.unit
+def test_stdio_loop_reports_child_exit(tmp_path: Path) -> None:
+    loop = StdioLoopRunner(_fake_xdebug(tmp_path), cwd=tmp_path)
+    loop.start()
+    result = loop.request(
+        {
+            "api_version": "xdebug.v1",
+            "action": "actions",
+            "args": {"exit_now": True},
+        }
+    )
+    assert not result.ok
+    assert "stdio-loop exited: rc=17" in result.stderr_raw
 
 
 @pytest.mark.unit
