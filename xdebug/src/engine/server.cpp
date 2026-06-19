@@ -49,6 +49,8 @@ static std::string g_auth_token;
 static FILE* g_debug_log = nullptr;
 static int g_crash_fd = -1;
 static char g_crash_prefix[512] = {};
+static char g_current_action[128] = {};
+static char g_current_request_id[128] = {};
 
 // Unified-engine resource state.
 bool g_has_design = false;
@@ -126,6 +128,14 @@ static void write_int(int fd, int value) {
 
 static void crash_signal_exit(int sig) {
     write_const(g_crash_fd, g_crash_prefix);
+    if (g_current_action[0] != '\0') {
+        write_const(g_crash_fd, " current_action=");
+        write_const(g_crash_fd, g_current_action);
+    }
+    if (g_current_request_id[0] != '\0') {
+        write_const(g_crash_fd, " request_id=");
+        write_const(g_crash_fd, g_current_request_id);
+    }
     write_const(g_crash_fd, " sig=");
     write_int(g_crash_fd, sig);
     write_const(g_crash_fd, "\n");
@@ -137,6 +147,13 @@ static void open_crash_marker() {
     g_crash_fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0600);
     snprintf(g_crash_prefix, sizeof(g_crash_prefix),
              "signal_exit pid=%d session_id=%s", static_cast<int>(getpid()), g_session_id.c_str());
+}
+
+static void update_current_request_marker(const Json& request) {
+    std::string action = request.value("action", std::string());
+    std::string request_id = request.value("request_id", request.value("id", std::string()));
+    snprintf(g_current_action, sizeof(g_current_action), "%s", action.c_str());
+    snprintf(g_current_request_id, sizeof(g_current_request_id), "%s", request_id.c_str());
 }
 
 static void daemonize_io() {
@@ -320,6 +337,7 @@ static bool handle_client(int client_fd, bool& should_quit) {
     if (g_transport == "tcp" && request.value("auth_token", std::string()) != g_auth_token) {
         return send_response(client_fd, error_response("AUTH_FAILED", "authentication failed"));
     }
+    update_current_request_marker(request);
     const std::string action = request.value("action", std::string());
 
     // ── meta ──

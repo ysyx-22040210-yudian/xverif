@@ -5,7 +5,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <sys/wait.h>
 #include <unistd.h>
+#include <vector>
 
 using xdebug_core::Json;
 
@@ -25,6 +27,20 @@ static Json read_last_json_line(const std::string& path) {
     }
     assert(!last.empty());
     return Json::parse(last);
+}
+
+static std::vector<Json> read_json_lines(const std::string& path) {
+    std::ifstream in(path.c_str());
+    std::vector<Json> rows;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (!line.empty()) rows.push_back(Json::parse(line));
+    }
+    return rows;
+}
+
+static bool exists(const std::string& path) {
+    return access(path.c_str(), F_OK) == 0;
 }
 
 int main() {
@@ -103,6 +119,64 @@ int main() {
     assert(stdio_event["component"] == "xdebug");
     assert(stdio_event["request_id"] == "stdio-1");
     assert(stdio_event["phase"] == "loop.validate_failed");
+
+    Json huge = request;
+    huge["request_id"] = "huge-1";
+    Json huge_rsp = response;
+    huge_rsp["request_id"] = "huge-1";
+    for (int i = 0; i < 150; ++i) {
+        huge["args"][std::string("field_") + std::to_string(i)] = std::string(4096, 'x');
+        huge_rsp["data"][std::string("field_") + std::to_string(i)] = std::string(4096, 'y');
+    }
+    xdebug_core::log_action_event("public", "xdebug", "huge_case", "value.at", "end", false, 9,
+                                  {{"request", xdebug_core::request_summary_for_log(huge)},
+                                   {"response", xdebug_core::response_summary_for_log(huge_rsp)},
+                                   {"request_compact", huge},
+                                   {"response_compact", huge_rsp}});
+    Json huge_event = read_last_json_line(xdebug_core::public_action_log_path("huge_case"));
+    assert(huge_event.value("log_truncated", false));
+    assert(huge_event.contains("payload_sidecars"));
+    assert(huge_event["payload_sidecars"].contains("request_compact"));
+    assert(huge_event["payload_sidecars"].contains("response_compact"));
+    assert(exists(huge_event["payload_sidecars"]["request_compact"]["path"].get<std::string>()));
+    assert(exists(huge_event["payload_sidecars"]["response_compact"]["path"].get<std::string>()));
+
+    setenv("XDEBUG_LOG_MAX_BYTES", "1200", 1);
+    setenv("XDEBUG_LOG_MAX_FILES", "2", 1);
+    for (int i = 0; i < 8; ++i) {
+        xdebug_core::log_action_event("public", "xdebug", "rotate_case", "actions", "end", true, i,
+                                      {{"request_id", std::string("rotate-") + std::to_string(i)},
+                                       {"padding", std::string(300, 'r')}});
+    }
+    unsetenv("XDEBUG_LOG_MAX_BYTES");
+    unsetenv("XDEBUG_LOG_MAX_FILES");
+    assert(exists(xdebug_core::public_action_log_path("rotate_case") + ".1"));
+
+    const int child_count = 4;
+    const int events_per_child = 20;
+    for (int child = 0; child < child_count; ++child) {
+        pid_t pid = fork();
+        assert(pid >= 0);
+        if (pid == 0) {
+            for (int i = 0; i < events_per_child; ++i) {
+                xdebug_core::log_action_event("public", "xdebug", "concurrent_case", "actions", "end", true, i,
+                                              {{"request_id", std::string("child-") + std::to_string(child) +
+                                                               "-" + std::to_string(i)}});
+            }
+            _exit(0);
+        }
+    }
+    for (int child = 0; child < child_count; ++child) {
+        int status = 0;
+        assert(wait(&status) > 0);
+        assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    }
+    std::vector<Json> concurrent = read_json_lines(xdebug_core::public_action_log_path("concurrent_case"));
+    assert(concurrent.size() == static_cast<size_t>(child_count * events_per_child));
+    for (const auto& row : concurrent) {
+        assert(row["session_id"] == "concurrent_case");
+        assert(row["phase"] == "end");
+    }
 
     return 0;
 }

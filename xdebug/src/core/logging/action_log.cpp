@@ -4,6 +4,9 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
 #include <fcntl.h>
 #include <fstream>
 #include <iomanip>
@@ -20,6 +23,7 @@ const size_t kMaxString = 4096;
 const size_t kMaxArray = 64;
 const size_t kMaxObject = 128;
 const int kMaxDepth = 8;
+const size_t kMaxLine = 256 * 1024;
 
 bool ensure_dir(const std::string& path) {
     if (path.empty()) return false;
@@ -78,6 +82,160 @@ std::string event_id() {
 std::string xdebug_home() {
     const char* home = std::getenv("HOME");
     return std::string(home ? home : "/tmp") + "/.xdebug";
+}
+
+long long env_long(const char* name, long long fallback) {
+    const char* value = std::getenv(name);
+    if (!value || value[0] == '\0') return fallback;
+    char* end = nullptr;
+    long long parsed = std::strtoll(value, &end, 10);
+    if (!end || *end != '\0' || parsed < 0) return fallback;
+    return parsed;
+}
+
+std::string dirname_of(const std::string& path) {
+    size_t slash = path.rfind('/');
+    if (slash == std::string::npos) return ".";
+    if (slash == 0) return "/";
+    return path.substr(0, slash);
+}
+
+std::string basename_of(const std::string& path) {
+    size_t slash = path.rfind('/');
+    return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+std::string strip_ndjson_suffix(const std::string& name) {
+    const std::string suffix = ".ndjson";
+    if (name.size() > suffix.size() &&
+        name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        return name.substr(0, name.size() - suffix.size());
+    }
+    return name;
+}
+
+std::string fnv1a_hex(const std::string& s) {
+    unsigned long long hash = 1469598103934665603ULL;
+    for (unsigned char c : s) {
+        hash ^= c;
+        hash *= 1099511628211ULL;
+    }
+    std::ostringstream oss;
+    oss << std::hex << hash;
+    return oss.str();
+}
+
+bool write_file_atomic_append(const std::string& path, const std::string& payload, int mode = 0600) {
+    int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, mode);
+    if (fd < 0) return false;
+    flock(fd, LOCK_EX);
+    const char* data = payload.data();
+    size_t left = payload.size();
+    bool ok = true;
+    while (left > 0) {
+        ssize_t n = write(fd, data, left);
+        if (n <= 0) {
+            ok = false;
+            break;
+        }
+        data += n;
+        left -= static_cast<size_t>(n);
+    }
+    flock(fd, LOCK_UN);
+    close(fd);
+    return ok;
+}
+
+void append_health_event(const std::string& log_path,
+                         const std::string& code,
+                         const std::string& message,
+                         const Json& detail = Json::object()) {
+    try {
+        std::string dir = dirname_of(log_path);
+        if (!ensure_dir_recursive(dir)) dir = xdebug_home() + "/logs";
+        if (!ensure_dir_recursive(dir)) return;
+        Json event;
+        event["ts"] = now_iso8601();
+        event["event_id"] = event_id();
+        event["pid"] = static_cast<int>(getpid());
+        event["layer"] = "log";
+        event["component"] = "xdebug";
+        event["phase"] = "log_health";
+        event["ok"] = false;
+        event["code"] = code;
+        event["message"] = message;
+        event["log_path"] = log_path;
+        if (!detail.is_null() && !(detail.is_object() && detail.empty())) event["detail"] = detail;
+        std::string line = event.dump();
+        line.push_back('\n');
+        write_file_atomic_append(dir + "/log_health.ndjson", line);
+    } catch (...) {
+    }
+}
+
+bool write_sidecar(const std::string& path, const Json& payload, Json& sidecars, const std::string& key) {
+    try {
+        std::string dir = dirname_of(path);
+        if (!ensure_dir_recursive(dir)) return false;
+        std::string text = payload.dump(2);
+        std::ofstream out(path.c_str(), std::ios::trunc);
+        if (!out) return false;
+        out << text << "\n";
+        sidecars[key] = {{"path", path}, {"bytes", text.size()}, {"hash", fnv1a_hex(text)}};
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+void spill_large_context_to_sidecars(const std::string& path, Json& event) {
+    if (!event.contains("context") || !event["context"].is_object()) return;
+    Json& ctx = event["context"];
+    std::string payload_dir = dirname_of(path) + "/" + strip_ndjson_suffix(basename_of(path)) + "_payload";
+    std::string id = event.value("event_id", event_id());
+    Json sidecars = Json::object();
+    for (const char* key : {"request_compact", "response_compact"}) {
+        if (!ctx.contains(key)) continue;
+        std::string sidecar_path = payload_dir + "/" + id + "." + key + ".json";
+        if (write_sidecar(sidecar_path, ctx[key], sidecars, key)) {
+            ctx[key] = {{"sidecar", sidecars[key]}};
+        } else {
+            append_health_event(path, "SIDECAR_WRITE_FAILED", "failed to write log payload sidecar",
+                                {{"sidecar_path", sidecar_path}});
+        }
+    }
+    if (sidecars.empty()) {
+        std::string sidecar_path = payload_dir + "/" + id + ".context.json";
+        if (write_sidecar(sidecar_path, ctx, sidecars, "context")) {
+            ctx = {{"sidecar", sidecars["context"]}};
+        } else {
+            append_health_event(path, "SIDECAR_WRITE_FAILED", "failed to write log context sidecar",
+                                {{"sidecar_path", sidecar_path}});
+        }
+    }
+    if (!sidecars.empty()) {
+        event["payload_sidecars"] = sidecars;
+        event["log_truncated"] = true;
+    }
+}
+
+void rotate_if_needed(const std::string& path, size_t incoming_bytes) {
+    long long max_bytes = env_long("XDEBUG_LOG_MAX_BYTES", 0);
+    if (max_bytes <= 0) return;
+    long long max_files = env_long("XDEBUG_LOG_MAX_FILES", 3);
+    if (max_files <= 0) max_files = 1;
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return;
+    if (st.st_size + static_cast<long long>(incoming_bytes) <= max_bytes) return;
+    for (long long i = max_files - 1; i >= 1; --i) {
+        std::string from = path + "." + std::to_string(i);
+        std::string to = path + "." + std::to_string(i + 1);
+        rename(from.c_str(), to.c_str());
+    }
+    if (rename(path.c_str(), (path + ".1").c_str()) != 0) {
+        append_health_event(path, "ROTATION_FAILED", "failed to rotate log file",
+                            {{"errno", errno}, {"message", strerror(errno)}});
+    }
 }
 
 bool heavy_key(const std::string& key) {
@@ -140,28 +298,28 @@ Json sanitize_impl(const Json& value, int depth, bool& truncated) {
 void append_event(const std::string& path, Json event) {
     try {
         size_t slash = path.rfind('/');
-        if (slash != std::string::npos && !ensure_dir_recursive(path.substr(0, slash))) return;
+        if (slash != std::string::npos && !ensure_dir_recursive(path.substr(0, slash))) {
+            append_health_event(path, "DIR_CREATE_FAILED", "failed to create log directory");
+            return;
+        }
         std::string line = event.dump();
-        const size_t max_line = 256 * 1024;
-        if (line.size() > max_line) {
+        if (line.size() > kMaxLine) {
+            spill_large_context_to_sidecars(path, event);
+            line = event.dump();
+        }
+        if (line.size() > kMaxLine) {
             event["log_truncated"] = true;
             event["context"] = {{"message", "log event exceeded max line size and was truncated"}};
             line = event.dump();
+            append_health_event(path, "EVENT_TRUNCATED", "log event exceeded max line size after sidecar spill",
+                                {{"line_bytes", line.size()}});
         }
         line.push_back('\n');
-        int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0600);
-        if (fd < 0) return;
-        flock(fd, LOCK_EX);
-        const char* data = line.data();
-        size_t left = line.size();
-        while (left > 0) {
-            ssize_t n = write(fd, data, left);
-            if (n <= 0) break;
-            data += n;
-            left -= static_cast<size_t>(n);
+        rotate_if_needed(path, line.size());
+        if (!write_file_atomic_append(path, line)) {
+            append_health_event(path, "WRITE_FAILED", "failed to append log event",
+                                {{"errno", errno}, {"message", strerror(errno)}});
         }
-        flock(fd, LOCK_UN);
-        close(fd);
     } catch (...) {
     }
 }
