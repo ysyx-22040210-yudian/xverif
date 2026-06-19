@@ -55,7 +55,6 @@ std::string create_session_quiet(SessionManager& manager, const std::string& fsd
                                         const SessionTransportOptions& transport);
 
 bool resolve_session(const Json& target,
-                            bool allow_auto_open,
                             std::string& session_id,
                             SessionInfo& info,
                             std::string& error) {
@@ -79,41 +78,8 @@ bool resolve_session(const Json& target,
         return true;
     }
 
-    std::string fsdb;
-    if (get_string(target, "fsdb", fsdb)) {
-        bool auto_open = bool_or(target, "auto_open", allow_auto_open);
-        if (!auto_open) {
-            error = "target.fsdb requires auto_open=true when session_id is omitted";
-            return false;
-        }
-        std::string name;
-        if (!get_string(target, "name", name)) {
-            error = "target.name is required when auto-opening an FSDB";
-            return false;
-        }
-        SessionTransportOptions transport;
-        transport.transport = string_or(target, "transport", "");
-        transport.bind_host = string_or(target, "bind_host", string_or(target, "bind", ""));
-        transport.host = string_or(target, "host", "");
-        transport.port = int_or(target, "port", 0);
-        session_id = create_session_quiet(manager, fsdb, name, transport);
-        if (session_id.empty() || !manager.get_session(session_id, info)) {
-            error = "failed to open fsdb: " + fsdb;
-            return false;
-        }
-        return true;
-    }
-
-    if (!manager.get_latest_session(info)) {
-        error = "no active session";
-        return false;
-    }
-    if (!manager.ensure_session_current(info.session_id) || !manager.get_session(info.session_id, info)) {
-        error = "latest session unavailable";
-        return false;
-    }
-    session_id = info.session_id;
-    return true;
+    error = "target.session_id is required; open a session explicitly first";
+    return false;
 }
 
 std::string create_session_quiet(SessionManager& manager, const std::string& fsdb, const std::string& name,

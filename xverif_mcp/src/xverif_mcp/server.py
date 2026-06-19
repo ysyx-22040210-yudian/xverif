@@ -325,15 +325,11 @@ def xverif_debug_session_open(
     fsdb: Optional[str] = None,
     queue: Optional[str] = None,
     resource: Optional[str] = None,
-    reuse: bool = True,
-    reopen: bool = False,
-    make_default: bool = True,
 ) -> dict:
     """Open a loop-backed xdebug session."""
     return debug.session_open(
         name=name, daidir=daidir, fsdb=fsdb, queue=queue,
-        resource=resource, reuse=reuse, reopen=reopen,
-        make_default=make_default,
+        resource=resource,
     )
 
 
@@ -341,18 +337,6 @@ def xverif_debug_session_open(
 def xverif_debug_session_list(include_native: bool = False) -> dict:
     """List xdebug sessions managed by this server."""
     return debug.session_list(include_native=include_native)
-
-
-@xverif_tool("debug")
-def xverif_debug_session_use(
-    name: Optional[str] = None,
-    session_id: Optional[str] = None,
-) -> dict:
-    """Set the default xdebug session."""
-    key = session_id or name
-    if not key:
-        return _tool_error("INVALID_ARGUMENT", "provide name or session_id")
-    return debug.session_use(key)
 
 
 @xverif_tool("debug")
@@ -369,10 +353,9 @@ def xverif_debug_session_close(
 
 @xverif_tool("debug")
 def xverif_debug_query(
+    session: str,
     action: str,
     args: Optional[dict] = None,
-    target: Optional[dict] = None,
-    session: Optional[str] = None,
     limits: Optional[dict] = None,
     output: Optional[dict] = None,
     output_format: str = "xout",
@@ -387,9 +370,8 @@ def xverif_debug_query(
 
     Args:
         action: The xdebug action name (e.g. "value.at", "trace.drivers").
+        session: Explicit session alias or session_id returned by session_open.
         args: Action-specific arguments dict.
-        target: Explicit target with daidir/fsdb/session_id. Overrides session.
-        session: Named session alias. Uses default session if omitted.
         limits: Query limits dict (max_rows, timeout, etc.).
         output: Output control dict (rarely needed).
         output_format:
@@ -403,7 +385,6 @@ def xverif_debug_query(
     return debug.query(
         action=action,
         args=args or {},
-        target=target,
         session=session,
         limits=limits,
         output=output,
@@ -447,14 +428,10 @@ def xverif_cov_session_open(
     vdb: str,
     queue: Optional[str] = None,
     resource: Optional[str] = None,
-    reuse: bool = True,
-    reopen: bool = False,
-    make_default: bool = True,
 ) -> dict:
     """Open a loop-backed xcov coverage database session."""
     return cov.session_open(
         name=name, vdb=vdb, queue=queue, resource=resource,
-        reuse=reuse, reopen=reopen, make_default=make_default,
     )
 
 
@@ -462,18 +439,6 @@ def xverif_cov_session_open(
 def xverif_cov_session_list() -> dict:
     """List xcov sessions managed by this server."""
     return cov.session_list()
-
-
-@xverif_tool("cov")
-def xverif_cov_session_use(
-    name: Optional[str] = None,
-    session_id: Optional[str] = None,
-) -> dict:
-    """Set the default xcov session."""
-    key = session_id or name
-    if not key:
-        return _tool_error("INVALID_ARGUMENT", "provide name or session_id")
-    return cov.session_use(key)
 
 
 @xverif_tool("cov")
@@ -490,10 +455,9 @@ def xverif_cov_session_close(
 
 @xverif_tool("cov")
 def xverif_cov_query(
+    session: str,
     action: str,
     args: Optional[dict] = None,
-    target: Optional[dict] = None,
-    session: Optional[str] = None,
     limits: Optional[dict] = None,
     output: Optional[dict] = None,
     output_format: str = "xout",
@@ -505,7 +469,6 @@ def xverif_cov_query(
     return cov.query(
         action=action,
         args=args or {},
-        target=target,
         session=session,
         limits=limits,
         output=output,
@@ -875,7 +838,8 @@ TOOL_CATALOG = [
                     "Line: {\"tool\":\"<name>\",\"args\":{<params>}}. "
                     "Nested args for debug_query/cov_query: "
                     "{\"tool\":\"xverif_debug_query\",\"args\":"
-                    "{\"action\":\"value.at\",\"args\":{\"signal\":\"top.clk\",\"time\":\"10ns\"}}}"},
+                    "{\"session\":\"case_a\",\"action\":\"value.at\","
+                    "\"args\":{\"signal\":\"top.clk\",\"time\":\"10ns\"}}}"},
     # debug
     {"name": "xverif_debug_list_actions", "category": "debug", "backend": "xdebug",
      "stateful": False, "requires_session": False,
@@ -892,9 +856,6 @@ TOOL_CATALOG = [
     {"name": "xverif_debug_session_list", "category": "debug", "backend": "xdebug",
      "stateful": True, "requires_session": False,
      "description": "List xdebug sessions managed by this server."},
-    {"name": "xverif_debug_session_use", "category": "debug", "backend": "xdebug",
-     "stateful": True, "requires_session": False,
-     "description": "Set the default xdebug session."},
     {"name": "xverif_debug_session_close", "category": "debug", "backend": "xdebug",
      "stateful": True, "requires_session": True,
      "description": "Close and cleanup an xdebug session."},
@@ -917,9 +878,6 @@ TOOL_CATALOG = [
     {"name": "xverif_cov_session_list", "category": "cov", "backend": "xcov",
      "stateful": True, "requires_session": False,
      "description": "List xcov sessions managed by this server."},
-    {"name": "xverif_cov_session_use", "category": "cov", "backend": "xcov",
-     "stateful": True, "requires_session": False,
-     "description": "Set the default xcov session."},
     {"name": "xverif_cov_session_close", "category": "cov", "backend": "xcov",
      "stateful": True, "requires_session": True,
      "description": "Close and cleanup an xcov session."},
@@ -1072,14 +1030,14 @@ def xverif_tool_help(name: str) -> dict:
 
 @xverif_tool("debug")
 def xverif_wave_value_at(signal: str, time: str = "0ns",
-                          session: Optional[str] = None,
+                          session: str = "",
                           output_format: str = "xout") -> Any:
     """Get a signal value at a specific time (alias for value.at).
 
     Args:
         signal: Full hierarchical signal path.
         time: Target time string (e.g. "100ns", "1us").
-        session: Session alias (uses default if omitted).
+        session: Explicit session alias or session_id.
         output_format: "xout", "json", or "envelope".
     """
     return debug.query(action="value.at", args={"signal": signal, "time": time},
@@ -1089,7 +1047,7 @@ def xverif_wave_value_at(signal: str, time: str = "0ns",
 @xverif_tool("debug")
 def xverif_wave_changes(signal: str, begin: str = "0ns",
                                 end: str = "100ns",
-                                session: Optional[str] = None,
+                                session: str = "",
                                 output_format: str = "xout") -> Any:
     """Get all value changes for a signal in a time window.
 
@@ -1097,7 +1055,7 @@ def xverif_wave_changes(signal: str, begin: str = "0ns",
         signal: Full hierarchical signal path.
         begin: Start time (e.g. "0ns").
         end: End time (e.g. "100ns").
-        session: Session alias.
+        session: Explicit session alias or session_id.
         output_format: "xout", "json", or "envelope".
     """
     return debug.query(action="signal.changes",
@@ -1107,14 +1065,14 @@ def xverif_wave_changes(signal: str, begin: str = "0ns",
 
 @xverif_tool("debug")
 def xverif_wave_generate_rc(config_path: str, rc_path: str,
-                              session: Optional[str] = None,
+                              session: str = "",
                               output_format: str = "xout") -> Any:
     """Generate recovery context from config (alias for rc.generate).
 
     Args:
         config_path: Path to RC config file.
         rc_path: Output path for generated RC.
-        session: Session alias.
+        session: Explicit session alias or session_id.
         output_format: "json" or "xout".
     """
     return debug.query(action="rc.generate",
@@ -1124,14 +1082,14 @@ def xverif_wave_generate_rc(config_path: str, rc_path: str,
 
 @xverif_tool("debug")
 def xverif_design_trace_driver(signal: str, time: str = "0ns",
-                                session: Optional[str] = None,
+                                session: str = "",
                                 output_format: str = "xout") -> Any:
     """Trace the active driver of a signal at a specific time.
 
     Args:
         signal: Full hierarchical signal path.
         time: Target time string.
-        session: Session alias.
+        session: Explicit session alias or session_id.
         output_format: "xout", "json", or "envelope".
     """
     return debug.query(action="trace.driver",

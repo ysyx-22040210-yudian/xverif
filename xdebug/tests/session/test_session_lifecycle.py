@@ -128,12 +128,12 @@ def test_session_open_list_doctor_close_for_each_resource_mode(
         _kill_all(cli_runner)
 
 @pytest.mark.session
-def test_session_duplicate_reuse_ensure_and_reopen_contract(
+def test_session_duplicate_stale_and_advisory_contract(
     resource_targets: dict,
     cli_runner: CliRunner,
     isolated_home: Path,
 ) -> None:
-    name = "reuse_reopen"
+    name = "strict_open"
     target = resource_targets["design"]
     try:
         opened = cli_runner.run(
@@ -148,38 +148,64 @@ def test_session_duplicate_reuse_ensure_and_reopen_contract(
         assert not duplicate.ok
         assert duplicate.response["error"]["code"] == "SESSION_ID_EXISTS"
 
-        reused = cli_runner.run(
+        old_reuse = cli_runner.run(
             _request(
                 "session.open",
                 target=target,
                 args={"name": name, "reuse": True},
             )
         )
-        assert reused.ok
-        assert reused.response["summary"]["reused"] is True
-        assert _registry_session(isolated_home, name)["server_pid"] == first["server_pid"]
+        assert not old_reuse.ok
+        assert old_reuse.response["error"]["code"] == "INVALID_REQUEST"
 
         ensured = cli_runner.run(
             _request("session.ensure", target=target, args={"name": name})
         )
-        assert ensured.ok
-        assert ensured.response["summary"]["reused"] is True
+        assert not ensured.ok
+        assert ensured.response["error"]["code"] == "UNKNOWN_ACTION"
 
-        reopened = cli_runner.run(
+        same_resource = cli_runner.run(
             _request(
                 "session.open",
                 target=target,
-                args={"name": name, "reopen": True},
+                args={"name": "strict_open_b"},
             )
         )
-        assert reopened.ok
-        assert reopened.response["summary"]["reopened"] is True
-        second = _registry_session(isolated_home, name)
-        assert second["server_pid"] != first["server_pid"]
-        with pytest.raises(ProcessLookupError):
-            os.kill(first["server_pid"], 0)
+        assert same_resource.ok
+        advisories = same_resource.response.get("advisories", [])
+        assert advisories
+        assert advisories[0]["code"] == "RESOURCE_SESSION_ALREADY_ALIVE"
+        assert advisories[0]["existing_session_id"] == name
+
+        os.kill(first["server_pid"], signal.SIGKILL)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                os.kill(first["server_pid"], 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        stale = cli_runner.run(
+            _request("session.open", target=target, args={"name": name})
+        )
+        assert not stale.ok
+        assert stale.response["error"]["code"] == "SESSION_STALE"
     finally:
         _kill_all(cli_runner)
+
+
+@pytest.mark.session
+@pytest.mark.parametrize("name", ["", "1case", "_case", "case-a", "case.a", "case a", "A" * 65])
+def test_session_open_rejects_invalid_name(
+    name: str,
+    resource_targets: dict,
+    cli_runner: CliRunner,
+) -> None:
+    result = cli_runner.run(
+        _request("session.open", target=resource_targets["design"], args={"name": name})
+    )
+    assert not result.ok
+    assert result.response["error"]["code"] in ("MISSING_FIELD", "INVALID_SESSION_NAME")
 
 
 @pytest.mark.session
@@ -362,7 +388,7 @@ def test_session_uds_direct_query_times_out_without_spawn_fallback(
         assert result.returncode != 0
         assert isinstance(result.response, dict)
         assert result.response["ok"] is False
-        assert result.response["error"]["code"] == "INTERNAL_ENGINE_FAILED"
+        assert result.response["error"]["code"] == "SESSION_TRANSPORT_FAILED"
         assert "direct session socket timed out" in result.response["error"]["message"]
         assert result.response["summary"]["transport"] == "uds"
         assert result.response["summary"]["timeout_ms"] == 100

@@ -4,13 +4,26 @@
   "title": "xdebug target",
   "type": "object",
   "properties": {
-    "daidir": {"type": "string"},
-    "fsdb": {"type": "string"},
-    "session_id": {"type": "string"},
-    "name": {"type": "string"},
-    "mode": {"type": "string", "enum": ["design", "waveform", "combined"]},
-    "auto_open": {"type": "boolean"},
-    "auto_ensure": {"type": "boolean"}
+    "daidir": {
+      "type": "string"
+    },
+    "fsdb": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "design",
+        "waveform",
+        "combined"
+      ]
+    }
   },
   "additionalProperties": true
 }

@@ -2,8 +2,7 @@
   "api_version": "xdebug.v1",
   "action": "cursor.set",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   },
   "args": {
     "time": "100ns"

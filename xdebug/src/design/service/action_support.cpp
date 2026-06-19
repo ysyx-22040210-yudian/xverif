@@ -230,28 +230,8 @@ bool ensure_target_session(const json& request,
         response["session"] = session_to_json(session);
         return true;
     }
-    std::vector<std::string> design_args = target_dbdir_args(request);
-    if (!design_args.empty()) {
-        if (!target.value("auto_ensure", true)) {
-            response = error_response(request, request.value("action", ""), "INVALID_TARGET",
-                                      "target.dbdir requires auto_ensure=true or an existing session_id");
-            return false;
-        }
-        SessionEnsureResult ensured = manager.ensure_session(design_args, request_session_name(request), request_transport_options(request));
-        if (!ensured.ok) {
-            response = error_response(request, request.value("action", ""), ensure_error_code(ensured),
-                                      ensured.message.empty() ? "failed to ensure session" : ensured.message);
-            return false;
-        }
-        session_id = ensured.session_id;
-        session = ensured.info;
-        response["session"] = session_to_json(session);
-        response["session"]["reused"] = ensured.reused;
-        response["session"]["healthy"] = true;
-        return true;
-    }
-    response = error_response(request, request.value("action", ""), "INVALID_TARGET",
-                              "target must contain string session_id or dbdir with args.name");
+    response = error_response(request, request.value("action", ""), "SESSION_REQUIRED",
+                              "target.session_id is required; open a session explicitly first");
     return false;
 }
 

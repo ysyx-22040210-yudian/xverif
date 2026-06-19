@@ -45,14 +45,14 @@ tools/xdebug -
 从 stdin 传入 JSON request，默认返回 xout：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"fsdb":"waves.fsdb","auto_open":true},"args":{"signal":"top.clk","time":"10ns"}}' \
+printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"session_id":"case_a"},"args":{"signal":"top.clk","time":"10ns"}}' \
   | tools/xdebug -
 ```
 
 同一请求需要 JSON response 时：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"fsdb":"waves.fsdb","auto_open":true},"args":{"signal":"top.clk","time":"10ns"}}' \
+printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"session_id":"case_a"},"args":{"signal":"top.clk","time":"10ns"}}' \
   | tools/xdebug --json -
 ```
 
@@ -186,9 +186,8 @@ MCP client 配置示例（direct 模式）：
 
 可用 xdebug MCP tools（以 `xverif_` 前缀统一命名）：
 
-- `xverif_debug_session_open`：打开/复用命名 session。
+- `xverif_debug_session_open`：打开命名 session。
 - `xverif_debug_session_list`：列出管理的 session。
-- `xverif_debug_session_use`：切换默认 session。
 - `xverif_debug_session_close`：关闭 session 并清理。
 - `xverif_debug_query`：通过 loop session 调用 xdebug action。
 - `xverif_debug_request`：一次性 raw JSON request（无 session）。
@@ -255,7 +254,7 @@ PYTHON=python3 tools/xverif-lsf-doctor
 }
 ```
 
-同名 `session.open` 默认会返回 `SESSION_ID_EXISTS`，避免误连到资源不同的旧 session。需要复用时显式传 `"reuse": true`：资源匹配且健康则返回 `reused:true`，旧 session 已失效则清理后重建。需要强制覆盖时传 `"reopen": true`。
+同名 `session.open` 永远不会复用或替换旧 session。已有 live session 时返回 `SESSION_ID_EXISTS`；已有 stale session 时返回 `SESSION_STALE`，需要显式 `session.close` 或 `session.gc` 后再重新 open。session name 必须以英文字母开头，只能包含英文、数字和下划线，最大 64 个字符。
 
 ## Test Entry Points
 
@@ -538,7 +537,7 @@ compact 默认不返回大字段，例如 `expanded_queries`、`raw_edges`、`al
 {
   "api_version": "xdebug.v1",
   "action": "value.at",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "signal": "top.u.valid",
     "time": "100ns",
@@ -553,7 +552,7 @@ compact 默认不返回大字段，例如 `expanded_queries`、`raw_edges`、`al
 {
   "api_version": "xdebug.v1",
   "action": "value.batch_at",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "time": "100ns",
     "signals": ["top.u.valid", "top.u.ready", "top.u.data"],
@@ -570,7 +569,7 @@ unpacked/聚合数组可显式请求结构化显示：
 {
   "api_version": "xdebug.v1",
   "action": "value.at",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "signal": "top.u.array_sig",
     "time": "100ns",
@@ -587,7 +586,7 @@ unpacked/聚合数组可显式请求结构化显示：
 {
   "api_version": "xdebug.v1",
   "action": "value.at",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "signal": "top.u.data",
     "time": "100ns",
@@ -605,7 +604,7 @@ unpacked/聚合数组可显式请求结构化显示：
 {
   "api_version": "xdebug.v1",
   "action": "verify.conditions",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "time": "100ns",
     "conditions": [
@@ -627,7 +626,7 @@ unpacked/聚合数组可显式请求结构化显示：
 {
   "api_version": "xdebug.v1",
   "action": "rc.generate",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "config_path": "wave_view.json",
     "rc_path": "signal.rc",
@@ -695,7 +694,7 @@ unpacked/聚合数组可显式请求结构化显示：
 {
   "api_version": "xdebug.v1",
   "action": "event.find",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "expr": "valid && !ready",
     "clk": "top.clk",
@@ -720,7 +719,7 @@ unpacked/聚合数组可显式请求结构化显示：
 {
   "api_version": "xdebug.v1",
   "action": "event.export",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "name": "if0",
     "expr": "valid && !ready",
@@ -843,7 +842,7 @@ xdebug 默认静默记录结构化日志。日志只写文件，不打印到 std
 定位工具问题时推荐顺序：
 
 1. 先看 public `actions.ndjson`，确认 action、session、路由和最终 error。
-2. 如果是 `session.open/session.ensure`、`SESSION_UNHEALTHY` 或 `INTERNAL_ENGINE_FAILED`，再看后端 `lifecycle.ndjson`。
+2. 如果是 `session.open`、`SESSION_UNHEALTHY` 或 `INTERNAL_ENGINE_FAILED`，再看后端 `lifecycle.ndjson`。
 3. 如果怀疑 socket/TCP/ping/daemon 连接问题，看 `transport.ndjson`。
 4. 如果卡在 Verdi/NPI 初始化或 daemon bind/listen，结合 `lifecycle.ndjson` 和 `debug.log`。
 

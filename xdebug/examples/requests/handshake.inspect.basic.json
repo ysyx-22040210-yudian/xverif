@@ -2,8 +2,7 @@
   "api_version": "xdebug.v1",
   "action": "handshake.inspect",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   },
   "args": {
     "valid": "top.u.valid",

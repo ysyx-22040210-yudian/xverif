@@ -4,5 +4,8 @@
   "target": {
     "daidir": "simv.daidir",
     "fsdb": "waves.fsdb"
+  },
+  "args": {
+    "name": "case_a"
   }
 }

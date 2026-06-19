@@ -115,7 +115,7 @@ class AiRunner(object):
         elif self.sid is not None:
             req["target"] = {"session_id": self.sid}
         elif not allow_no_sid:
-            req["target"] = {"fsdb": self.fsdb, "name": self.name, "auto_open": True}
+            raise AssertionError("session must be opened before stateful query")
         if limits is not None:
             req["limits"] = limits
 
@@ -141,8 +141,6 @@ class AiRunner(object):
         session = data.get("session") or data.get("data", {}).get("session", {})
         self.sid = session["id"]
         self.query("session.open", target={"fsdb": self.fsdb}, args={"name": self.name}, expect_ok=False, allow_no_sid=True)
-        reused = self.query("session.open", target={"fsdb": self.fsdb}, args={"name": self.name, "reuse": True}, expect_ok=True, allow_no_sid=True)
-        require(reused["summary"]["reused"] is True, "session.open reuse:true did not reuse healthy session")
         return data
 
 

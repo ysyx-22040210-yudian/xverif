@@ -57,12 +57,10 @@ for line in sys.stdin:
 
     if action == "session.open":
         name = args.get("name", "unknown")
-        reuse = args.get("reuse", True)
-        reopen = args.get("reopen", False)
         result = {
             "ok": True, "action": "session.open",
             "summary": {"session_id": name, "mode": "combined",
-                        "reuse_called": reuse, "reopen_called": reopen},
+                        "open_args": args},
         }
     elif action == "value.at":
         delay = float(args.get("sleep", 0))
@@ -137,17 +135,18 @@ class TestLoopSessionOpen:
         assert session.state == "alive"
         assert session.session_id == "test"
 
-    def test_reuse_false(self, fake_xdebug_bin):
+    def test_open_does_not_send_reuse_or_reopen(self, fake_xdebug_bin):
         s = XdebugLoopSession(
             alias="test2", fsdb="t.fsdb", daidir=None,
             launcher=DirectLauncher(), xdebug_bin=fake_xdebug_bin,
-            reuse=False, reopen=False,
             startup_timeout_sec=5.0, request_timeout_sec=5.0,
         )
         try:
             r = s.open()
             assert r.get("ok")
             assert s.state == "alive"
+            rsp = s.query("fake", {}, output_format="json")
+            assert rsp["summary"]["echo_target"]["session_id"] == "test2"
         finally:
             s.close(force=True)
 
@@ -170,11 +169,11 @@ class TestLoopSessionQuery:
         r = session.query("value.at", {"signal": "clk"}, output_format="envelope")
         assert isinstance(r, dict)
 
-    def test_target_passthrough(self, session):
+    def test_target_override_is_ignored(self, session):
         session.open()
         r = session.query("fake", {}, target={"fsdb": "override.fsdb"}, output_format="json")
         echo = r.get("summary", {}).get("echo_target", {})
-        assert echo.get("fsdb") == "override.fsdb"
+        assert echo == {"session_id": "test"}
 
     def test_limits_passthrough(self, session):
         session.open()

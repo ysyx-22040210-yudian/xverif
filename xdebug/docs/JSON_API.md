@@ -99,18 +99,14 @@ file transport directory:
 }
 ```
 
-单次 `auto_open` 使用 TCP：
+后续查询必须显式使用已打开 session：
 
 ```json
 {
   "api_version": "xdebug.v1",
   "action": "value.at",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true,
-    "transport": "tcp",
-    "bind_host": "127.0.0.1",
-    "port": 0
+    "session_id": "wave_tcp"
   },
   "args": {
     "signal": "top.clk",

@@ -97,7 +97,7 @@ Target modes
       especially trace.active_driver.
 
   target.session_id
-      Reuse an already opened session. Prefer this for multi-step debug.
+      Required for all stateful debug queries after session.open.
 
 Session transport
 -----------------
@@ -158,7 +158,7 @@ Common actions
       actions, schema
 
   Session:
-      session.open, session.ensure, session.list, session.doctor,
+      session.open, session.list, session.doctor,
       session.kill, session.close, session.gc
 
   Design:
@@ -236,29 +236,13 @@ Examples
       "args":{"signal":"top.u.ready"}
     }' | xdebug -
 
-  Query one waveform value:
-
-    printf '%s\n' '{
-      "api_version":"xdebug.v1",
-      "action":"value.at",
-      "target":{"fsdb":"waves.fsdb","auto_open":true},
-      "args":{"signal":"top.clk","time":"10ns"}
-    }' | xdebug -
-
-  Open a session, then reuse it explicitly:
+  Open a session, then query it explicitly:
 
     printf '%s\n' '{
       "api_version":"xdebug.v1",
       "action":"session.open",
       "target":{"daidir":"simv.daidir","fsdb":"waves.fsdb"},
       "args":{"name":"case_a"}
-    }' | xdebug -
-
-    printf '%s\n' '{
-      "api_version":"xdebug.v1",
-      "action":"session.open",
-      "target":{"daidir":"simv.daidir","fsdb":"waves.fsdb"},
-      "args":{"name":"case_a","reuse":true}
     }' | xdebug -
 
     printf '%s\n' '{
@@ -273,7 +257,7 @@ Examples
     printf '%s\n' '{
       "api_version":"xdebug.v1",
       "action":"trace.active_driver",
-      "target":{"daidir":"simv.daidir","fsdb":"waves.fsdb"},
+      "target":{"session_id":"case_a"},
       "args":{"signal":"top.u.ready","requested_time":"100ns"}
     }' | xdebug -
 
@@ -283,8 +267,7 @@ Logs and troubleshooting
   and do not change JSON responses.
 
   Public action logs:
-      ~/.xdebug/sessions/<session_id>/logs/actions.ndjson
-      ~/.xdebug/sessions/adhoc/logs/actions.ndjson
+      ~/.xdebug/sessions/<session_prefix>_<hash>/logs/actions.ndjson
 
   Backend logs:
       ~/.xdebug/design/sessions/<hashed-session>/logs/lifecycle.ndjson

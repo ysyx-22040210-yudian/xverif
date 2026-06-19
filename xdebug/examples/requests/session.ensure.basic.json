@@ -1,8 +1,0 @@
-{
-  "api_version": "xdebug.v1",
-  "action": "session.ensure",
-  "target": {
-    "daidir": "simv.daidir",
-    "fsdb": "waves.fsdb"
-  }
-}

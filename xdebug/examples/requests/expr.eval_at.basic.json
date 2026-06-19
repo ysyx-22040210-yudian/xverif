@@ -2,8 +2,7 @@
   "api_version": "xdebug.v1",
   "action": "expr.eval_at",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   },
   "args": {
     "expr": "valid && !ready",

@@ -27,14 +27,14 @@ def _error(code: str, message: str, **extra: Any) -> Json:
     return {"ok": False, "error": err}
 
 
-def _extract_session_id(response: Json, fallback: str) -> str:
+def _extract_session_id(response: Json) -> Optional[str]:
     for key in ("summary", "data", "session"):
         value = response.get(key)
         if isinstance(value, dict):
             sid = value.get("session_id") or value.get("id")
             if isinstance(sid, str) and sid:
                 return sid
-    return fallback
+    return None
 
 
 @dataclass
@@ -52,8 +52,6 @@ class XdebugLoopSession:
     queue: Optional[str] = None
     resource: Optional[str] = None
     job_name: Optional[str] = None
-    reuse: bool = True
-    reopen: bool = False
     startup_timeout_sec: float = field(default_factory=startup_timeout)
     request_timeout_sec: float = field(default_factory=request_timeout)
 
@@ -105,10 +103,10 @@ class XdebugLoopSession:
                 "If caused by LSF queue delay, consider increasing "
                 "XVERIF_MCP_STARTUP_TIMEOUT_SEC (session open, default 180s) "
                 "or XVERIF_MCP_REQUEST_TIMEOUT_SEC (query, default 360s). "
-                "Reopen session explicitly before retrying."
+                "Close or gc the stale session, then open a new session before retrying."
             )
         else:
-            reason = "session is no longer reusable; reopen explicitly"
+            reason = "session is no longer reusable; close or gc it before opening a new session"
 
         return _error("SESSION_LOST", message, alias=self.alias,
                        session_id=self.session_id, mode=self.launcher.mode,
@@ -141,8 +139,7 @@ class XdebugLoopSession:
                 "request_id": f"open-{_safe_name(self.alias)}",
                 "api_version": self.api_version, "action": "session.open",
                 "target": {},
-                "args": {"name": self.alias, "reuse": self.reuse,
-                         "reopen": self.reopen},
+                "args": {"name": self.alias},
                 "output": {"response_format": "json"} if self.backend == "xcov"
                 else {"format": "json"},
             }
@@ -153,12 +150,21 @@ class XdebugLoopSession:
             if self.daidir:
                 open_req["target"]["daidir"] = self.daidir
             rsp = self._call_raw(open_req, timeout=self.startup_timeout_sec)
-            err = rsp.get("error", {})
-            if not rsp.get("ok") and err.get("code") != "SESSION_ID_EXISTS":
+            if not rsp.get("ok"):
                 self.state = "dead"
                 return rsp
             payload = rsp.get("json", rsp)
-            self.session_id = _extract_session_id(payload, self.alias)
+            self.session_id = _extract_session_id(payload)
+            if not self.session_id:
+                self.state = "dead"
+                cleanup = self.abort("backend did not return session_id",
+                                     source="open")
+                return _error(
+                    "BACKEND_SESSION_ID_MISSING",
+                    "backend session.open response did not include session_id",
+                    cleanup=cleanup,
+                    backend_response=payload,
+                )
             self.state = "alive"
             return {"ok": True, "session": self.public_json()}
         except Exception as e:
@@ -204,10 +210,7 @@ class XdebugLoopSession:
         }
         if args:
             req["args"] = args
-        if target:
-            req["target"] = target
-        else:
-            req["target"] = {"session_id": self.session_id}
+        req["target"] = {"session_id": self.session_id}
         if limits:
             req["limits"] = limits
         req["output"] = dict(output or {})

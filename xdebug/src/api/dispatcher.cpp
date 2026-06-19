@@ -5,6 +5,7 @@
 #include "api/request_validator.h"
 #include "api/resource_resolver.h"
 #include "api/response.h"
+#include "common/path_utils.h"
 #include "logging/action_log.h"
 
 #include <cerrno>
@@ -69,7 +70,7 @@ Json direct_socket_timeout_error(const Json& request,
     Json response = make_error(
         request,
         action,
-        "INTERNAL_ENGINE_FAILED",
+        "SESSION_TRANSPORT_FAILED",
         "direct session socket timed out after " + std::to_string(timeout_ms) +
             "ms: " + socket_path,
         true);
@@ -78,6 +79,25 @@ Json direct_socket_timeout_error(const Json& request,
         {"socket_path", socket_path},
         {"timeout_ms", timeout_ms}
     };
+    return response;
+}
+
+Json direct_socket_failed_error(const Json& request,
+                                const std::string& action,
+                                const SessionRecord& record) {
+    Json response = make_error(
+        request,
+        action,
+        "SESSION_TRANSPORT_FAILED",
+        "direct session transport failed for session: " + record.id,
+        true);
+    response["summary"] = {
+        {"session_id", record.id},
+        {"mode", record.mode},
+        {"transport", record.transport.empty() ? "uds" : record.transport}
+    };
+    if (!record.socket_path.empty()) response["summary"]["socket_path"] = record.socket_path;
+    if (!record.file_dir.empty()) response["summary"]["file_dir"] = record.file_dir;
     return response;
 }
 
@@ -133,6 +153,38 @@ std::string target_mode_for_log(const Json& request, const Json& response = Json
     if (daidir) return "design";
     if (fsdb) return "waveform";
     return "";
+}
+
+bool same_resource(const SessionRecord& a, const SessionRecord& b) {
+    if (a.mode != b.mode) return false;
+    if (a.mode == "design") return a.daidir == b.daidir;
+    if (a.mode == "waveform") return a.fsdb == b.fsdb;
+    if (a.mode == "combined") return a.daidir == b.daidir && a.fsdb == b.fsdb;
+    return false;
+}
+
+std::string resource_match_kind(const SessionRecord& record) {
+    if (record.mode == "design") return "same_daidir";
+    if (record.mode == "waveform") return "same_fsdb";
+    if (record.mode == "combined") return "same_combined_resource";
+    return "same_resource";
+}
+
+Json duplicate_resource_advisories(const std::vector<SessionRecord>& records,
+                                   const SessionRecord& opened) {
+    Json advisories = Json::array();
+    for (const auto& existing : records) {
+        if (existing.id == opened.id || !same_resource(existing, opened)) continue;
+        advisories.push_back({
+            {"code", "RESOURCE_SESSION_ALREADY_ALIVE"},
+            {"severity", "info"},
+            {"match_kind", resource_match_kind(opened)},
+            {"existing_session_id", existing.id},
+            {"existing_mode", existing.mode},
+            {"message", "same resource already has an alive session; consider closing one to save resources"}
+        });
+    }
+    return advisories;
 }
 
 } // namespace
@@ -200,27 +252,19 @@ Json Dispatcher::handle_engine_forward(const Json& request, const ActionSpec& sp
     std::string sid = target.value("session_id", "");
     if (!sid.empty()) {
         SessionRecord record;
-        if (sessions_.get(sid, record) && !record.socket_path.empty()) {
-            Json response;
-            if (send_to_socket(record.socket_path, routed, response)) {
-                return response;
-            }
+        if (!sessions_.get(sid, record)) {
+            return make_error(request, spec.name, "SESSION_NOT_FOUND", "session not found: " + sid);
         }
+        if (!record.transport.empty() && record.transport != "uds") {
+            return forward_action(routed);
+        }
+        if (record.socket_path.empty()) return direct_socket_failed_error(request, spec.name, record);
+        Json response;
+        if (send_to_socket(record.socket_path, routed, response)) return response;
+        return direct_socket_failed_error(request, spec.name, record);
     }
 
     Json response = forward_action(routed);
-
-    // The engine owns canonical session registration for ad-hoc queries.
-    if (response.value("ok", false) && !has_string(target, "session_id") &&
-        !requested_name(request).empty()) {
-        SessionRecord record;
-        record.id = requested_name(request);
-        record.mode = mode_for_target(target);
-        record.daidir = target.value("daidir", std::string());
-        record.fsdb = target.value("fsdb", std::string());
-        record.socket_path = response.value("session", Json::object()).value("socket_path", "");
-        xdebug_core::update_public_session_manifest(record.id, record.mode, record.daidir, record.fsdb);
-    }
     return response;
 }
 
@@ -293,56 +337,38 @@ Json Dispatcher::handle_session(const Json& request, const std::string& action) 
         response["data"] = {{"before", before}, {"kept", kept}, {"removed", removed}};
         return response;
     }
-    if (action == "session.open" || action == "session.ensure") {
+    if (action == "session.open") {
         const std::string name = requested_name(request);
         const std::string mode = mode_for_target(target);
         if (name.empty()) return make_error(request, action, "MISSING_FIELD", "args.name is required");
+        if (!xdebug_core::is_valid_session_name(name)) {
+            return make_error(request, action, "INVALID_SESSION_NAME", xdebug_core::session_name_rule());
+        }
+        if (args.contains("reuse") || args.contains("reopen")) {
+            return make_error(request, action, "INVALID_REQUEST",
+                              "session.open does not accept args.reuse or args.reopen; close or gc existing sessions explicitly");
+        }
         if (mode.empty()) return make_error(request, action, "RESOURCE_REQUIRED", "target.daidir or target.fsdb is required");
+        std::vector<SessionRecord> before_records = sessions_.list();
         SessionRecord existing;
-        bool reopened_existing = false;
         if (sessions_.get(name, existing)) {
-            const bool reopen = action == "session.open" && args.value("reopen", false);
-            const bool reuse = args.value("reuse", false) || action == "session.ensure";
-            const bool resource_match = existing.mode == mode &&
-                (mode == "design" || existing.daidir == target.value("daidir", std::string())) &&
-                (mode == "waveform" || existing.fsdb == target.value("fsdb", std::string()));
-            if (reopen) {
-                Json kill_req = request;
-                kill_req["action"] = "session.kill";
-                kill_req["target"] = {{"session_id", name}};
-                kill_req["args"] = Json::object();
-                Json kill_result = handle_session(kill_req, "session.kill");
-                if (!kill_result.value("ok", false)) return kill_result;
-                reopened_existing = true;
-            } else if (reuse && resource_match) {
-                Json doctor_req = request;
-                doctor_req["action"] = "session.doctor";
-                doctor_req["target"] = {{"session_id", name}};
-                Json health = forward_action(doctor_req);
-                bool healthy = health.value("ok", false);
-                if (healthy) {
-                    xdebug_core::update_public_session_manifest(existing.id, existing.mode, existing.daidir, existing.fsdb);
-                    Json response = make_response(request, action);
-                    response["session"] = session_record_json(existing);
-                    response["summary"] = {{"session_id", name}, {"mode", mode}, {"reused", true}, {"healthy", true}};
-                    response["data"] = {{"session", response["session"]}, {"health", health}};
-                    return response;
-                }
-                Json kill_req = request;
-                kill_req["action"] = "session.kill";
-                kill_req["target"] = {{"session_id", name}};
-                kill_req["args"] = Json::object();
-                Json kill_result = handle_session(kill_req, "session.kill");
-                if (!kill_result.value("ok", false)) return kill_result;
-                reopened_existing = true;
-            } else {
+            Json doctor_req = request;
+            doctor_req["action"] = "session.doctor";
+            doctor_req["target"] = {{"session_id", name}};
+            Json health = forward_action(doctor_req);
+            if (health.value("ok", false)) {
                 Json err = make_error(request, action, "SESSION_ID_EXISTS",
-                                      "session id already exists: " + name + "; pass args.reuse:true to reuse matching healthy sessions or args.reopen:true to replace it");
-                err["summary"] = {{"session_id", name}, {"mode", mode}, {"existing", session_record_json(existing)},
-                                  {"requested", target}, {"resource_match", resource_match},
-                                  {"suggested_args", {{"reuse", true}, {"reopen", true}}}};
+                                      "session id already exists: " + name);
+                err["summary"] = {{"session_id", name}, {"existing", session_record_json(existing)},
+                                  {"health", health}};
                 return err;
             }
+            Json err = make_error(request, action, "SESSION_STALE",
+                                  "session id exists but is stale: " + name +
+                                      "; close it explicitly or run session.gc before opening again");
+            err["summary"] = {{"session_id", name}, {"existing", session_record_json(existing)},
+                              {"health", health}};
+            return err;
         }
         // Spawn ONE unified engine (handles design, waveform, or both).
         Json open_request = request;
@@ -367,8 +393,10 @@ Json Dispatcher::handle_session(const Json& request, const std::string& action) 
         xdebug_core::update_public_session_manifest(record.id, record.mode, record.daidir, record.fsdb);
         Json response = make_response(request, action);
         response["session"] = session_record_json(record);
-        response["summary"] = {{"session_id", name}, {"mode", mode}, {"reused", false}, {"reopened", reopened_existing}};
+        response["summary"] = {{"session_id", name}, {"mode", mode}};
         response["data"] = {{"session", response["session"]}};
+        Json advisories = duplicate_resource_advisories(before_records, record);
+        if (!advisories.empty()) response["advisories"] = advisories;
         return response;
     }
     std::string id = target.value("session_id", args.value("session_id", args.value("id", std::string())));

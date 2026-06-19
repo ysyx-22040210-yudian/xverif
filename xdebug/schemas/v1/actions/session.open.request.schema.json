@@ -176,20 +176,6 @@
         },
         "include_all_signals": {
           "type": "boolean"
-        },
-        "auto_open": {
-          "type": "boolean"
-        },
-        "auto_ensure": {
-          "type": "boolean"
-        },
-        "reopen": {
-          "type": "boolean",
-          "description": "When true, explicitly reopen/replace an existing same-name session."
-        },
-        "reuse": {
-          "type": "boolean",
-          "description": "When true, reuse a matching healthy same-name session or rebuild a stale matching session."
         }
       },
       "additionalProperties": true

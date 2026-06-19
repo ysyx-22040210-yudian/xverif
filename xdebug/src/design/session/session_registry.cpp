@@ -1,5 +1,6 @@
 #include "session_registry.h"
 #include "../common/xdebug_design_paths.h"
+#include "common/path_utils.h"
 #include "json.hpp"
 
 #include <fcntl.h>
@@ -10,7 +11,6 @@
 #include <signal.h>
 #include <sys/file.h>
 #include <sstream>
-#include <cctype>
 
 namespace xdebug_design {
 
@@ -317,11 +317,7 @@ bool SessionRegistry::exists(const std::string& session_id) {
 }
 
 bool SessionRegistry::is_valid_session_name(const std::string& name) {
-    if (name.empty() || name.size() > 256) return false;
-    for (unsigned char c : name) {
-        if (!(std::isalnum(c) || c == '_' || c == '-' || c == '.')) return false;
-    }
-    return true;
+    return xdebug_core::is_valid_session_name(name);
 }
 
 bool SessionRegistry::cleanup_stale() {

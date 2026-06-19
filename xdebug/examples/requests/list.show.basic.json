@@ -2,7 +2,6 @@
   "api_version": "xdebug.v1",
   "action": "list.show",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   }
 }

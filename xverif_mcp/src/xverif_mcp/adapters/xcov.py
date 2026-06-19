@@ -71,9 +71,6 @@ class XverifCoverageAdapter:
     def session_list(self) -> Json:
         return self._sessions.list_sessions()
 
-    def session_use(self, key: str) -> Json:
-        return self._sessions.use_session(key)
-
     def session_close(self, key: str) -> Json:
         return self._sessions.close_session(key)
 

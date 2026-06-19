@@ -44,7 +44,7 @@ xdebug 是原 xtrace 与 xwave 的统一事实查询入口。设计事实来自 
 - 默认使用 `xdebug` 或 `tools/xdebug`；不要推荐旧 `xtrace` / `xwave` 人类 CLI 作为主路径。
 - 机器解析必须加 `--json`；不要解析默认 `xout` 文本。
 - 不确定 action 参数时，先查 `actions`，再查 action-specific `schema`，不要猜字段。
-- 多步调试先 `session.open`，后续用 `target.session_id`，不要反复 `auto_open`。
+- 调试先 `session.open`，后续必须用 `target.session_id`。
 - LSF / 登录机无法连接计算节点 TCP 端口时，使用 `transport:"file"`，不要继续尝试 TCP 直连。
 - 默认 `output.verbosity:"compact"`；需要证据时只打开精确 `include_*`，不要直接 `debug`。
 - 结论必须保留 `signal`、`time/window`、`value/finding`、`file:line`、`confidence`、`truncated`。
@@ -77,7 +77,6 @@ JSON
 MCP 场景使用 `tools/xverif-mcp`（统一入口 `python -m xverif_mcp.server`）。xdebug 是设计/波形 stateful backend；coverage 数据库查询使用 xcov stateful backend；其他 xverif 工具以 stateless CLI adapter 方式接入。MCP tool 选择：
 
 - `xverif_debug_session_open`：打开/复用 `daidir`、`fsdb` 或 combined session。
-- `xverif_debug_session_use`：切换默认 session。
 - `xverif_debug_query`：用默认 session 调 action。
 - `xverif_debug_raw_request`：需要完整 envelope 控制时直接传 xdebug JSON request。
 - `xverif_debug_list_actions` / `xverif_debug_get_schema`：查询机器契约。
@@ -120,9 +119,9 @@ MCP 场景使用 `tools/xverif-mcp`（统一入口 `python -m xverif_mcp.server`
 
 ## session / transport 决策
 
-单次查询可用 `auto_open:true` 或 `auto_ensure:true`。多步调试必须先 `session.open`，后续复用 `target.session_id`。
+所有 stateful 查询必须先 `session.open`，后续使用 `target.session_id`；不要使用 `auto_open` 或 `auto_ensure`。
 
-同名 `session.open` 默认返回 `SESSION_ID_EXISTS`。确认资源相同并希望复用时传 `args.reuse:true`；要强制替换旧 session 时传 `args.reopen:true`。
+`session.open` 永远创建新 session，不复用也不替换。同名 live session 返回 `SESSION_ID_EXISTS`；同名 stale session 返回 `SESSION_STALE`，需要显式 `session.close` 或 `session.gc` 后再重新 open。session name 必须匹配 `^[A-Za-z][A-Za-z0-9_]{0,63}$`。
 
 Transport 选择：
 
@@ -340,7 +339,7 @@ config 对象需要哪些字段只能从实际代码中推测。APB: `pclk, pres
 
 - `SIGNAL_NOT_FOUND`：波形侧先 `scope.list`；设计侧先外部 `rg` 搜源码候选，再重试 exact path。
 - `TIME_SPEC_INVALID`：检查 `time`、`at`、`time_range`、cursor 名和 clock path；cycle offset 交给 xdebug 解析。
-- `SESSION_NOT_FOUND`：先 `session.list`，再 `session.open reuse:true` 或重新 open。
+- `SESSION_NOT_FOUND`：先 `session.list`，确认后用合法新 name `session.open`。
 - `SESSION_UNHEALTHY`：跑 `session.doctor`；看 lifecycle/transport logs。
 - `UNKNOWN_ACTION`：查 `actions`；不要回退旧 CLI；combined 生效驱动是 `trace.active_driver`。
 - `INTERNAL_ENGINE_FAILED`：检查资源路径、权限、Verdi/NPI 环境、daemon 工作目录和日志。

@@ -5,8 +5,8 @@ Verifies:
 - query failure when process crashes mid-request
 - backend SESSION_DEAD → SESSION_LOST
 - ordinary errors do NOT tear down session
-- stale alive open recovery
-- reopen after SESSION_LOST
+- stale alive open rejection
+- open after SESSION_LOST eviction
 """
 
 from __future__ import annotations
@@ -72,7 +72,11 @@ def _fake_loop_script(dirpath: Path, fail_open: bool = False, fail_query: bool =
         "",
         '    wants_json = req.get("output", {}).get("format") == "json"',
         "    if wants_json:",
-        '        result = {"ok": True, "action": action, "summary": {"echo": action}}',
+        '        if action == "session.open":',
+        '            result = {"ok": True, "action": action,',
+        '                      "summary": {"session_id": req.get("args", {}).get("name", "test"), "mode": "waveform"}}',
+        '        else:',
+        '            result = {"ok": True, "action": action, "summary": {"echo": action}}',
         '        rsp = {"id": rid, "ok": True, "payload_format": "json", "json": result}',
         "    else:",
         '        xout = "@xdebug." + action + ".v1\\n"',
@@ -229,9 +233,8 @@ class TestManagerEvict:
         r = mgr.query("evict_me", "value.at", {"signal": "x"}, output_format="json")
         assert "SESSION_LOST" in str(r)
         assert "evict_me" not in mgr.sessions
-        assert mgr.default_session is None
 
-    def test_stale_alive_recovery(self, tmp_path):
+    def test_stale_alive_open_returns_session_stale(self, tmp_path):
         fake = _fake_loop_script(tmp_path)
         mgr = McpSessionManager(mode="direct")
         mgr.xdebug_bin = fake
@@ -246,10 +249,11 @@ class TestManagerEvict:
         # Still marked alive in manager
         assert s.state == "alive"
 
-        # Reopen same name — should succeed
+        # Same-name open must not evict or replace the stale record implicitly.
         r = mgr.open_session("stale_test", fsdb="test.fsdb")
-        assert r.get("ok"), r
-        assert mgr.sessions["stale_test"].process_alive()
+        assert not r.get("ok"), r
+        assert r["error"]["code"] == "SESSION_STALE"
+        assert "stale_test" in mgr.sessions
 
     def test_close_dead_session(self, tmp_path):
         fake = _fake_loop_script(tmp_path)
@@ -270,7 +274,7 @@ class TestManagerEvict:
         mgr = McpSessionManager(mode="direct")
         mgr.xdebug_bin = fake
         mgr.open_session("close_all_a", fsdb="a.fsdb")
-        mgr.open_session("close_all_b", fsdb="b.fsdb", make_default=False)
+        mgr.open_session("close_all_b", fsdb="b.fsdb")
         sessions = {
             id(session): session for session in mgr.sessions.values()
         }
@@ -278,13 +282,12 @@ class TestManagerEvict:
         mgr.close_all()
 
         assert mgr.sessions == {}
-        assert mgr.default_session is None
         assert all(session.state == "closed" for session in sessions.values())
         assert all(not session.process_alive() for session in sessions.values())
 
 
-class TestReopenAfterLost:
-    def test_reopen_after_session_lost(self, tmp_path):
+class TestOpenAfterLost:
+    def test_open_after_session_lost_eviction(self, tmp_path):
         fake = _fake_loop_dead_session(tmp_path)
         mgr = McpSessionManager(mode="direct")
         mgr.xdebug_bin = fake
@@ -293,7 +296,7 @@ class TestReopenAfterLost:
         mgr.query("reopen_me", "value.at", {"signal": "x"}, output_format="json")
         assert "reopen_me" not in mgr.sessions
 
-        # Now create a working fake and reopen
+        # Now create a working fake and open the same name after eviction.
         fake2 = _fake_loop_script(tmp_path)
         mgr.xdebug_bin = fake2
         r = mgr.open_session("reopen_me", fsdb="test.fsdb")
@@ -370,4 +373,3 @@ class TestTimeoutSessionLost:
 
         # Manager must have evicted the dead session
         assert "slow" not in mgr.sessions
-        assert mgr.default_session is None

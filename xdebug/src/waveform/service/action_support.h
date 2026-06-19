@@ -40,7 +40,7 @@ int int_or(const Json& obj, const char* key, int def);
 bool bool_or(const Json& obj, const char* key, bool def);
 std::string create_session_quiet(SessionManager& manager, const std::string& fsdb,
                                  const std::string& name, const SessionTransportOptions& transport);
-bool resolve_session(const Json& target, bool allow_auto_open, std::string& session_id,
+bool resolve_session(const Json& target, std::string& session_id,
                      SessionInfo& info, std::string& error);
 void fill_session(Json& out, const SessionInfo& info);
 bool capture_server_json(const std::string& session_id, const std::string& cmd, Json& data, std::string& error);

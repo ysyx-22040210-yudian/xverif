@@ -22,6 +22,10 @@ def _safe_name(s: str, max_len: int = 64) -> str:
     return (x or "unnamed")[:max_len]
 
 
+def _valid_session_name(s: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", s or ""))
+
+
 def _error(code: str, message: str) -> Json:
     return {"ok": False, "error": {"code": code, "message": message}}
 
@@ -64,23 +68,28 @@ class McpSessionManager:
             f"{_uuid.uuid4().hex[:8]}"
         )
         self.sessions: Dict[str, XdebugLoopSession] = {}
-        self.default_session: Optional[str] = None
 
     def open_session(self, name: str, fsdb: Optional[str] = None,
                      daidir: Optional[str] = None,
                      queue: Optional[str] = None, resource: Optional[str] = None,
-                     reuse: bool = True, reopen: bool = False,
-                     make_default: bool = True, **kwargs: Any) -> Json:
+                     **kwargs: Any) -> Json:
+        if not _valid_session_name(name):
+            return _error(
+                "INVALID_SESSION_NAME",
+                "session name must start with an ASCII letter and contain only "
+                "ASCII letters, digits, and underscores, with maximum length 64",
+            )
         if not fsdb and not daidir:
             return _error("RESOURCE_REQUIRED", "provide fsdb or daidir")
         if name in self.sessions:
             existing = self.sessions[name]
             if existing.state == "alive":
                 if existing.process_alive():
-                    return _error("SESSION_EXISTS", f"session already exists: {name}")
-                existing.abort("stale alive session process is not running",
-                               source="stale_open")
-                self._evict_session(existing)
+                    return _error("SESSION_ID_EXISTS",
+                                  f"session id already exists: {name}")
+                return _error("SESSION_STALE",
+                              "session id exists but is stale: "
+                              f"{name}; close it explicitly before opening again")
         job_name = None
         actual_queue = queue or (self._session_queue if self.mode == "lsf" else None)
         actual_resource = resource or (self._session_resource if self.mode == "lsf" else None)
@@ -89,8 +98,8 @@ class McpSessionManager:
         session = XdebugLoopSession(
             alias=name, fsdb=fsdb, daidir=daidir, launcher=self.launcher,
             xdebug_bin=self.xdebug_bin, queue=actual_queue,
-            resource=actual_resource, job_name=job_name, reuse=reuse,
-            reopen=reopen, startup_timeout_sec=self.startup_timeout_sec,
+            resource=actual_resource, job_name=job_name,
+            startup_timeout_sec=self.startup_timeout_sec,
             request_timeout_sec=self.request_timeout_sec,
             backend=self.backend, api_version=self.api_version,
             ready_protocol=self.ready_protocol, target_key=self.target_key,
@@ -101,22 +110,19 @@ class McpSessionManager:
         self.sessions[name] = session
         if session.session_id:
             self.sessions[session.session_id] = session
-        if make_default or not self.default_session:
-            self.default_session = session.session_id or name
-        return {"ok": True, "session": session.public_json(),
-                "default_session": self.default_session}
+        return {"ok": True, "session": session.public_json()}
 
     def query(self, session: Optional[str], action: str,
               args: Optional[Json] = None, output_format: str = "xout",
               **kwargs: Any) -> Any:
-        key = session or self.default_session
-        if not key:
+        if not session:
             return _error("SESSION_REQUIRED",
-                          f"provide session or call {self.recovery_tool} first")
+                          "explicit session is required")
+        key = session
         s = self.sessions.get(key)
         if not s:
             return _error("SESSION_NOT_FOUND", f"session not found: {key}")
-        rsp = s.query(action=action, args=args, target=kwargs.get("target"),
+        rsp = s.query(action=action, args=args,
                        limits=kwargs.get("limits"), output=kwargs.get("output"),
                        output_format=output_format)
         if s.state == "dead":
@@ -135,7 +141,6 @@ class McpSessionManager:
                     source="close_dead")
         self._evict_session(s)
         return {"ok": True, "closed": s.public_json(),
-                "default_session": self.default_session,
                 "previous_state": old_state}
 
     def list_sessions(self) -> Json:
@@ -146,16 +151,7 @@ class McpSessionManager:
                 continue
             seen.add(id(s))
             rows.append(s.public_json())
-        return {"ok": True, "sessions": rows,
-                "default_session": self.default_session}
-
-    def use_session(self, key: str) -> Json:
-        s = self.sessions.get(key)
-        if not s or s.state != "alive":
-            return _error("SESSION_NOT_FOUND", f"session not alive: {key}")
-        self.default_session = s.session_id or s.alias
-        return {"ok": True, "default_session": self.default_session,
-                "session": s.public_json()}
+        return {"ok": True, "sessions": rows}
 
     def _evict_session(self, s: XdebugLoopSession) -> None:
         self.sessions.pop(s.alias, None)
@@ -164,8 +160,6 @@ class McpSessionManager:
         for key, value in list(self.sessions.items()):
             if value is s:
                 self.sessions.pop(key, None)
-        if self.default_session in (s.alias, s.session_id):
-            self.default_session = None
 
     def session_open(self, name: str, fsdb: Optional[str] = None,
                      **kwargs: Any) -> Json:
@@ -173,9 +167,6 @@ class McpSessionManager:
 
     def session_list(self, **kwargs: Any) -> Json:
         return self.list_sessions()
-
-    def session_use(self, session: str) -> Json:
-        return self.use_session(session)
 
     def session_close(self, session: str) -> Json:
         return self.close_session(session)
@@ -201,4 +192,3 @@ class McpSessionManager:
                 except Exception:
                     pass
         self.sessions.clear()
-        self.default_session = None

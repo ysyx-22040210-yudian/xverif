@@ -1084,25 +1084,6 @@
       }
     },
     {
-      "name": "session.ensure",
-      "category": "session",
-      "status": "stable",
-      "requires": "any",
-      "handler_kind": "session",
-      "schemas": {
-        "request": "schemas/v1/actions/session.ensure.request.schema.json",
-        "response": "schemas/v1/actions/session.ensure.response.schema.json"
-      },
-      "examples": {
-        "request": [
-          "examples/requests/session.ensure.basic.json"
-        ],
-        "response": [
-          "examples/responses/session.ensure.basic.json"
-        ]
-      }
-    },
-    {
       "name": "session.gc",
       "category": "session",
       "status": "stable",

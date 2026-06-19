@@ -2,8 +2,7 @@
   "api_version": "xdebug.v1",
   "action": "detect_anomaly",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   },
   "args": {
     "signals": [

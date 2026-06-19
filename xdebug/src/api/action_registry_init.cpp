@@ -51,7 +51,6 @@ void register_builtin(ActionRegistry& r) {
 
 void register_session(ActionRegistry& r) {
     register_spec(r, stable_spec("session.open", "session", ResourceRequirement::Any, "session"));
-    register_spec(r, stable_spec("session.ensure", "session", ResourceRequirement::Any, "session"));
     register_spec(r, stable_spec("session.list", "session", ResourceRequirement::Session, "session"));
     register_spec(r, stable_spec("session.doctor", "session", ResourceRequirement::Session, "session"));
     register_spec(r, stable_spec("session.kill", "session", ResourceRequirement::Session, "session"));

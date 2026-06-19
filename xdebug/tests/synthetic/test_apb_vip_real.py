@@ -93,7 +93,7 @@ def test_apb_vip_real_wait_state_and_error_actions(
         cwd=fixture_dir,
         timeout_sec=1200,
         metadata={
-            "suite": "apb-vip-real",
+            "suite": "apb_vip_real",
             "fixture": str(fixture_dir),
             "seed": manifest["seed"],
         },
@@ -123,7 +123,7 @@ def test_apb_vip_real_wait_state_and_error_actions(
             "api_version": "xdebug.v1",
             "action": "session.open",
             "target": {"fsdb": str(fsdb)},
-            "args": {"name": "apb-vip-real"},
+            "args": {"name": "apb_vip_real"},
         },
         case_name="apb-vip-session-open",
         artifact_root=artifact_root,

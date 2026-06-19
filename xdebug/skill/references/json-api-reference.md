@@ -113,15 +113,14 @@ file transport directory:
 }
 ```
 
-`auto_open` TCP 模板：
+显式 session 查询模板：
 
 ```json
 {
   "api_version": "xdebug.v1",
   "action": "value.at",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true,
+    "session_id": "case_a",
     "transport": "tcp",
     "bind_host": "127.0.0.1",
     "port": 0
@@ -289,7 +288,7 @@ file transport directory:
 {
   "api_version": "xdebug.v1",
   "action": "value.at",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "signal": "top.u.valid",
     "time": "100ns",
@@ -304,7 +303,7 @@ file transport directory:
 {
   "api_version": "xdebug.v1",
   "action": "value.batch_at",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "time": "100ns",
     "signals": ["top.u.valid", "top.u.ready", "top.u.data"],
@@ -327,7 +326,7 @@ file transport directory:
 {
   "api_version": "xdebug.v1",
   "action": "rc.generate",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "config_path": "wave_view.json",
     "rc_path": "signal.rc",
@@ -359,7 +358,7 @@ file transport directory:
 {
   "api_version": "xdebug.v1",
   "action": "event.find",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "expr": "valid && !ready",
     "clk": "top.clk",
@@ -379,7 +378,7 @@ file transport directory:
 {
   "api_version": "xdebug.v1",
   "action": "event.export",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "name": "if0",
     "expr": "valid && !ready",
@@ -397,7 +396,7 @@ file transport directory:
 {
   "api_version": "xdebug.v1",
   "action": "verify.conditions",
-  "target": {"fsdb": "waves.fsdb", "auto_open": true},
+  "target": {"session_id": "case_a"},
   "args": {
     "time": "100ns",
     "conditions": [

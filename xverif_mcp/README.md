@@ -258,7 +258,6 @@ xdebug session 工具使用明确前缀：
 ```text
 xverif_debug_session_open
 xverif_debug_session_list
-xverif_debug_session_use
 xverif_debug_session_close
 ```
 
@@ -267,7 +266,6 @@ xcov session 工具使用 coverage 前缀：
 ```text
 xverif_cov_session_open
 xverif_cov_session_list
-xverif_cov_session_use
 xverif_cov_session_close
 xverif_cov_query
 ```

@@ -249,7 +249,6 @@ def test_mcp_direct_real_waveform_design_and_combined_sessions(
                 {
                     "name": "mcp_design",
                     "daidir": mcp_resources["daidir"],
-                    "make_default": False,
                 },
             )
         )
@@ -277,7 +276,6 @@ def test_mcp_direct_real_waveform_design_and_combined_sessions(
                     "name": "mcp_combined",
                     "daidir": mcp_resources["combined_daidir"],
                     "fsdb": mcp_resources["combined_fsdb"],
-                    "make_default": False,
                 },
             )
         )
@@ -630,7 +628,6 @@ def test_mcp_real_lsf_optional_waveform_smoke(
                 {
                     "name": "real_lsf_wave",
                     "fsdb": mcp_resources["fsdb"],
-                    "make_default": False,
                 },
             )
         )

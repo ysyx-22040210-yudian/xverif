@@ -32,7 +32,24 @@ int main() {
 
     assert(std::string(xdebug_core::CMD_PING) == "PING");
     assert(xdebug_core::registry_path(config).find(".xdebug/registry.json") != std::string::npos);
-    assert(xdebug_core::socket_path(config, "case_a").find(".xdebug/sessions/s_") != std::string::npos);
+    assert(xdebug_core::is_valid_session_name("A"));
+    assert(xdebug_core::is_valid_session_name("case_1"));
+    assert(xdebug_core::is_valid_session_name("Case_0123456789_abc"));
+    assert(xdebug_core::is_valid_session_name(std::string("A") + std::string(63, 'x')));
+    assert(!xdebug_core::is_valid_session_name(""));
+    assert(!xdebug_core::is_valid_session_name("1case"));
+    assert(!xdebug_core::is_valid_session_name("_case"));
+    assert(!xdebug_core::is_valid_session_name("case-a"));
+    assert(!xdebug_core::is_valid_session_name("case.a"));
+    assert(!xdebug_core::is_valid_session_name("case a"));
+    assert(!xdebug_core::is_valid_session_name(std::string("A") + std::string(64, 'x')));
+    const std::string dir_name = xdebug_core::session_dir_name("abcdefghijklmnopXYZ");
+    assert(dir_name.find("abcdefghijklmnop_") == 0);
+    assert(dir_name.size() == 16 + 1 + 16);
+    assert(dir_name == xdebug_core::session_dir_name("abcdefghijklmnopXYZ"));
+    assert(dir_name != xdebug_core::session_dir_name("abcdefghijklmnopXYA"));
+    assert(xdebug_core::session_dir_name("bad/name").find("bad_name_") == 0);
+    assert(xdebug_core::socket_path(config, "case_a").find(".xdebug/sessions/case_a_") != std::string::npos);
     const char* old_home = std::getenv("HOME");
     const std::string saved_home = old_home ? old_home : "";
     setenv("HOME",

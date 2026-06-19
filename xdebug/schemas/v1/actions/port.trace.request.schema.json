@@ -177,12 +177,6 @@
         },
         "include_all_signals": {
           "type": "boolean"
-        },
-        "auto_open": {
-          "type": "boolean"
-        },
-        "auto_ensure": {
-          "type": "boolean"
         }
       },
       "additionalProperties": true,

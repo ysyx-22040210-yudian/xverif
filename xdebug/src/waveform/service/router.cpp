@@ -60,8 +60,10 @@ int run_query(const Json& req, long long elapsed_ms) {
     std::string sid;
     SessionInfo info;
     std::string err;
-    if (!resolve_session(target, true, sid, info, err)) {
-        return print_error_and_return(req, action, "SESSION_NOT_FOUND", err, elapsed_ms);
+    if (!resolve_session(target, sid, info, err)) {
+        const char* code = err.find("target.session_id is required") != std::string::npos
+            ? "SESSION_REQUIRED" : "SESSION_NOT_FOUND";
+        return print_error_and_return(req, action, code, err, elapsed_ms);
     }
 
     // 3. Dispatch through WaveformActionRegistry (covers value.*, scope.list, list.*,

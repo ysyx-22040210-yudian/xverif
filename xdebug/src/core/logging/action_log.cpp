@@ -3,7 +3,6 @@
 #include "common/path_utils.h"
 
 #include <chrono>
-#include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
@@ -77,17 +76,6 @@ std::string event_id() {
 std::string xdebug_home() {
     const char* home = std::getenv("HOME");
     return std::string(home ? home : "/tmp") + "/.xdebug";
-}
-
-std::string safe_session_id(const std::string& session_id) {
-    if (session_id.empty()) return "adhoc";
-    std::string out;
-    out.reserve(session_id.size());
-    for (unsigned char c : session_id) {
-        if (std::isalnum(c) || c == '_' || c == '-' || c == '.') out.push_back(static_cast<char>(c));
-        else out.push_back('_');
-    }
-    return out.empty() ? "adhoc" : out;
 }
 
 bool heavy_key(const std::string& key) {
@@ -191,7 +179,8 @@ Json base_event(const std::string& layer,
 } // namespace
 
 std::string public_session_dir(const std::string& session_id) {
-    return xdebug_home() + "/sessions/" + safe_session_id(session_id);
+    return xdebug_home() + "/sessions/" +
+           session_dir_name(session_id.empty() ? "adhoc" : session_id);
 }
 
 std::string public_action_log_path(const std::string& session_id) {

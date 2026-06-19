@@ -30,16 +30,15 @@ json run_batch(const json& request) {
 json handle_session_action(const json& request, const std::string& action) {
     json response = base_response(request, action);
     SessionManager manager;
-    if (action == "session.open" || action == "session.ensure") {
+    if (action == "session.open") {
         std::vector<std::string> args = target_dbdir_args(request);
         if (args.empty()) return error_response(request, action, "INVALID_TARGET", "target.dbdir is required");
         SessionEnsureResult result = manager.ensure_session(args, request_session_name(request), request_transport_options(request));
         if (!result.ok) return error_response(request, action, ensure_error_code(result), result.message);
         response["session"] = session_to_json(result.info);
-        response["session"]["reused"] = result.reused;
         response["session"]["healthy"] = true;
         response["summary"] = {{"id", result.session_id}, {"session_id", result.session_id},
-                               {"status", result.status}, {"reused", result.reused}};
+                               {"status", result.status}};
         response["data"] = {{"session", response["session"]}};
         return response;
     }
@@ -95,7 +94,7 @@ json handle_session_action(const json& request, const std::string& action) {
 
 json schema_payload() {
     return {{"api_version", API_VERSION}, {"request", {{"api_version", API_VERSION}, {"request_id", "optional-id"},
-        {"action", "trace.driver"}, {"target", {{"dbdir", "/path/to/simv.daidir"}, {"session_id", nullptr}, {"auto_ensure", true}}},
+        {"action", "trace.driver"}, {"target", {{"session_id", "case_a"}}},
         {"args", {{"name", "case_a"}, {"transport", "uds"}, {"bind_host", "127.0.0.1"}, {"port", 0}}},
         {"limits", {{"max_results", 50}, {"max_depth", 1}, {"max_paths", 10}, {"timeout_ms", 5000}}},
         {"output", {{"verbosity", "compact"}, {"pretty", false}}},
@@ -105,12 +104,12 @@ json schema_payload() {
             {"session", json::object()}, {"summary", json::object()}, {"data", json::object()}, {"findings", json::array()},
             {"suggested_next_actions", json::array()}, {"warnings", json::array()}, {"error", nullptr}, {"meta", json::object()}}},
         {"transport", {{"default", "uds"}, {"env_default", "XDEBUG_TRANSPORT"}, {"values", json::array({"uds", "tcp", "file"})},
-            {"tcp", "session.open/session.ensure accept args.transport=tcp with optional bind_host/host/port. port 0 or omitted lets the server bind an automatically assigned port and write it to endpoint.json."},
-            {"file", "session.open/session.ensure accept args.transport=file. The daemon exchanges requests and responses through the session transport directory under ~/.xdebug."}}}};
+            {"tcp", "session.open accepts args.transport=tcp with optional bind_host/host/port. port 0 or omitted lets the server bind an automatically assigned port and write it to endpoint.json."},
+            {"file", "session.open accepts args.transport=file. The daemon exchanges requests and responses through the session transport directory under ~/.xdebug."}}}};
 }
 
 json actions_payload() {
-    json implemented = json::array({"session.open", "session.ensure", "session.list", "session.doctor", "session.kill", "session.close",
+    json implemented = json::array({"session.open", "session.list", "session.doctor", "session.kill", "session.close",
         "trace.driver", "trace.load", "trace.query", "signal.resolve", "signal.canonicalize",
         "trace.expand", "trace.graph", "trace.path", "trace.explain", "control.explain", "source.context",
         "expr.normalize", "procedural.assignment", "sequential.update", "fsm.explain", "counter.explain",

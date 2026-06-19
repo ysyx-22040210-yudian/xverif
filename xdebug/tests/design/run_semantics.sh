@@ -87,7 +87,10 @@ assert "counter.explain" in d["implemented"]
 
 printf '%s\n' '{"api_version":"xdebug.v1","action":"schema"}' | "$XDEBUG" --json - | python3 -c 'import json,sys; assert json.load(sys.stdin)["ok"]'
 
-query "{\"api_version\":\"xdebug.v1\",\"action\":\"trace.driver\",\"target\":{\"daidir\":\"$UART_DB\",\"auto_ensure\":true,\"name\":\"uart_ai\"},\"args\":{\"signal\":\"uart_16550.RXDin\"},\"limits\":{\"max_results\":10},\"output\":{\"verbosity\":\"full\"}}" \
+query "{\"api_version\":\"xdebug.v1\",\"action\":\"session.open\",\"target\":{\"daidir\":\"$UART_DB\"},\"args\":{\"name\":\"uart_ai\"}}" \
+  | check_json 'd["ok"] and d["summary"]["session_id"] == "uart_ai"'
+
+query '{"api_version":"xdebug.v1","action":"trace.driver","target":{"session_id":"uart_ai"},"args":{"signal":"uart_16550.RXDin"},"limits":{"max_results":10},"output":{"verbosity":"full"}}' \
   | check_json 'd["ok"] and d["data"]["assignment"]["rhs"]["op"] == "ternary" and len(d["data"]["dependency_edges"]) >= 2 and d["summary"]["confidence"] in ("high","medium")'
 
 query '{"api_version":"xdebug.v1","action":"trace.driver","target":{"session_id":"uart_ai"},"args":{"signal":"uart_16550.RXDin","include_statement_only":false},"limits":{"max_results":10},"output":{"verbosity":"full"}}' \
@@ -121,7 +124,10 @@ query '{"api_version":"xdebug.v1","action":"expr.normalize","args":{"expr":"vali
   | check_json 'd["ok"] and d["summary"]["source"] == "string_fallback" and d["summary"]["confidence"] == "low"'
 
 if [[ -d "$IFACE_DB" ]]; then
-query "{\"api_version\":\"xdebug.v1\",\"action\":\"instance.map\",\"target\":{\"daidir\":\"$IFACE_DB\",\"auto_ensure\":true,\"name\":\"iface_ai\"},\"args\":{\"path\":\"test_top.uut\"}}" \
+query "{\"api_version\":\"xdebug.v1\",\"action\":\"session.open\",\"target\":{\"daidir\":\"$IFACE_DB\"},\"args\":{\"name\":\"iface_ai\"}}" \
+  | check_json 'd["ok"] and d["summary"]["session_id"] == "iface_ai"'
+
+query '{"api_version":"xdebug.v1","action":"instance.map","target":{"session_id":"iface_ai"},"args":{"path":"test_top.uut"}}' \
   | check_json 'd["ok"] and d["summary"]["port_count"] >= 8 and d["data"]["port_count"] >= 8'
 
 query '{"api_version":"xdebug.v1","action":"interface.resolve","target":{"session_id":"iface_ai"},"args":{"path":"test_top.bus_if_inst"}}' \
@@ -131,7 +137,10 @@ query '{"api_version":"xdebug.v1","action":"port.trace","target":{"session_id":"
   | check_json 'd["ok"] and d["summary"]["port_count"] == 3 and d["summary"]["truncated"] is True'
 fi
 
-query "{\"api_version\":\"xdebug.v1\",\"action\":\"procedural.assignment\",\"target\":{\"daidir\":\"$P3_DB\",\"auto_ensure\":true,\"name\":\"p3_ai\"},\"args\":{\"signal\":\"p3_sem_top.u_mid.u_leaf.out\"},\"limits\":{\"max_results\":30}}" \
+query "{\"api_version\":\"xdebug.v1\",\"action\":\"session.open\",\"target\":{\"daidir\":\"$P3_DB\"},\"args\":{\"name\":\"p3_ai\"}}" \
+  | check_json 'd["ok"] and d["summary"]["session_id"] == "p3_ai"'
+
+query '{"api_version":"xdebug.v1","action":"procedural.assignment","target":{"session_id":"p3_ai"},"args":{"signal":"p3_sem_top.u_mid.u_leaf.out"},"limits":{"max_results":30}}' \
   | check_json 'd["ok"] and d["summary"]["assignment_count"] >= 1 and d["data"]["procedural_assignment"]["branch_assignments"]'
 
 query '{"api_version":"xdebug.v1","action":"trace.explain","target":{"session_id":"p3_ai"},"args":{"signal":"p3_sem_top.u_mid.u_leaf.out","direction":"driver"},"limits":{"max_depth":1,"max_nodes":20,"max_edges":80}}' \

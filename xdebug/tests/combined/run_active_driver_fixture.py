@@ -97,7 +97,7 @@ def open_session(name: str, daidir: str, fsdb: str) -> "tuple[str, str]":
         "api_version": "xdebug.v1",
         "action": "session.open",
         "target": {"daidir": daidir, "fsdb": fsdb},
-        "args": {"name": name, "reopen": True},
+        "args": {"name": name},
         "output": {"format": "json", "verbosity": "compact"},
     })
     _, out = run_xdebug(req)

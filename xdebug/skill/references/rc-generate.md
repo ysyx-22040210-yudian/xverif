@@ -19,7 +19,7 @@
   "action": "rc.generate",
   "target": {
     "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   },
   "args": {
     "config_path": "wave_view.json",

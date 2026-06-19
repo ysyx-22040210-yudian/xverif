@@ -84,7 +84,7 @@ def test_mcp_tools_list(monkeypatch: pytest.MonkeyPatch):
     assert "xverif_debug_list_actions" in names
     assert "xverif_debug_get_schema" in names
     assert "xverif_debug_session_list" in names
-    assert "xverif_debug_session_use" in names
+    assert "xverif_debug_session_use" not in names
     assert "xverif_debug_session_close" in names
     assert "xverif_session_open" not in names
     assert "xverif_session_list" not in names

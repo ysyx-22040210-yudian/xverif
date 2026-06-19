@@ -29,7 +29,6 @@ example 和 contract test 迁移使用。状态定义：
 | `actions` | builtin | stable | none | top-level catalog | regression |
 | `batch` | builtin | stable | none | top-level dispatcher | partial |
 | `session.open` | session | stable | any | dispatcher + backend session managers | regression |
-| `session.ensure` | session | stable | any | dispatcher + backend session managers | partial |
 | `session.list` | session | stable | session | unified engine session registry | partial |
 | `session.doctor` | session | stable | session | dispatcher + backend health | partial |
 | `session.kill` | session | stable | session | dispatcher + backend session managers | partial |

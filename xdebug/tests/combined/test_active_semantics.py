@@ -110,9 +110,9 @@ def test_active_trace_semantic_branches_and_gates(
             "api_version": "xdebug.v1",
             "action": "session.open",
             "target": {"daidir": str(daidir), "fsdb": str(fsdb)},
-            "args": {"name": "active-semantics", "reopen": True},
+            "args": {"name": "active_semantics"},
         },
-        case_name="active-semantics-session-open",
+        case_name="active_semantics_session_open",
         artifact_root=artifact_root,
     )
     session = open_response.get("session") or open_response["data"]["session"]

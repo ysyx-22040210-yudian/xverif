@@ -28,9 +28,15 @@
     "target": {
       "type": "object",
       "properties": {
-        "daidir": { "type": "string" },
-        "fsdb": { "type": "string" },
-        "session_id": { "type": "string" }
+        "daidir": {
+          "type": "string"
+        },
+        "fsdb": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        }
       }
     },
     "args": {
@@ -104,11 +110,18 @@
       "properties": {
         "format": {
           "type": "string",
-          "enum": ["json", "xout"]
+          "enum": [
+            "json",
+            "xout"
+          ]
         },
         "verbosity": {
           "type": "string",
-          "enum": ["compact", "full", "debug"]
+          "enum": [
+            "compact",
+            "full",
+            "debug"
+          ]
         }
       },
       "additionalProperties": false

@@ -1,5 +1,6 @@
 #include "session_registry.h"
 #include "../common/xdebug_waveform_paths.h"
+#include "common/path_utils.h"
 #include "json.hpp"
 #include "../protocol/protocol.h"
 
@@ -10,7 +11,6 @@
 #include <signal.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include <cctype>
 
 namespace xdebug_waveform {
 
@@ -205,11 +205,7 @@ bool SessionRegistry::exists(const std::string& session_id) {
 }
 
 bool SessionRegistry::is_valid_session_name(const std::string& name) {
-    if (name.empty() || name.size() > 256) return false;
-    for (unsigned char c : name) {
-        if (!std::isalnum(c) && c != '_' && c != '.' && c != '-') return false;
-    }
-    return true;
+    return xdebug_core::is_valid_session_name(name);
 }
 
 bool SessionRegistry::touch(const std::string& session_id, time_t last_active) {

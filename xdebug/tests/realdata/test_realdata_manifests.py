@@ -107,7 +107,7 @@ def test_realdata_manifest_invariants(
             "api_version": "xdebug.v1",
             "action": "session.open",
             "target": target,
-            "args": {"name": manifest.name, "reopen": True},
+            "args": {"name": manifest.name},
             "output": {"verbosity": "compact"},
         },
         manifest=manifest,

@@ -2,8 +2,7 @@
   "api_version": "xdebug.v1",
   "action": "value.at",
   "target": {
-    "fsdb": "waves.fsdb",
-    "auto_open": true
+    "session_id": "case_a"
   },
   "args": {
     "signal": "top.u.ready",
