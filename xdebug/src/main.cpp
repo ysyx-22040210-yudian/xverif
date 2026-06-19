@@ -10,6 +10,7 @@
 #include <deque>
 #include <fstream>
 #include <cstdlib>
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -70,6 +71,35 @@ std::string parent_dir(const std::string& path) {
 bool file_exists(const std::string& path) {
     struct stat st;
     return stat(path.c_str(), &st) == 0;
+}
+
+bool ensure_dir(const std::string& path) {
+    if (path.empty()) return false;
+    if (mkdir(path.c_str(), 0700) == 0) return true;
+    struct stat st;
+    return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+bool ensure_dir_recursive(const std::string& path) {
+    if (path.empty()) return false;
+    std::string cur;
+    size_t i = 0;
+    if (path[0] == '/') {
+        cur = "/";
+        i = 1;
+    }
+    while (i <= path.size()) {
+        size_t slash = path.find('/', i);
+        std::string part = path.substr(i, slash == std::string::npos ? std::string::npos : slash - i);
+        if (!part.empty()) {
+            if (cur.size() > 1) cur += "/";
+            cur += part;
+            if (!ensure_dir(cur)) return false;
+        }
+        if (slash == std::string::npos) break;
+        i = slash + 1;
+    }
+    return true;
 }
 
 long long file_size(const std::string& path) {
@@ -169,6 +199,60 @@ int run_log_bundle(const std::string& session_id, const std::string& out_path) {
     return 0;
 }
 
+bool write_redacted_log_copy(const std::string& source, const std::string& dest) {
+    std::ifstream in(source.c_str());
+    if (!in) return false;
+    if (!ensure_dir_recursive(parent_dir(dest))) return false;
+    std::ofstream out(dest.c_str(), std::ios::trunc);
+    if (!out) return false;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty()) {
+            out << "\n";
+            continue;
+        }
+        try {
+            xdebug_core::Json j = xdebug_core::Json::parse(line);
+            out << xdebug_core::sanitize_for_log(j).dump() << "\n";
+        } catch (...) {
+            out << line << "\n";
+        }
+    }
+    return true;
+}
+
+int run_redacted_log_bundle(const std::string& session_id, const std::string& out_path) {
+    std::string old_mode = std::getenv("XDEBUG_LOG_PATH_MODE") ? std::getenv("XDEBUG_LOG_PATH_MODE") : "";
+    setenv("XDEBUG_LOG_PATH_MODE", "hash", 1);
+    std::string tmp = "/tmp/xdebug-log-bundle-" + std::to_string(getpid());
+    ensure_dir_recursive(tmp);
+    xdebug::Json paths = log_paths_for_session(session_id);
+    for (const char* name : {"public_actions", "public_stdio", "engine_lifecycle", "engine_transport",
+                             "engine_crash_marker", "engine_log_health", "public_log_health"}) {
+        std::string source = paths[name].get<std::string>();
+        if (!file_exists(source)) continue;
+        write_redacted_log_copy(source, tmp + "/" + std::string(name) + ".ndjson");
+    }
+    if (!old_mode.empty()) setenv("XDEBUG_LOG_PATH_MODE", old_mode.c_str(), 1);
+    else unsetenv("XDEBUG_LOG_PATH_MODE");
+
+    xdebug::ProcessRequest req;
+    req.executable = "/bin/tar";
+    req.argv.push_back("-czf");
+    req.argv.push_back(out_path);
+    req.argv.push_back("-C");
+    req.argv.push_back(tmp);
+    req.argv.push_back(".");
+    req.timeout_ms = 30000;
+    xdebug::ProcessResult result = xdebug::ProcessRunner().run(req);
+    if (result.exit_code != 0) {
+        std::cerr << result.stderr_text;
+        return result.exit_code == 0 ? 1 : result.exit_code;
+    }
+    std::cout << out_path << "\n";
+    return 0;
+}
+
 int run_log_command(int argc, char** argv, OutputFormat format) {
     if (argc < 3) {
         std::cerr << "usage: xdebug log tail|doctor|bundle --session <id> [--lines N] [--out file]\n";
@@ -178,11 +262,13 @@ int run_log_command(int argc, char** argv, OutputFormat format) {
     std::string session_id;
     std::string out_path;
     int lines = 40;
+    bool redact = false;
     for (int i = 3; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--session" && i + 1 < argc) session_id = argv[++i];
         else if (arg == "--out" && i + 1 < argc) out_path = argv[++i];
         else if (arg == "--lines" && i + 1 < argc) lines = std::atoi(argv[++i]);
+        else if (arg == "--redact") redact = true;
         else if (arg == "--json") format = OutputFormat::Json;
         else {
             std::cerr << "unknown log argument: " << arg << "\n";
@@ -203,6 +289,7 @@ int run_log_command(int argc, char** argv, OutputFormat format) {
             std::cerr << "missing --out\n";
             return 1;
         }
+        if (redact) return run_redacted_log_bundle(session_id, out_path);
         return run_log_bundle(session_id, out_path);
     }
     std::cerr << "unknown log subcommand: " << sub << "\n";

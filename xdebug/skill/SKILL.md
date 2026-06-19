@@ -344,7 +344,7 @@ config 对象需要哪些字段只能从实际代码中推测。APB: `pclk, pres
 - `UNKNOWN_ACTION`：查 `actions`；不要回退旧 CLI；combined 生效驱动是 `trace.active_driver`。
 - `INTERNAL_ENGINE_FAILED`：检查资源路径、权限、Verdi/NPI 环境、daemon 工作目录和日志。
 - MCP/LSF ready timeout、stdout pollution、job 启动或 cleanup 问题：看 `~/.xverif/mcp/sessions/<alias>/session.ndjson`、`stdio.ndjson`、`lsf.ndjson`。
-- 快速收集日志：`xdebug log doctor --session <id> --json`、`xdebug log tail --session <id>`、`xdebug log bundle --session <id> --out debug_bundle.tgz`。
+- 快速收集日志：`xdebug log doctor --session <id> --json`、`xdebug log tail --session <id>`、`xdebug log bundle --session <id> --out debug_bundle.tgz`；外发给他人或 AI 前用 `--redact`。
 
 ## 最终回答证据链格式
 

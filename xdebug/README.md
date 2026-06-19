@@ -849,10 +849,12 @@ xdebug 默认静默记录结构化日志。日志只写文件，不打印到 std
 xdebug log doctor --session <id> --json
 xdebug log tail --session <id> --lines 40
 xdebug log bundle --session <id> --out debug_bundle.tgz
+xdebug log bundle --session <id> --out debug_bundle.redacted.tgz --redact
 ```
 
 可选环境变量：
 
+- `XDEBUG_LOG_PATH_MODE=full|basename|hash` / `XDEBUG_LOG_REDACT=1`：控制日志路径字段脱敏。
 - `XDEBUG_LOG_MAX_BYTES` / `XDEBUG_LOG_MAX_FILES`：启用单文件大小滚动。
 - `XVERIF_MCP_LOG_DIR`：覆盖 MCP structured log 根目录，默认 `~/.xverif/mcp`。
 

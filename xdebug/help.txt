@@ -285,6 +285,7 @@ Logs and troubleshooting
       xdebug log doctor --session <id> --json
       xdebug log tail --session <id> --lines 40
       xdebug log bundle --session <id> --out debug_bundle.tgz
+      xdebug log bundle --session <id> --out debug_bundle.redacted.tgz --redact
 
   Troubleshooting order:
       1. Check public actions.ndjson for action, routing, elapsed_ms and error.
