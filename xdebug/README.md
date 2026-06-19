@@ -843,6 +843,8 @@ xdebug 默认静默记录结构化日志。日志只写文件，不打印到 std
 
 每行都是一个 JSON event，常见字段包括 `ts`、`event_id`、`trace_id`、`request_id`、`layer`、`component`、`session_id`、`action`、`phase`、`elapsed_ms`、`ok`、`context`。成功 action 默认只记录摘要、路由、耗时和 `summary/meta`；失败 action 会额外记录裁剪后的 request/response。超大 compact payload 会写入 `logs/*_payload/` sidecar，主日志保留路径和 hash。
 
+engine 启动时会在 `lifecycle.ndjson` 写入 `env.snapshot`，记录 hostname、cwd、argv0、构建时间、EDA/LSF 环境摘要，以及 `LD_LIBRARY_PATH` hash；路径字段受 `XDEBUG_LOG_PATH_MODE` / `XDEBUG_LOG_REDACT` 控制。
+
 辅助命令：
 
 ```bash

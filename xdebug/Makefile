@@ -195,7 +195,7 @@ log-test: $(CORE_OBJS) $(EXE) internal-engines
 	$(BUILD)/tests/test_action_log
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/session/test_stdio_loop_lifecycle.py
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/session/test_session_lifecycle.py -k "engine_crash_marker_is_written_by_signal_handler"
-	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/session/test_session_lifecycle.py -k "uds_direct_query_times_out_without_spawn_fallback"
+	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/session/test_session_lifecycle.py -k "uds_direct_query_times_out_without_spawn_fallback or uds_connect_failure_is_logged or uds_invalid_json_response_is_logged"
 	PYTHONPATH=$(CURDIR)/../xverif_mcp/src:$(CURDIR)/.. \
 		$(PYTHON) -m pytest -q $(CURDIR)/../xverif_mcp/tests/test_stdio_loop_session_lifecycle.py
 

@@ -443,6 +443,124 @@ def test_session_uds_direct_query_times_out_without_spawn_fallback(
         _kill_all(cli_runner)
 
 
+def test_session_uds_connect_failure_is_logged(
+    resource_targets: dict,
+    cli_runner: CliRunner,
+    isolated_home: Path,
+    tmp_path: Path,
+) -> None:
+    socket_path = tmp_path / "missing-engine.sock"
+    _write_registry_session(
+        isolated_home,
+        {
+            "session_id": "dead_uds",
+            "transport": "uds",
+            "fsdb_file": resource_targets["waveform"]["fsdb"],
+            "socket_path": str(socket_path),
+            "server_pid": os.getpid(),
+        },
+    )
+
+    result = cli_runner.run(
+        {
+            **_request(
+                "value.at",
+                target={"session_id": "dead_uds"},
+                args={
+                    "signal": "ai_complex_top.sig_a",
+                    "time": "75ns",
+                    "format": "hex",
+                },
+            ),
+            "limits": {"timeout_ms": 100},
+        },
+        timeout_sec=5.0,
+    )
+
+    assert not result.ok
+    assert result.response["error"]["code"] == "SESSION_TRANSPORT_FAILED"
+    events = _engine_transport_events(isolated_home, "dead_uds")
+    failed = next(event for event in events if event["phase"] == "socket.connect.failed")
+    assert failed["session_id"] == "dead_uds"
+    assert failed["action"] == "value.at"
+    assert failed["context"]["socket_path"] == str(socket_path)
+    assert failed["context"]["timeout_ms"] == 100
+    assert failed["context"]["errno"] != 0
+
+
+def test_session_uds_invalid_json_response_is_logged(
+    resource_targets: dict,
+    cli_runner: CliRunner,
+    isolated_home: Path,
+    tmp_path: Path,
+) -> None:
+    socket_path = tmp_path / "bad-json-engine.sock"
+    ready = threading.Event()
+    server_error: list[BaseException] = []
+
+    def serve_invalid_json() -> None:
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
+                server.bind(str(socket_path))
+                server.listen(1)
+                server.settimeout(5.0)
+                ready.set()
+                conn, _ = server.accept()
+                with conn:
+                    conn.recv(65536)
+                    conn.sendall(b"{not-json}\n")
+        except BaseException as exc:
+            server_error.append(exc)
+            ready.set()
+
+    thread = threading.Thread(target=serve_invalid_json, daemon=True)
+    thread.start()
+    assert ready.wait(timeout=2.0)
+    assert not server_error
+
+    _write_registry_session(
+        isolated_home,
+        {
+            "session_id": "bad_json",
+            "transport": "uds",
+            "fsdb_file": resource_targets["waveform"]["fsdb"],
+            "socket_path": str(socket_path),
+            "server_pid": os.getpid(),
+        },
+    )
+
+    try:
+        result = cli_runner.run(
+            {
+                **_request(
+                    "value.at",
+                    target={"session_id": "bad_json"},
+                    args={
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                        "format": "hex",
+                    },
+                ),
+                "limits": {"timeout_ms": 100},
+            },
+            timeout_sec=5.0,
+        )
+
+        assert not result.ok
+        assert result.response["error"]["code"] == "SESSION_TRANSPORT_FAILED"
+        events = _engine_transport_events(isolated_home, "bad_json")
+        phases = [event["phase"] for event in events]
+        assert "socket.connect.ok" in phases
+        parsed = next(event for event in events if event["phase"] == "socket.response_parse_failed")
+        assert parsed["session_id"] == "bad_json"
+        assert parsed["action"] == "value.at"
+        assert parsed["context"]["socket_path"] == str(socket_path)
+        assert parsed["context"]["response_bytes"] > 0
+    finally:
+        thread.join(timeout=2.0)
+        _kill_all(cli_runner)
+
+
 def test_engine_crash_marker_is_written_by_signal_handler(
     repo_root: Path,
     xdebug_root: Path,
@@ -457,6 +575,11 @@ def test_engine_crash_marker_is_written_by_signal_handler(
             "XDEBUG_ENGINE_TEST_CRASH_MARKER": "1",
             "XDEBUG_ENGINE_TEST_CRASH_ACTION": "value.at",
             "XDEBUG_ENGINE_TEST_CRASH_REQUEST_ID": "crash-req-1",
+            "VERDI_HOME": "/eda/verdi",
+            "VCS_HOME": "/eda/vcs",
+            "LSB_JOBID": "987654",
+            "LSB_QUEUE": "normal",
+            "LD_LIBRARY_PATH": "/eda/lib:/proj/lib",
         }
     )
 
@@ -478,3 +601,14 @@ def test_engine_crash_marker_is_written_by_signal_handler(
     assert "current_action=value.at" in text
     assert "request_id=crash-req-1" in text
     assert f"sig={signal.SIGABRT}" in text
+
+    lifecycle = _read_ndjson(_single_engine_log(isolated_home, "crashmark", "lifecycle"))
+    snapshot = next(event for event in lifecycle if event["phase"] == "env.snapshot")
+    context = snapshot["context"]
+    assert context["argv_count"] == 2
+    assert context["cwd_path"] == str(repo_root)
+    assert context["eda"]["verdi_home_path"] == "/eda/verdi"
+    assert context["eda"]["vcs_home_path"] == "/eda/vcs"
+    assert context["lsf"] == {"job_id": "987654", "queue": "normal"}
+    assert context["paths"]["ld_library_path_hash"]
+    assert "/eda/lib" not in json.dumps(context)

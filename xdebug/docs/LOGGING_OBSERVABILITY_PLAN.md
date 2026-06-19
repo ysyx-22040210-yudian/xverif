@@ -243,6 +243,12 @@ signal_exit sig=11 pid=12345 session_id=case0 current_action=value.at request_id
 
 默认值应保守，不影响现有小规模使用。
 
+### 6. environment snapshot
+
+engine 启动早期写入 `lifecycle.ndjson` 的 `env.snapshot`，至少包含 hostname、cwd、
+argv0、构建时间、EDA/LSF 环境摘要和 `LD_LIBRARY_PATH` hash。路径类字段必须经过已有
+redaction 机制，长环境变量只能记录 hash 或摘要。
+
 ## 阶段三：MCP / LSF 结构化日志
 
 新增 Python MCP logging 模块，默认路径：
@@ -425,4 +431,3 @@ make -C xdebug log-test
 4. 阶段二实现 atomic append、health、sidecar、rotation。
 5. 阶段三实现 MCP / LSF structured log 和 log bundle/tail/doctor。
 6. 最后同步 README、skill、MCP README，并更新测试状态文档。
-

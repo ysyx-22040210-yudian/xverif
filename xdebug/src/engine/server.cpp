@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <limits.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -159,6 +160,50 @@ static void update_current_request_marker(const Json& request) {
     std::string request_id = request.value("request_id", request.value("id", std::string()));
     snprintf(g_current_action, sizeof(g_current_action), "%s", action.c_str());
     snprintf(g_current_request_id, sizeof(g_current_request_id), "%s", request_id.c_str());
+}
+
+static std::string getenv_string(const char* name) {
+    const char* value = getenv(name);
+    return value ? std::string(value) : std::string();
+}
+
+static std::string hash_string_hex(const std::string& value) {
+    unsigned long long h = 1469598103934665603ULL;
+    for (unsigned char c : value) {
+        h ^= c;
+        h *= 1099511628211ULL;
+    }
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%016llx", h);
+    return std::string(buf);
+}
+
+static void log_environment_snapshot(int argc, char** argv) {
+    char cwd[PATH_MAX] = {};
+    char host[256] = {};
+    Json context;
+    if (gethostname(host, sizeof(host)) == 0) context["hostname"] = host;
+    if (getcwd(cwd, sizeof(cwd))) context["cwd_path"] = cwd;
+    context["argv_count"] = argc;
+    if (argc > 0 && argv && argv[0]) context["argv0_path"] = argv[0];
+    context["build"] = {{"date", __DATE__}, {"time", __TIME__}};
+    Json eda;
+    std::string verdi_home = getenv_string("VERDI_HOME");
+    std::string vcs_home = getenv_string("VCS_HOME");
+    if (!verdi_home.empty()) eda["verdi_home_path"] = verdi_home;
+    if (!vcs_home.empty()) eda["vcs_home_path"] = vcs_home;
+    if (!eda.empty()) context["eda"] = eda;
+    Json lsf;
+    std::string lsb_jobid = getenv_string("LSB_JOBID");
+    std::string lsb_queue = getenv_string("LSB_QUEUE");
+    if (!lsb_jobid.empty()) lsf["job_id"] = lsb_jobid;
+    if (!lsb_queue.empty()) lsf["queue"] = lsb_queue;
+    if (!lsf.empty()) context["lsf"] = lsf;
+    std::string ld_library_path = getenv_string("LD_LIBRARY_PATH");
+    if (!ld_library_path.empty()) {
+        context["paths"] = {{"ld_library_path_hash", hash_string_hex(ld_library_path)}};
+    }
+    xdebug_core::log_lifecycle_event("engine", g_session_id, "env.snapshot", true, context);
 }
 
 static void maybe_run_crash_marker_test_hook() {
@@ -432,6 +477,7 @@ int server_main(int argc, char** argv) {
     server_debug_log("server_main: parsed session_id=%s argc=%d", g_session_id.c_str(), argc);
     xdebug_core::log_lifecycle_event("engine", g_session_id, "server.start", true,
                                      {{"argc", argc}});
+    log_environment_snapshot(argc, argv);
     open_crash_marker();
     maybe_run_crash_marker_test_hook();
 
