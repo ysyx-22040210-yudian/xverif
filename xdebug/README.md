@@ -257,6 +257,36 @@ PYTHON=python3 tools/xverif-lsf-doctor
 
 同名 `session.open` 默认会返回 `SESSION_ID_EXISTS`，避免误连到资源不同的旧 session。需要复用时显式传 `"reuse": true`：资源匹配且健康则返回 `reused:true`，旧 session 已失效则清理后重建。需要强制覆盖时传 `"reopen": true`。
 
+## Test Entry Points
+
+xdebug 测试入口以 Makefile 聚合 target 和 pytest marker 为主，Python 解释器可通过
+`PYTHON=/path/to/python` 覆盖。
+
+常用入口：
+
+```bash
+make -C xdebug test-fast
+make -C xdebug test-synthetic
+make -C xdebug test-vip
+make -C xdebug test-session
+make -C xdebug test-mcp-direct
+make -C xdebug test-mcp-fake-lsf
+make -C xdebug test-realdata-smoke
+make -C xdebug test-regression
+make -C xdebug test-nightly
+```
+
+`test-regression` 不包含真实 LSF。`test-nightly` 默认也不会强制真实 LSF；只有显式
+设置 `XDEBUG_ENABLE_REAL_LSF=1` 时才追加 real LSF smoke：
+
+```bash
+XDEBUG_ENABLE_REAL_LSF=1 make -C xdebug test-mcp-real-lsf
+XDEBUG_ENABLE_REAL_LSF=1 make -C xdebug test-nightly
+```
+
+真实项目 FSDB/daidir 通过 `xdebug/tests/realdata/manifests/*.yaml` 描述，Python
+测试代码不硬编码项目路径。realdata 使用 invariant 检查，不做完整 JSON golden。
+
 ## Core Concepts
 
 ### 资源与 fallback

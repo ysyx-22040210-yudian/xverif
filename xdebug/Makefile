@@ -24,6 +24,9 @@ BUILD    = build
 LIBEXEC  = libexec
 EXE      = xdebug
 PYTHON  ?= python3
+AXI_REFERENCE_ROOT ?= /home/yian/axi_test/test
+SVT_VIP_INCDIR ?= /home/yian/axi_test/test/include/sverilog
+SVT_VIP_SRCDIR ?= /home/yian/axi_test/test/src/sverilog/vcs
 
 CORE_SRCS = src/core/common/tool_config.cpp \
             src/core/common/path_utils.cpp \
@@ -139,7 +142,7 @@ ENGINE_OBJS = $(ENGINE_SRCS:%.cpp=$(BUILD)/%.o)
 DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
 WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
 
-.PHONY: all internal-engines unit-test test-infra pytest-contract pytest-synthetic-existing pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast mcp-test schema-test contract-test combined-test clean
+.PHONY: all internal-engines unit-test test-infra pytest-contract pytest-synthetic-existing pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast test-contract test-synthetic test-vip test-active-trace test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke test-regression test-nightly test-mcp-real-lsf mcp-test schema-test contract-test combined-test clean
 
 all: $(EXE) internal-engines
 
@@ -189,10 +192,12 @@ pytest-synthetic-existing: all
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/synthetic/test_existing_regressions.py
 
 pytest-axi-vip: all
-	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/synthetic/test_axi_vip_real.py
+	AXI_REFERENCE_ROOT=$(AXI_REFERENCE_ROOT) SVT_VIP_INCDIR=$(SVT_VIP_INCDIR) SVT_VIP_SRCDIR=$(SVT_VIP_SRCDIR) \
+		$(PYTHON) -m pytest -c tests/pytest.ini -q tests/synthetic/test_axi_vip_real.py
 
 pytest-apb-vip: all
-	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/synthetic/test_apb_vip_real.py
+	SVT_VIP_INCDIR=$(SVT_VIP_INCDIR) SVT_VIP_SRCDIR=$(SVT_VIP_SRCDIR) \
+		$(PYTHON) -m pytest -c tests/pytest.ini -q tests/synthetic/test_apb_vip_real.py
 
 pytest-active-semantics: all
 	$(PYTHON) -m pytest -c tests/pytest.ini -q tests/combined/test_active_semantics.py
@@ -208,6 +213,39 @@ pytest-mcp: all
 		$(PYTHON) -m pytest -c tests/pytest.ini -q tests/mcp
 
 test-fast: test-infra schema-test unit-test contract-test pytest-contract
+
+test-contract: test-fast
+
+test-synthetic: pytest-synthetic-existing pytest-active-semantics
+
+test-vip: pytest-axi-vip pytest-apb-vip
+
+test-active-trace: pytest-active-semantics
+
+test-session: pytest-session
+
+test-mcp-direct: all
+	PYTHONPATH=$(CURDIR)/../xverif_mcp/src:$(CURDIR)/.. \
+		$(PYTHON) -m pytest -c tests/pytest.ini -q tests/mcp -m "mcp_direct"
+
+test-mcp-fake-lsf: all
+	PYTHONPATH=$(CURDIR)/../xverif_mcp/src:$(CURDIR)/.. \
+		$(PYTHON) -m pytest -c tests/pytest.ini -q tests/mcp -m "mcp_fake_lsf"
+
+test-realdata-smoke: pytest-realdata
+
+test-regression: test-fast test-synthetic test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke
+
+test-nightly: test-regression test-vip
+	@if [ "$$XDEBUG_ENABLE_REAL_LSF" = "1" ]; then \
+		$(MAKE) test-mcp-real-lsf PYTHON=$(PYTHON); \
+	else \
+		echo "skip optional real LSF tests: set XDEBUG_ENABLE_REAL_LSF=1 and run make test-mcp-real-lsf"; \
+	fi
+
+test-mcp-real-lsf: all
+	PYTHONPATH=$(CURDIR)/../xverif_mcp/src:$(CURDIR)/.. XDEBUG_ENABLE_REAL_LSF=1 \
+		$(PYTHON) -m pytest -c tests/pytest.ini -q tests/mcp -m "mcp_real_lsf"
 
 schema-test:
 	$(PYTHON) tools/validate_schema.py schemas/v1

@@ -512,3 +512,72 @@ def test_mcp_fake_lsf_child_crash_evicts_session(
     finally:
         _close_loaded_server()
         _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_real_lsf
+@pytest.mark.optional_lsf
+@pytest.mark.nightly
+@pytest.mark.slow
+def test_mcp_real_lsf_optional_waveform_smoke(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+) -> None:
+    if os.environ.get("XDEBUG_ENABLE_REAL_LSF") != "1":
+        pytest.skip("real LSF is optional; set XDEBUG_ENABLE_REAL_LSF=1")
+
+    server = _load_server(
+        monkeypatch,
+        isolated_home,
+        backend="lsf",
+        extra_env={
+            "XDEBUG_ENABLE_REAL_LSF": "1",
+        },
+    )
+    try:
+        opened = _json(
+            _call(
+                server,
+                "xverif_debug_session_open",
+                {
+                    "name": "real_lsf_wave",
+                    "fsdb": mcp_resources["fsdb"],
+                    "make_default": False,
+                },
+            )
+        )
+        assert opened["ok"] is True, opened
+        assert opened["session"]["mode"] == "lsf"
+        assert opened["session"].get("job_id") or opened["session"].get("job_name")
+
+        queried = _json(
+            _call(
+                server,
+                "xverif_debug_query",
+                {
+                    "session": "real_lsf_wave",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert queried["ok"] is True
+        assert queried["data"]["value"]["known"] is True
+
+        closed = _json(
+            _call(
+                server,
+                "xverif_debug_session_close",
+                {"name": "real_lsf_wave"},
+            )
+        )
+        assert closed["ok"] is True
+        assert closed["closed"]["state"] in {"closed", "dead"}
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
