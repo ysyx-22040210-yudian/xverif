@@ -35,6 +35,22 @@ def configure_environment(
     _FAKE_LSF_ENV = fake_lsf_env
 
 
+def configure_mcp_environment() -> None:
+    configure_environment()
+
+
+def configure_loop_wrapper_environment() -> None:
+    configure_environment(
+        backend_env="XVERIF_LOOP_BACKEND",
+        timeout_env="XVERIF_LOOP_TIMEOUT_SEC",
+        startup_timeout_env="XVERIF_LOOP_STARTUP_TIMEOUT_SEC",
+        request_timeout_env="XVERIF_LOOP_REQUEST_TIMEOUT_SEC",
+        close_timeout_env="XVERIF_LOOP_CLOSE_TIMEOUT_SEC",
+        bkill_timeout_env="XVERIF_LOOP_BKILL_TIMEOUT_SEC",
+        fake_lsf_env="XVERIF_LOOP_FAKE_LSF",
+    )
+
+
 def repo_root() -> str:
     return os.environ.get("XVERIF_HOME") or os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../../..")

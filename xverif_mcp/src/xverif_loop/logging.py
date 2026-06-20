@@ -33,6 +33,24 @@ def configure_logging(
     _DEFAULT_SUBDIR = default_subdir
 
 
+def configure_mcp_logging() -> None:
+    configure_logging(
+        layer="mcp",
+        component="xverif-mcp",
+        log_env_var="XVERIF_MCP_LOG_DIR",
+        default_subdir="mcp",
+    )
+
+
+def configure_loop_wrapper_logging() -> None:
+    configure_logging(
+        layer="loop-wrapper",
+        component="xverif-loop-wrapper",
+        log_env_var="XVERIF_LOOP_LOG_DIR",
+        default_subdir="loop-wrapper",
+    )
+
+
 def _safe_name(s: Optional[str], max_len: int = 64) -> str:
     import re
     x = re.sub(r"[^A-Za-z0-9_]", "_", s or "").strip("_")
