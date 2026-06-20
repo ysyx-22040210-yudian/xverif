@@ -88,8 +88,9 @@ const char* fallback_help_text() {
         "Docs\n"
         "----\n"
         "  xdebug/README.md\n"
-        "  xdebug/skill/SKILL.md\n"
-        "  xdebug/skill/references/json-api-reference.md\n";
+        "  skill/SKILL.md\n"
+        "  skill/references/xdebug/overview.md\n"
+        "  skill/references/xdebug/json-api.md\n";
 }
 
 } // namespace

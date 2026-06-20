@@ -310,7 +310,8 @@ Docs
       xdebug/README.md
 
   Agent skill:
-      xdebug/skill/SKILL.md
+      skill/SKILL.md
+      skill/references/xdebug/overview.md
 
   JSON API reference:
-      xdebug/skill/references/json-api-reference.md
+      skill/references/xdebug/json-api.md

@@ -1,9 +1,0 @@
-interface:
-  display_name: xcov
-  short_description: 查询 VCS/Verdi coverage database，输出 compact coverage evidence。
-  default_prompt: >
-    Use xcov to inspect VCS/Verdi coverage databases, find code or functional
-    coverage holes, map source lines to coverage items, and query coverage
-    summaries through xcov.v1 or xverif_cov_* MCP tools.
-policy:
-  allow_implicit_invocation: true

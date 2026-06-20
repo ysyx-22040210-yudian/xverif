@@ -1,6 +1,0 @@
-interface:
-  display_name: "xsva"
-  short_description: "将 SVA 编译为 IR，并生成确定性解释与回归验证。"
-  default_prompt: "Use $xsva to parse SVA into Surface/Sequence/Timeline IR, inspect temporal semantics, and validate golden/CLI behavior."
-policy:
-  allow_implicit_invocation: true
