@@ -85,6 +85,15 @@ def _send_raw(socket_path: str, payload: str) -> dict:
         return json.loads(reader.readline())
 
 
+def _read_ndjson(path: Path) -> list[dict]:
+    assert path.exists(), path
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _session_log(root: Path, alias: str, name: str) -> list[dict]:
+    return _read_ndjson(root / "sessions" / alias / f"{name}.ndjson")
+
+
 def test_loop_wrapper_ping(tmp_path, monkeypatch):
     monkeypatch.setenv("XVERIF_LOOP_LOG_DIR", str(tmp_path / "logs"))
     debug = _make_fake_loop(tmp_path / "fake_xdebug", protocol="xdebug-stdio-loop", api_version="xdebug")
@@ -196,3 +205,102 @@ def test_loop_wrapper_query_timeout_returns_error(tmp_path, monkeypatch):
     finally:
         server.shutdown()
         thread.join(timeout=5)
+
+
+def test_loop_wrapper_writes_direct_structured_logs(tmp_path, monkeypatch):
+    log_root = tmp_path / "logs"
+    monkeypatch.setenv("XVERIF_LOOP_LOG_DIR", str(log_root))
+    debug = _make_fake_loop(tmp_path / "fake_xdebug", protocol="xdebug-stdio-loop", api_version="xdebug")
+    cov = _make_fake_loop(tmp_path / "fake_xcov", protocol="xcov-stdio-loop", api_version="xcov")
+    service = LoopWrapperService(mode="direct", xdebug_bin=debug, xcov_bin=cov)
+    server, thread, sock = _start_server(tmp_path, service)
+    try:
+        responses = send_requests(sock, [
+            {"id": "open", "method": "debug.session.open", "params": {"name": "logcase", "fsdb": "wave.fsdb"}},
+            {"id": "query", "method": "debug.query", "params": {
+                "session": "logcase", "action": "value.at", "args": {"signal": "clk"}, "output_format": "json"}},
+            {"id": "close", "method": "debug.session.close", "params": {"name": "logcase"}},
+        ])
+        assert all(r["ok"] for r in responses)
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+    uds_events = _read_ndjson(log_root / "logs" / "uds.ndjson")
+    session_events = _session_log(log_root, "logcase", "session")
+    stdio_events = _session_log(log_root, "logcase", "stdio")
+    assert {e["component"] for e in uds_events} == {"xverif-loop-wrapper"}
+    assert {e["layer"] for e in uds_events} == {"loop-wrapper"}
+    assert "uds.listen.ready" in [e["phase"] for e in uds_events]
+    assert "uds.request.begin" in [e["phase"] for e in uds_events]
+    assert "uds.request.end" in [e["phase"] for e in uds_events]
+    assert "manager.open.begin" in [e["phase"] for e in session_events]
+    assert "query.begin" in [e["phase"] for e in session_events]
+    assert "manager.close.end" in [e["phase"] for e in session_events]
+    assert "process.start" in [e["phase"] for e in stdio_events]
+    assert "ready.ok" in [e["phase"] for e in stdio_events]
+    assert "request.end" in [e["phase"] for e in stdio_events]
+
+
+def test_loop_wrapper_logs_invalid_json_and_redacts_paths(tmp_path, monkeypatch):
+    log_root = tmp_path / "logs"
+    private_dir = tmp_path / "very" / "private"
+    private_dir.mkdir(parents=True)
+    private_fsdb = private_dir / "wave.fsdb"
+    monkeypatch.setenv("XVERIF_LOOP_LOG_DIR", str(log_root))
+    monkeypatch.setenv("XDEBUG_LOG_PATH_MODE", "basename")
+    debug = _make_fake_loop(tmp_path / "fake_xdebug", protocol="xdebug-stdio-loop", api_version="xdebug")
+    cov = _make_fake_loop(tmp_path / "fake_xcov", protocol="xcov-stdio-loop", api_version="xcov")
+    service = LoopWrapperService(mode="direct", xdebug_bin=debug, xcov_bin=cov)
+    server, thread, sock = _start_server(tmp_path, service)
+    try:
+        invalid = _send_raw(sock, "{not-json")
+        assert invalid["ok"] is False
+        opened = send_requests(sock, [
+            {"id": "open", "method": "debug.session.open", "params": {"name": "redact", "fsdb": str(private_fsdb)}}
+        ])[0]
+        assert opened["ok"] is True
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+    uds_text = (log_root / "logs" / "uds.ndjson").read_text(encoding="utf-8")
+    session_text = (log_root / "sessions" / "redact" / "session.ndjson").read_text(encoding="utf-8")
+    assert "uds.request.invalid_json" in uds_text
+    assert "wave.fsdb" in session_text
+    assert str(private_dir) not in session_text
+    assert str(tmp_path) not in uds_text
+
+
+def test_loop_wrapper_fake_lsf_logs_job_and_cleanup(tmp_path, monkeypatch):
+    log_root = tmp_path / "logs"
+    monkeypatch.setenv("XVERIF_LOOP_LOG_DIR", str(log_root))
+    monkeypatch.setenv("XVERIF_LOOP_FAKE_LSF", "1")
+    monkeypatch.setenv("FAKE_BSUB_STDOUT_NOISE_BEFORE_READY", "1")
+    debug = _make_fake_loop(tmp_path / "fake_xdebug", protocol="xdebug-stdio-loop", api_version="xdebug")
+    cov = _make_fake_loop(tmp_path / "fake_xcov", protocol="xcov-stdio-loop", api_version="xcov")
+    service = LoopWrapperService(
+        mode="lsf",
+        xdebug_bin=debug,
+        xcov_bin=cov,
+        startup_timeout_sec=3.0,
+        request_timeout_sec=3.0,
+    )
+    server, thread, sock = _start_server(tmp_path, service)
+    try:
+        responses = send_requests(sock, [
+            {"id": "open", "method": "debug.session.open", "params": {"name": "lsfcase", "fsdb": "wave.fsdb"}},
+            {"id": "close", "method": "debug.session.close", "params": {"name": "lsfcase"}},
+        ], timeout_sec=10.0)
+        assert [r["ok"] for r in responses] == [True, True]
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+    lsf_events = _session_log(log_root, "lsfcase", "lsf")
+    phases = [e["phase"] for e in lsf_events]
+    assert "launcher.lsf.start" in phases
+    assert "bsub.start" in phases
+    assert "job_id.detected" in phases
+    assert any(e.get("job_id") == "123" for e in lsf_events)
+    assert any(e["phase"].startswith("bkill.") for e in lsf_events)
