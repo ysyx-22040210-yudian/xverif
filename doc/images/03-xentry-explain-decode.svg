@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">xentry usage screenshot guide</title>
+  <desc id="desc">Two panel screenshot showing entry layout and decoded fields.</desc>
+  <rect width="1200" height="675" fill="#f7f9fc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">xentry: decode multi-beat entries</text>
+  <rect x="70" y="120" width="500" height="450" rx="14" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+  <text x="96" y="160" fill="#0f172a" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700">entry.yaml layout</text>
+  <text x="96" y="210" fill="#334155" font-family="Consolas,monospace" font-size="20">fields:</text>
+  <text x="126" y="250" fill="#334155" font-family="Consolas,monospace" font-size="20">opcode:  [7:0]</text>
+  <text x="126" y="290" fill="#334155" font-family="Consolas,monospace" font-size="20">addr:    [39:8]</text>
+  <text x="126" y="330" fill="#334155" font-family="Consolas,monospace" font-size="20">length:  [47:40]</text>
+  <text x="126" y="370" fill="#334155" font-family="Consolas,monospace" font-size="20">flags:   [55:48]</text>
+  <text x="96" y="470" fill="#475569" font-family="Arial,Helvetica,sans-serif" font-size="18">Screenshot focus: show the field layout config.</text>
+  <rect x="630" y="120" width="500" height="450" rx="14" fill="#0b1220"/>
+  <text x="656" y="160" fill="#e5e7eb" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700">xentry decode output</text>
+  <text x="656" y="212" fill="#93c5fd" font-family="Consolas,monospace" font-size="19">opcode = 0x13  from beat0[7:0]</text>
+  <text x="656" y="252" fill="#93c5fd" font-family="Consolas,monospace" font-size="19">addr   = 0x80001000 from beat0/beat1</text>
+  <text x="656" y="292" fill="#93c5fd" font-family="Consolas,monospace" font-size="19">length = 0x40  from beat1[15:8]</text>
+  <text x="656" y="332" fill="#93c5fd" font-family="Consolas,monospace" font-size="19">flags  = 0x01  from beat1[23:16]</text>
+  <text x="656" y="430" fill="#d1fae5" font-family="Arial,Helvetica,sans-serif" font-size="19">Highlight: raw field slices plus provenance.</text>
+</svg>

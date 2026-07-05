@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">environment setup screenshot guide</title>
+  <desc id="desc">Terminal style screenshot showing XVERIF_HOME and PATH setup.</desc>
+  <rect width="1200" height="675" fill="#f6f8fb"/>
+  <rect x="70" y="70" width="1060" height="535" rx="16" fill="#111827"/>
+  <rect x="70" y="70" width="1060" height="48" rx="16" fill="#243244"/>
+  <circle cx="103" cy="94" r="7" fill="#ef4444"/><circle cx="128" cy="94" r="7" fill="#f59e0b"/><circle cx="153" cy="94" r="7" fill="#22c55e"/>
+  <text x="180" y="101" fill="#dbeafe" font-family="Consolas,monospace" font-size="18">01-env-setup: terminal quick start</text>
+  <text x="96" y="160" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">PS E:\xverif&gt; $env:XVERIF_HOME = "E:\xverif"</text>
+  <text x="96" y="198" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">PS E:\xverif&gt; $env:PATH = "$env:XVERIF_HOME\tools;$env:PATH"</text>
+  <text x="96" y="236" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">PS E:\xverif&gt; xbit --help</text>
+  <text x="125" y="276" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">xbit - deterministic bit/literal/expression calculator</text>
+  <text x="125" y="310" fill="#9ca3af" font-family="Consolas,monospace" font-size="18">commands: conv, eval, slice, concat, mask, compare</text>
+  <text x="96" y="360" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">PS E:\xverif&gt; xdebug -h</text>
+  <text x="125" y="400" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">xdebug - design and waveform debug via JSON requests</text>
+  <text x="125" y="434" fill="#9ca3af" font-family="Consolas,monospace" font-size="18">usage: xdebug --json request.json</text>
+  <rect x="96" y="492" width="968" height="70" rx="10" fill="#0f766e"/>
+  <text x="125" y="532" fill="#ecfeff" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700">Screenshot focus</text>
+  <text x="325" y="532" fill="#ecfeff" font-family="Arial,Helvetica,sans-serif" font-size="20">show XVERIF_HOME, tools in PATH, and successful command discovery.</text>
+</svg>

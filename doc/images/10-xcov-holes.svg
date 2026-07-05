@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">xcov coverage holes screenshot guide</title>
+  <desc id="desc">Screenshot showing coverage summary and uncovered source evidence.</desc>
+  <rect width="1200" height="675" fill="#f8fafc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">xcov: coverage evidence</text>
+  <rect x="70" y="120" width="1060" height="430" rx="16" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+  <text x="110" y="170" fill="#0f172a" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700">scope summary</text>
+  <rect x="110" y="205" width="380" height="36" fill="#dcfce7"/><text x="125" y="230" fill="#14532d" font-family="Arial,Helvetica,sans-serif" font-size="18">line coverage: 86.4%</text>
+  <rect x="110" y="260" width="310" height="36" fill="#fef3c7"/><text x="125" y="285" fill="#78350f" font-family="Arial,Helvetica,sans-serif" font-size="18">toggle coverage: 72.1%</text>
+  <text x="610" y="170" fill="#0f172a" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700">holes</text>
+  <text x="610" y="220" fill="#334155" font-family="Consolas,monospace" font-size="18">rtl/cache.sv:188 branch never taken</text>
+  <text x="610" y="260" fill="#334155" font-family="Consolas,monospace" font-size="18">rtl/arbiter.sv:77 toggle missing</text>
+  <text x="610" y="300" fill="#334155" font-family="Consolas,monospace" font-size="18">covgroup axi_len bin len_16 uncovered</text>
+  <rect x="110" y="390" width="980" height="80" rx="10" fill="#e0f2fe"/>
+  <text x="140" y="440" fill="#075985" font-family="Arial,Helvetica,sans-serif" font-size="20">Highlight: coverage results include scope/object/bin and file/line evidence, not just percentages.</text>
+</svg>
