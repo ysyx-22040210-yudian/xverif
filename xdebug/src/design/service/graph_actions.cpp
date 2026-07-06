@@ -1,5 +1,5 @@
 #include "action_support.h"
-#include "../engine/service/design_postprocess.h"
+#include "design_postprocess.h"
 
 #include <algorithm>
 #include <map>
@@ -9,7 +9,7 @@
 
 namespace xdebug_design {
 
-// Functions formerly here now live in engine/service/design_postprocess.cpp
+// Functions formerly here now live in design/service/design_postprocess.cpp
 // (xdebug_design::detail namespace).  Re-exported via using for source compat.
 namespace {
 using detail::graph_from_trace;

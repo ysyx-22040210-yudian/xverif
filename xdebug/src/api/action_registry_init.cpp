@@ -95,6 +95,7 @@ void register_waveform(ActionRegistry& r) {
         {"rc.generate", ActionStatus::Stable},
         {"value.at", ActionStatus::Stable},
         {"value.batch_at", ActionStatus::Stable},
+        {"signal.scan", ActionStatus::Stable},
         {"list.create", ActionStatus::Stable},
         {"list.add", ActionStatus::Stable},
         {"list.delete", ActionStatus::Stable},
@@ -140,6 +141,8 @@ void register_waveform(ActionRegistry& r) {
         if (spec.name == "value.at") {
             spec.args.required.push_back("signal");
             spec.args.required.push_back("time");
+        } else if (spec.name == "signal.scan") {
+            spec.args.required.push_back("signal");
         } else if (spec.name == "rc.generate") {
             spec.args.required.push_back("config_path");
             spec.args.required.push_back("rc_path");

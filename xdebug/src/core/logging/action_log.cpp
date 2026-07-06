@@ -60,8 +60,10 @@ std::string now_iso8601() {
     std::time_t t = system_clock::to_time_t(now);
     std::tm tm;
     localtime_r(&t, &tm);
+    char stamp[32] = {};
+    std::strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%S", &tm);
     std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+    oss << stamp;
     auto ms = duration_cast<milliseconds>(now.time_since_epoch()).count() % 1000;
     oss << "." << std::setfill('0') << std::setw(3) << ms;
     char tz[8] = {};

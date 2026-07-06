@@ -1,11 +1,11 @@
 #pragma once
 
 // Pure JSON transformation functions extracted from design/service/*.cpp.
-// No I/O, no NPI, no socket.  Safe to call from engine server handlers.
+// No I/O and no backend handles. Safe to call from service handlers.
 //
 // All functions use nlohmann::json (xdebug_design::json).
 
-#include "../../design/service/action_support.h"
+#include "action_support.h"
 
 #include <set>
 #include <string>

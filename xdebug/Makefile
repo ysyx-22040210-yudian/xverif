@@ -2,22 +2,8 @@ TOP ?= ..
 
 include $(TOP)/mk/common_flags.mk
 
-ifneq ($(MAKECMDGOALS),)
-ifeq ($(filter-out schema-test,$(MAKECMDGOALS)),)
-XDEBUG_SCHEMA_ONLY := 1
-endif
-endif
-
-ifeq ($(XDEBUG_SCHEMA_ONLY),)
-include $(TOP)/mk/npi.mk
-endif
-
-NPI_CXXFLAGS ?=
-NPI_LDFLAGS ?=
-NPI_LIB ?=
-
-CXXFLAGS = $(COMMON_CXXFLAGS) $(NPI_CXXFLAGS) -pthread -Isrc -Isrc/core -Isrc/engine -Isrc/design -Isrc/waveform -Ithird_party
-LDFLAGS  = $(NPI_LDFLAGS) -pthread $(if $(NPI_LIB),-Xlinker -rpath -Xlinker $(NPI_LIB),)
+CXXFLAGS = $(COMMON_CXXFLAGS) -pthread -Isrc -Isrc/core -Isrc/design -Isrc/waveform -Ithird_party
+LDFLAGS  = -pthread
 DEPFLAGS = -MMD -MP
 # Frontend does not need NPI (all NPI is in the engine subprocess).
 FRONTEND_LDFLAGS = -pthread
@@ -59,118 +45,39 @@ APP_SRCS = src/main.cpp \
            src/backend/engine_adapter.cpp \
            src/runtime/work_dir.cpp
 
-ENGINE_SRCS = src/engine/main.cpp \
-              src/engine/server.cpp \
-              src/engine/service/engine_action_registry.cpp \
-              src/engine/service/engine_action_handler.cpp \
-              src/engine/service/engine_waveform_handlers.cpp \
-              src/engine/service/engine_protocol_handlers.cpp \
-              src/engine/service/engine_design_handlers.cpp \
-              src/engine/service/engine_stream_handlers.cpp \
-              src/engine/service/design_postprocess.cpp \
-              src/engine/service/trace_bfs_engine.cpp \
-              src/api/response.cpp \
-              src/api/text_response_builder.cpp \
-              src/api/xout_renderer.cpp \
-              src/runtime/work_dir.cpp \
-              src/combined/active_trace_service.cpp \
-              src/combined/active_trace_chain.cpp
-
-DESIGN_SRCS = src/design/session/session_registry.cpp \
-              src/design/session/session_manager.cpp \
-              src/design/session/session_transport.cpp \
-              src/design/client/client.cpp \
-              src/design/commands/cmd_ai.cpp \
-              src/design/service/action_support.cpp \
-              src/design/service/trace_actions.cpp \
-              src/design/service/graph_actions.cpp \
-              src/design/service/source_actions.cpp \
-              src/design/service/semantic_actions.cpp \
-              src/design/service/port_actions.cpp \
-              src/design/service/router.cpp \
-              src/design/common/xdebug_design_paths.cpp \
-              src/design/ast/ast_extractor.cpp \
-              src/design/port/port_analyzer.cpp \
-              src/design/control_dep/control_dep.cpp \
-              src/design/trace/trace_engine.cpp \
-              src/design/signal/signal_finder.cpp
-
-WAVEFORM_SRCS = src/waveform/main.cpp \
-                src/waveform/session/session_registry.cpp \
-                src/waveform/session/session_manager.cpp \
-                src/waveform/session/session_transport.cpp \
-                src/waveform/client/client.cpp \
-                src/waveform/commands/cmd_ai.cpp \
-                src/waveform/service/action_support.cpp \
-                src/waveform/service/value_support.cpp \
-                src/waveform/service/response_support.cpp \
-                src/waveform/service/config_support.cpp \
-                src/waveform/service/query_expression_support.cpp \
-                src/waveform/service/rc_generator.cpp \
-                src/waveform/service/action_registry.cpp \
-                src/waveform/service/actions/value_query_actions.cpp \
-                src/waveform/service/actions/list_actions.cpp \
-                src/waveform/service/actions/rc_generate_action.cpp \
-                src/waveform/service/actions/verify_conditions_action.cpp \
-                src/waveform/service/actions/ai_query_actions.cpp \
-                src/waveform/service/session_actions.cpp \
-                src/waveform/service/protocol_actions.cpp \
-                src/waveform/service/router.cpp \
-                src/waveform/value/logic_value.cpp \
-                src/waveform/server/service/context.cpp \
-                src/waveform/server/service/value_scope.cpp \
-                src/waveform/server/service/signal_analysis.cpp \
-                src/waveform/server/service/signal_inspect.cpp \
-                src/waveform/server/service/query_actions.cpp \
-                src/waveform/server/service/event_handlers.cpp \
-                src/waveform/server/fsdb_value_reader.cpp \
-                src/waveform/server/fsdb_scan_utils.cpp \
-                src/waveform/list/list_manager.cpp \
-                src/waveform/cursor/cursor_manager.cpp \
-                src/waveform/common/xdebug_waveform_paths.cpp \
-                src/waveform/common/time_spec.cpp \
-                src/waveform/common/time_parser.cpp \
-                src/waveform/apb/apb_manager.cpp \
-                src/waveform/apb/apb_analyzer.cpp \
-                src/waveform/axi/axi_manager.cpp \
-                src/waveform/axi/axi_analyzer.cpp \
-                src/waveform/axi/axi_exporter.cpp \
-                src/waveform/event/event_manager.cpp \
-                src/waveform/event/event_expr.cpp \
-                src/waveform/event/event_analyzer.cpp \
-                src/waveform/stream/stream_config.cpp \
-                src/waveform/stream/stream_manager.cpp \
-                src/waveform/stream/stream_expr.cpp \
-                src/waveform/stream/stream_analyzer.cpp \
-                src/waveform/stream/stream_exporter.cpp
-
 CORE_OBJS = $(CORE_SRCS:%.cpp=$(BUILD)/%.o)
 API_SUPPORT_OBJS = $(API_SUPPORT_SRCS:%.cpp=$(BUILD)/%.o)
 APP_OBJS = $(APP_SRCS:%.cpp=$(BUILD)/%.o)
-ENGINE_OBJS = $(ENGINE_SRCS:%.cpp=$(BUILD)/%.o)
-DESIGN_OBJS = $(DESIGN_SRCS:%.cpp=$(BUILD)/%.o)
-WAVEFORM_OBJS = $(WAVEFORM_SRCS:%.cpp=$(BUILD)/%.o)
 DEPS = $(sort $(CORE_OBJS:.o=.d) \
        $(API_SUPPORT_OBJS:.o=.d) \
        $(APP_OBJS:.o=.d) \
-       $(ENGINE_OBJS:.o=.d) \
-       $(DESIGN_OBJS:.o=.d) \
-       $(WAVEFORM_OBJS:.o=.d))
+       $(BUILD)/src/waveform/service/rc_generator.d \
+       $(BUILD)/src/waveform/value/logic_value.d \
+       $(BUILD)/src/session/session_catalog.d)
 
-.PHONY: all internal-engines unit-test log-test test-infra pytest-contract pytest-synthetic-existing pytest-counter-statistics pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast test-contract test-synthetic test-vip test-active-trace test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke test-regression test-nightly test-mcp-real-lsf mcp-test schema-test contract-test combined-test clean
+.PHONY: all internal-engines audit-no-cpp-npi unit-test log-test test-infra pytest-contract pytest-synthetic-existing pytest-counter-statistics pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast test-contract test-synthetic test-vip test-active-trace test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke test-regression test-nightly test-mcp-real-lsf mcp-test schema-test contract-test combined-test clean
 
-all: $(EXE) internal-engines
+all: audit-no-cpp-npi $(EXE) internal-engines
 
 internal-engines: $(LIBEXEC)/xdebug-engine
 
-# Unified engine: engine + design + waveform objects (excl. waveform/main.o).
-UNIFIED_OBJS = $(ENGINE_OBJS) $(DESIGN_OBJS) $(filter-out $(BUILD)/src/waveform/main.o,$(WAVEFORM_OBJS))
-$(LIBEXEC)/xdebug-engine: $(CORE_OBJS) $(UNIFIED_OBJS)
+audit-no-cpp-npi:
+	@if grep -RInE '#include[[:space:]]+[<"]npi(_[^>"]*)?\.h[>"]|#include[[:space:]]+[<"]npi(_fsdb|_hdl|_L1)[^>"]*[>"]|\bnpi(Fsdb|Handle)\b|\bnpi_(init|end|get|handle|release|fsdb|active|trace)[A-Za-z0-9_]*[[:space:]]*\(' src 2>/dev/null; then \
+		echo "ERROR: xdebug C++ sources must not include Verdi NPI headers; use tcl_engine/xdebug_npi.tcl instead." >&2; \
+		exit 1; \
+	fi
+
+# Tcl NPI backend: keep the public C++ CLI, but run Verdi/NPI through Tcl.
+$(LIBEXEC)/xdebug-engine: tcl_engine/xdebug-engine tcl_engine/xdebug_engine.py tcl_engine/xdebug_npi.tcl
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -DXDEBUG_INTERNAL_ENGINE -o $@ $^ $(LDFLAGS)
+	mkdir -p $(LIBEXEC)/tcl_engine
+	cp tcl_engine/xdebug-engine $@
+	cp tcl_engine/xdebug_engine.py $(LIBEXEC)/tcl_engine/xdebug_engine.py
+	cp tcl_engine/xdebug_npi.tcl $(LIBEXEC)/tcl_engine/xdebug_npi.tcl
+	chmod +x $@ $(LIBEXEC)/tcl_engine/xdebug_engine.py
 
 $(EXE): $(CORE_OBJS) $(APP_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(FRONTEND_LDFLAGS)
 
 $(BUILD)/%.o: %.cpp
 	mkdir -p $(dir $@)

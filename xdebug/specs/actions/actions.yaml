@@ -1635,6 +1635,28 @@
       ]
     },
     {
+      "name": "signal.scan",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.scan.request.schema.json",
+        "response": "schemas/v1/actions/signal.scan.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.scan.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.scan.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
       "name": "verify.conditions",
       "category": "waveform",
       "status": "stable",

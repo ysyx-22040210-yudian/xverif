@@ -1,12 +1,12 @@
 #include "action_support.h"
-#include "../engine/service/design_postprocess.h"
+#include "design_postprocess.h"
 
 #include <algorithm>
 #include <fstream>
 
 namespace xdebug_design {
 
-// infer_enclosing_block formerly here now lives in engine/service/design_postprocess.cpp
+// infer_enclosing_block formerly here now lives in design/service/design_postprocess.cpp
 // (xdebug_design::detail namespace).  Re-exported via using for source compat.
 namespace {
 using detail::infer_enclosing_block;
@@ -88,7 +88,7 @@ json run_expr_normalize_action(const json& request) {
         if (!trace_resp.value("ok", false)) return trace_resp;
         json assignment = trace_resp["data"].value("assignment", json::object());
         response["session"] = trace_resp["session"];
-        response["summary"] = {{"signal", signal}, {"source", "npi_trace_assignment"},
+        response["summary"] = {{"signal", signal}, {"source", "tcl_trace_assignment"},
                                {"confidence", trace_resp["data"].value("confidence", "unknown")}};
         response["data"] = {{"expr", assignment.value("rhs", json::object())}, {"assignment", assignment},
             {"rhs_signals", assignment.value("rhs_signals", json::array())},
@@ -99,7 +99,7 @@ json run_expr_normalize_action(const json& request) {
     if (expr.empty()) return error_response(request, action, "MISSING_FIELD", "args.expr or args.signal is required");
     response["summary"] = {{"expr", expr}, {"source", "string_fallback"}, {"confidence", "low"}};
     response["data"] = {{"expr", parse_expr_ast(expr)}, {"confidence", "low"},
-                        {"confidence_reason", "parsed from raw string without NPI handle"}};
+                        {"confidence_reason", "parsed from raw string without backend handle"}};
     return response;
 }
 
