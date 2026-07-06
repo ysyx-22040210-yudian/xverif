@@ -58,7 +58,7 @@ class SessionManager:
             worker = "fake"
         else:
             backend = NpiCoverageBackend(vdb)
-            worker = "npi_python"
+            worker = "npi_tcl"
         sess = XcovSession(session_id=sid, vdb=vdb, backend=backend, worker=worker)
         self.sessions[sid] = sess
         log_lifecycle_event(sid, "session.open.ok", True, {"vdb": vdb, "worker": worker})

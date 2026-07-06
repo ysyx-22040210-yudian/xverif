@@ -14,7 +14,7 @@ namespace {
 
 const xdebug_core::ToolConfig& tool_config() {
     static const xdebug_core::ToolConfig config =
-        xdebug_core::make_tool_config("xdebug-waveform", ".xdebug/waveform", "xdebug-waveform-engine", "1.0");
+        xdebug_core::make_tool_config("xdebug-waveform", ".xdebug/waveform", "xdebug-engine", "1.0");
     return config;
 }
 

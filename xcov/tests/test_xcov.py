@@ -4,10 +4,12 @@ import json
 import os
 import subprocess
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 from xcov.actions import Dispatcher
-from xcov.backend import CoverageBackend
+from xcov.backend import CoverageBackend, NpiCoverageBackend
+from xcov.errors import XcovError
 from xcov.logging import sanitize_for_log
 from xcov.protocol import render_xout
 from xcov.schemas import schema_actions
@@ -17,22 +19,36 @@ ROOT = Path(__file__).resolve().parents[2]
 XCOV = ROOT / "tools" / "xcov"
 
 
+def _xcov_cmd() -> list[str]:
+    if os.name == "nt":
+        return [sys.executable, "-m", "xcov.cli"]
+    return [str(XCOV)]
+
+
+def _test_env(env: dict | None = None) -> dict:
+    merged_env = os.environ.copy()
+    pythonpath = str(ROOT / "xcov")
+    if merged_env.get("PYTHONPATH"):
+        pythonpath = pythonpath + os.pathsep + merged_env["PYTHONPATH"]
+    merged_env["PYTHONPATH"] = pythonpath
+    if env:
+        merged_env.update(env)
+    return merged_env
+
+
 def _run(req: dict) -> dict:
     req.setdefault("output", {})["response_format"] = "json"
-    proc = subprocess.run([str(XCOV), "--json", "-"], input=json.dumps(req),
+    proc = subprocess.run([*_xcov_cmd(), "--json", "-"], input=json.dumps(req),
                           text=True, capture_output=True, check=False,
-                          cwd=str(ROOT))
+                          cwd=str(ROOT), env=_test_env())
     assert proc.returncode == 0, proc.stderr + proc.stdout
     return json.loads(proc.stdout)
 
 
 def _run_proc(req: dict, args: list[str] | None = None, env: dict | None = None):
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
-    return subprocess.run([str(XCOV), *(args or ["-"])], input=json.dumps(req),
+    return subprocess.run([*_xcov_cmd(), *(args or ["-"])], input=json.dumps(req),
                           text=True, capture_output=True, check=False,
-                          cwd=str(ROOT), env=merged_env)
+                          cwd=str(ROOT), env=_test_env(env))
 
 
 def _read_last_json_line(path: Path) -> dict:
@@ -76,6 +92,58 @@ def test_session_open_fake_json():
     assert rsp["ok"] is True
     assert rsp["summary"]["session_id"] == "cov0"
     assert rsp["summary"]["worker"] == "fake"
+
+
+def test_real_backend_does_not_use_python_npi_bindings():
+    backend_py = (ROOT / "xcov" / "xcov" / "backend.py").read_text(encoding="utf-8")
+    forbidden_terms = [
+        "py" + "npi",
+        "npi" + "sys",
+        "share/NPI/" + "python",
+        "NPI/" + "python",
+    ]
+    for forbidden in forbidden_terms:
+        assert forbidden not in backend_py
+
+
+def test_tcl_backend_success_response_returns_data(monkeypatch):
+    monkeypatch.setattr("xcov.backend._find_verdi", lambda: "verdi")
+
+    def fake_run(cmd, text, capture_output, cwd, env, timeout, check):
+        Path(env["XCOV_TCL_RESPONSE_JSON"]).write_text(
+            json.dumps({"ok": True, "data": {"items": [{"name": "t0"}]}}),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("xcov.backend.subprocess.run", fake_run)
+    backend = object.__new__(NpiCoverageBackend)
+    backend.vdb = "fake.vdb"
+    backend.timeout_sec = 1.0
+    assert backend._run_tcl("tests.list") == {"items": [{"name": "t0"}]}
+
+
+def test_tcl_backend_error_response_keeps_structured_error(monkeypatch):
+    monkeypatch.setattr("xcov.backend._find_verdi", lambda: "verdi")
+
+    def fake_run(cmd, text, capture_output, cwd, env, timeout, check):
+        Path(env["XCOV_TCL_RESPONSE_JSON"]).write_text(
+            json.dumps({"ok": False, "error": {"code": "VDB_OPEN_FAILED", "message": "missing"}}),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="out", stderr="err")
+
+    monkeypatch.setattr("xcov.backend.subprocess.run", fake_run)
+    backend = object.__new__(NpiCoverageBackend)
+    backend.vdb = "missing.vdb"
+    backend.timeout_sec = 1.0
+    try:
+        backend._run_tcl("tests.list")
+    except XcovError as exc:
+        assert exc.code == "VDB_OPEN_FAILED"
+        assert exc.detail["tcl_action"] == "tests.list"
+    else:
+        raise AssertionError("expected XcovError")
 
 
 def test_schema_registry_covers_all_p0_actions():
@@ -132,10 +200,10 @@ def test_stdio_loop_fake_holes():
          "action": "cov.holes", "target": {"session_id": "cov0"},
          "args": {"metrics": ["toggle", "branch"]}},
     ]
-    proc = subprocess.run([str(XCOV), "--stdio-loop"],
+    proc = subprocess.run([*_xcov_cmd(), "--stdio-loop"],
                           input="\n".join(json.dumps(x) for x in lines) + "\n",
                           text=True, capture_output=True, check=False,
-                          cwd=str(ROOT))
+                          cwd=str(ROOT), env=_test_env())
     assert proc.returncode == 0, proc.stderr
     out = [json.loads(line) for line in proc.stdout.splitlines()]
     assert out[0]["protocol"] == "xcov-stdio-loop"
@@ -157,11 +225,11 @@ def test_logging_writes_action_manifest_lifecycle_and_transport(tmp_path):
         {"api_version": "xcov.v1", "request_id": "close",
          "action": "session.close", "target": {"session_id": "cov0"}},
     ]
-    proc = subprocess.run([str(XCOV), "--stdio-loop"],
+    proc = subprocess.run([*_xcov_cmd(), "--stdio-loop"],
                           input="\n".join(json.dumps(x) for x in reqs) + "\n",
                           text=True, capture_output=True, check=False,
                           cwd=str(ROOT),
-                          env={**os.environ, "XVERIF_XCOV_LOG_DIR": str(log_dir)})
+                          env=_test_env({"XVERIF_XCOV_LOG_DIR": str(log_dir)}))
     assert proc.returncode == 0
     action_log = log_dir / "sessions" / "cov0" / "logs" / "actions.ndjson"
     manifest = log_dir / "sessions" / "cov0" / "session.json"
@@ -197,10 +265,10 @@ def test_regex_rejected():
          "action": "cov.holes", "target": {"session_id": "cov0"},
          "args": {"query": {"include_patterns": ["^top.*"]}}},
     ]
-    proc = subprocess.run([str(XCOV), "--stdio-loop"],
+    proc = subprocess.run([*_xcov_cmd(), "--stdio-loop"],
                           input="\n".join(json.dumps(x) for x in reqs) + "\n",
                           text=True, capture_output=True, check=False,
-                          cwd=str(ROOT))
+                          cwd=str(ROOT), env=_test_env())
     out = [json.loads(line) for line in proc.stdout.splitlines()]
     assert out[2]["ok"] is False
     assert out[2]["json"]["error"]["code"] == "REGEX_NOT_SUPPORTED"
@@ -217,10 +285,10 @@ def test_export_writes_file(tmp_path):
          "args": {"output": {"mode": "file", "artifact_format": "ndjson",
                               "path": str(path), "allow_absolute_path": True}}},
     ]
-    proc = subprocess.run([str(XCOV), "--stdio-loop"],
+    proc = subprocess.run([*_xcov_cmd(), "--stdio-loop"],
                           input="\n".join(json.dumps(x) for x in reqs) + "\n",
                           text=True, capture_output=True, check=False,
-                          cwd=str(ROOT))
+                          cwd=str(ROOT), env=_test_env())
     assert proc.returncode == 0
     assert path.exists()
     assert "npiCovToggleBin" in path.read_text()
@@ -323,7 +391,7 @@ def test_export_scope_tree_contains_coverage_tree(tmp_path, monkeypatch):
         "output": {"format": "json"},
     })
     assert rsp["ok"] is True
-    assert rsp["summary"]["output_path"] == ".xverif/xcov_exports/tree.json"
+    assert rsp["summary"]["output_path"].replace("\\", "/") == ".xverif/xcov_exports/tree.json"
     item = next(i for i in rsp["data"]["items"] if i["full_name"] == "top.u_dut")
     assert item["coverable"] == 6
     assert item["metrics"]

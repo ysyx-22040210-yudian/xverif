@@ -6,10 +6,11 @@ Set `output.response_format:"json"` or use `tools/xcov --json -` for machine
 JSON responses.
 
 xcov follows the same stateful split as xdebug: `tools/xcov --stdio-loop`
-hosts the real coverage database session and owns VDB handles, cached summary,
-scope traversal, and query execution. `xverif_mcp` only starts/stops the loop
-process, keeps alias/default mappings, forwards JSON requests, and handles
-direct/LSF launcher cleanup.
+hosts the real coverage database session. Python owns the JSON protocol,
+filtering, caching, export, and MCP-facing lifecycle; direct VDB/NPI traversal
+is delegated to `xcov/tcl_engine/xcov_npi.tcl` running inside Verdi batch Tcl.
+`xverif_mcp` only starts/stops the loop process, keeps alias/default mappings,
+forwards JSON requests, and handles direct/LSF launcher cleanup.
 
 ## Quick Start
 
@@ -30,12 +31,13 @@ The loop emits a JSON ready line with `protocol:"xcov-stdio-loop"` and then
 JSONL envelopes containing `xout` and `json` payloads. NPI diagnostic output is
 routed to stderr so stdout remains machine-readable.
 
-## Real NPI Smoke
+## Real Tcl NPI Smoke
 
 The verified runtime shape is:
 
 ```text
 Python 3.11
+verdi -batch -nologo -play xcov/tcl_engine/xcov_npi.tcl
 ```
 
 Verified database shape:
@@ -56,8 +58,10 @@ export.scope_tree: ok, writes .xverif/xcov_exports/<name>
 cov.holes: ok with metric/limit filtering
 ```
 
-Real NPI commands need access to the local Synopsys license server. In sandboxed
-execution, run them outside the sandbox.
+Real Tcl NPI commands need access to Verdi/VCS coverage libraries and the local
+Synopsys license server. In sandboxed execution, run them outside the sandbox.
+Do not add another direct NPI implementation path; keep direct coverage NPI
+calls in `tcl_engine/xcov_npi.tcl`.
 
 ## MCP Tools
 

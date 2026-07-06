@@ -70,18 +70,12 @@ assert removed["ok"] is False and removed["error"]["code"] == "UNKNOWN_ACTION"
 assert text_cli["ok"] is False and text_cli["error"]["code"] == "JSON_ONLY"
 PY
 
-if LD_LIBRARY_PATH="$NPI_LIB:${LD_LIBRARY_PATH:-}" "$ROOT/xdebug/libexec/xdebug-design-engine" open -dbdir nowhere \
-    >"$TMP_HOME/private_design.out" 2>&1; then
-    printf 'FAIL: internal design engine accepted a text CLI request\n' >&2
+if LD_LIBRARY_PATH="$NPI_LIB:${LD_LIBRARY_PATH:-}" "$ROOT/xdebug/libexec/xdebug-engine" open -dbdir nowhere \
+    >"$TMP_HOME/private_engine.out" 2>&1; then
+    printf 'FAIL: internal Tcl engine accepted a text CLI request\n' >&2
     exit 1
 fi
-if LD_LIBRARY_PATH="$NPI_LIB:${LD_LIBRARY_PATH:-}" "$ROOT/xdebug/libexec/xdebug-waveform-engine" value top.clk 10ns \
-    >"$TMP_HOME/private_waveform.out" 2>&1; then
-    printf 'FAIL: internal waveform engine accepted a text CLI request\n' >&2
-    exit 1
-fi
-grep -q 'accepts JSON requests only' "$TMP_HOME/private_design.out"
-grep -q 'accepts JSON requests only' "$TMP_HOME/private_waveform.out"
+grep -q 'accepts JSON requests only' "$TMP_HOME/private_engine.out"
 
 if [[ ! -d "$DBDIR" || ! -f "$FSDB" ]]; then
     printf 'SKIP: fixture resources absent: %s %s\n' "$DBDIR" "$FSDB"

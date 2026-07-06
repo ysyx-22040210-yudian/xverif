@@ -34,9 +34,9 @@ xdebug/examples/responses/<action>.basic.json
 
 `make -C xdebug contract-test` 会检查 runtime `actions` 输出、`specs/actions/actions.yaml`、schemas 和 examples 是否完全对齐。
 
-推荐通过仓库根目录的 wrapper 调用，它会设置 Verdi/NPI 运行所需环境：
+推荐通过仓库根目录的 wrapper 调用，它会设置 Verdi/NPI Tcl 后端运行所需环境：
 
-> **环境要求**：GCC 5.0+。当前基于 Verdi **V-2023.12-SP2** 开发与测试。NPI API 随 Verdi 版本不同可能存在参数差异——如果使用其他版本遇到编译或运行时 NPI 兼容性问题，可让 AI agent 根据编译错误和 NPI 头文件（`$VERDI_HOME/share/NPI/inc`）进行兼容性修复。
+> **环境要求**：Python 3.11+、GCC 5.0+、可用 Verdi/VCS/FSDB 环境。直接 NPI/FSDB 查询统一通过 `tcl_engine/xdebug_npi.tcl` 在 Verdi batch Tcl 中执行，目标兼容 Verdi **O-2018.09-SP2** 这类较老版本。不要新增或恢复非 Tcl 的直接 NPI engine；如果遇到版本兼容问题，应优先修 Tcl 后端或 Python 请求转换层。
 
 ```bash
 tools/xdebug -

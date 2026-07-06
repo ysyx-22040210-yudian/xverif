@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
-import sys
-from contextlib import contextmanager
-from dataclasses import dataclass, field
+import shutil
+import subprocess
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from .errors import XcovError
@@ -13,16 +16,6 @@ from .query import coverage_pct
 Json = Dict[str, Any]
 
 METRICS = ["line", "toggle", "branch", "condition", "fsm", "assert", "functional"]
-METRIC_METHODS = {
-    "line": "line_metric_handle",
-    "toggle": "toggle_metric_handle",
-    "branch": "branch_metric_handle",
-    "condition": "condition_metric_handle",
-    "fsm": "fsm_metric_handle",
-    "assert": "assert_metric_handle",
-    "functional": "testbench_metric_handle",
-    "power": "power_metric_handle",
-}
 
 
 def _missing(covered: Any, coverable: Any) -> int | None:
@@ -174,112 +167,47 @@ class FakeCoverageBackend(CoverageBackend):
 @dataclass
 class NpiCoverageBackend(CoverageBackend):
     vdb: str
-    python_kind: str = "current"
-    cov: Any = None
-    npisys: Any = None
-    db: Any = None
-    merged_test: Any = None
-    test_map: Dict[str, Any] = field(default_factory=dict)
+    timeout_sec: float = 180.0
+    _tests: Optional[List[Json]] = None
+    _scopes: Optional[List[Json]] = None
 
     def __post_init__(self) -> None:
-        log_lifecycle_event("adhoc", "npi.init.begin", True, {"vdb": self.vdb})
-        verdi_home = os.environ.get("XVERIF_XCOV_VERDI_HOME") or os.environ.get("VERDI_HOME")
-        if not verdi_home:
-            log_lifecycle_event("adhoc", "npi.init.failed", False,
-                                {"vdb": self.vdb, "reason": "VERDI_HOME is required"})
-            raise XcovError("NPI_INIT_FAILED", "VERDI_HOME is required")
-        sys.path.append(os.path.abspath(os.path.join(verdi_home, "share/NPI/python")))
-        try:
-            from pynpi import cov, npisys  # type: ignore
-        except Exception as exc:
-            log_lifecycle_event("adhoc", "npi.import.failed", False,
-                                {"vdb": self.vdb, "error": str(exc)})
-            raise XcovError("NPI_INIT_FAILED", f"failed to import pynpi: {exc}") from exc
-        self.cov = cov
-        self.npisys = npisys
-        with _redirect_stdout_to_stderr():
-            init_ok = npisys.init(sys.argv)
-        if init_ok != 1:
-            log_lifecycle_event("adhoc", "npi.init.failed", False,
-                                {"vdb": self.vdb, "init_ok": init_ok})
-            raise XcovError("NPI_INIT_FAILED", "npisys.init failed")
-        log_lifecycle_event("adhoc", "npi.init.ok", True, {"vdb": self.vdb})
-        log_lifecycle_event("adhoc", "vdb.open.begin", True, {"vdb": self.vdb})
-        with _redirect_stdout_to_stderr():
-            self.db = cov.open(self.vdb)
-        if not self.db:
-            log_lifecycle_event("adhoc", "vdb.open.failed", False, {"vdb": self.vdb})
-            raise XcovError("VDB_OPEN_FAILED", "cov.open returned empty handle", vdb=self.vdb)
-        log_lifecycle_event("adhoc", "vdb.open.ok", True, {"vdb": self.vdb})
-        tests = self.db.test_handles()
-        for test in tests:
-            self.test_map[test.name()] = test
-        self.merged_test = None
-        for test in tests:
-            self.merged_test = test if self.merged_test is None else cov.merge_test(self.merged_test, test)
+        self.timeout_sec = float(os.environ.get("XVERIF_XCOV_TCL_TIMEOUT_SEC", self.timeout_sec))
+        log_lifecycle_event("adhoc", "npi.tcl.backend.ready", True, {"vdb": self.vdb})
+        self._tests = self._run_tcl("tests.list").get("items", [])
 
     def close(self) -> None:
-        try:
-            if self.db:
-                log_lifecycle_event("adhoc", "vdb.close.begin", True, {"vdb": self.vdb})
-                with _redirect_stdout_to_stderr():
-                    self.db.close()
-                log_lifecycle_event("adhoc", "vdb.close.ok", True, {"vdb": self.vdb})
-        finally:
-            if self.npisys:
-                log_lifecycle_event("adhoc", "npi.end.begin", True, {"vdb": self.vdb})
-                with _redirect_stdout_to_stderr():
-                    self.npisys.end()
-                log_lifecycle_event("adhoc", "npi.end.ok", True, {"vdb": self.vdb})
+        log_lifecycle_event("adhoc", "npi.tcl.backend.closed", True, {"vdb": self.vdb})
 
     def tests(self) -> List[Json]:
-        return [{"name": name} for name in sorted(self.test_map)]
+        if self._tests is None:
+            self._tests = self._run_tcl("tests.list").get("items", [])
+        return [dict(row) for row in self._tests]
 
-    def _test_handle(self, test: str) -> Any:
+    def _check_test(self, test: str) -> None:
         if test in ("merged", "", None):
-            return self.merged_test
+            return
         if test == "each":
             raise XcovError("TEST_MODE_NOT_SUPPORTED",
                             'test="each" is not implemented yet; use test="merged" or a concrete test name')
-        if test in self.test_map:
-            return self.test_map[test]
+        if any(row.get("name") == test for row in self.tests()):
+            return
         raise XcovError("TEST_NOT_FOUND", "test not found", test=test)
 
     def summary(self) -> Json:
-        return {"test_count": len(self.test_map), "top_scope_count": None}
+        return {"test_count": len(self.tests()), "top_scope_count": None}
 
     def top_scopes(self) -> List[Json]:
-        rows: List[Json] = []
-        for inst in self.db.instance_handles():
-            rows.append(self._scope_row_from_inst(inst))
-        return rows
+        rows = self.scopes()
+        return [s for s in rows if "." not in str(s.get("full_name", ""))] or rows
 
     def scopes(self) -> List[Json]:
-        rows: List[Json] = []
-        for inst in self.db.instance_handles():
-            self._walk_scopes(inst, rows)
-            self.cov.release_handle(inst)
-        return rows
-
-    def _scope_row_from_inst(self, inst: Any) -> Json:
-        full_name = _safe_call(inst, "full_name") or _safe_call(inst, "name")
-        return {
-            "name": _safe_call(inst, "name"),
-            "full_name": full_name,
-            "parent": _scope_parent(str(full_name or "")),
-            "depth": _scope_depth(str(full_name or "")),
-            "type": _safe_call(inst, "type"),
-            "def_name": _safe_call(inst, "def_name"),
-            "evidence": {"file": _safe_call(inst, "file_name"), "line": _safe_call(inst, "line_no")},
-        }
-
-    def _walk_scopes(self, inst: Any, rows: List[Json]) -> None:
-        rows.append(self._scope_row_from_inst(inst))
-        for child in _safe_list(inst, "instance_handles"):
-            self._walk_scopes(child, rows)
-            self.cov.release_handle(child)
+        if self._scopes is None:
+            self._scopes = self._run_tcl("scope.list").get("items", [])
+        return [dict(row) for row in self._scopes]
 
     def metrics_for_scope(self, scope: Optional[str], test: str) -> List[Json]:
+        self._check_test(test)
         items = self.items(scope=scope, test=test)
         rows: List[Json] = []
         for metric in METRICS:
@@ -296,294 +224,96 @@ class NpiCoverageBackend(CoverageBackend):
     def items(self, metrics: Optional[List[str]] = None,
               scope: Optional[str] = None, test: str = "merged",
               functional_only: bool = False) -> List[Json]:
-        test_hdl = self._test_handle(test)
-        wanted = metrics or METRICS
+        self._check_test(test)
+        wanted = list(metrics or METRICS)
         if functional_only and "functional" not in wanted:
             wanted = ["functional"]
-        rows: List[Json] = []
-        design_metrics = [metric for metric in wanted if metric != "functional"]
-        if design_metrics and not functional_only:
-            for inst in self.db.instance_handles():
-                self._walk_items(inst, test_hdl, design_metrics, scope, rows)
-                self.cov.release_handle(inst)
-        if "functional" in wanted:
-            self._walk_functional_items(test_hdl, scope, rows)
+        data = self._run_tcl("items", {
+            "metrics": wanted,
+            "scope": scope,
+            "test": test,
+            "functional_only": functional_only,
+        })
+        rows = [dict(row) for row in data.get("items", [])]
+        for row in rows:
+            row.setdefault("missing", _missing(row.get("covered"), row.get("coverable")))
+            row.setdefault("coverage_pct", coverage_pct(row.get("covered"), row.get("coverable")))
+            row.setdefault("status", _status_flags_from_values(row.get("covered"), row.get("coverable"),
+                                                               row.get("status")))
+            if (row.get("metric") == "branch" and row.get("type") == "npiCovBranchBin"
+                    and _branch_mask_hint_enabled() and isinstance(row.get("branch_bin"), str)):
+                hint = _branch_mask_hint(str(row.get("branch_bin")))
+                if hint is not None:
+                    row.setdefault("branch_mask", hint)
         return rows
 
-    def _walk_items(self, inst: Any, test_hdl: Any, wanted: List[str],
-                    scope: Optional[str], rows: List[Json]) -> None:
-        inst_full = _safe_call(inst, "full_name") or _safe_call(inst, "name")
-        if scope is None or str(inst_full).startswith(scope):
-            for metric in wanted:
-                method = METRIC_METHODS.get(metric)
-                if not method or not hasattr(inst, method):
-                    continue
-                metric_hdl = _safe_call(inst, method)
-                if metric_hdl:
-                    try:
-                        self._walk_metric(metric_hdl, metric, inst_full, test_hdl, rows)
-                    finally:
-                        self.release_if_handle(metric_hdl)
-        for child in _safe_list(inst, "instance_handles"):
-            self._walk_items(child, test_hdl, wanted, scope, rows)
-            self.cov.release_handle(child)
-
-    def release_if_handle(self, hdl: Any) -> None:
-        if hdl:
+    def _run_tcl(self, action: str, args: Optional[Json] = None) -> Json:
+        verdi = _find_verdi()
+        if not verdi:
+            log_lifecycle_event("adhoc", "npi.tcl.verdi_not_found", False, {"vdb": self.vdb})
+            raise XcovError("VERDI_NOT_FOUND", "verdi is not in PATH; set VERDI_HOME")
+        script = _tcl_script_path()
+        request = {"action": action, "vdb": self.vdb, "args": args or {}}
+        tmpdir = tempfile.mkdtemp(prefix="xcov-tcl-npi-")
+        try:
+            req_path = os.path.join(tmpdir, "request.json")
+            rsp_path = os.path.join(tmpdir, "response.json")
+            with open(req_path, "w", encoding="utf-8") as fp:
+                json.dump(request, fp, ensure_ascii=True)
+            env = dict(os.environ)
+            env["XCOV_TCL_REQUEST_JSON"] = req_path
+            env["XCOV_TCL_RESPONSE_JSON"] = rsp_path
+            env["XCOV_TCL_ACTION"] = action
+            env["XCOV_TCL_VDB"] = self.vdb
+            action_args = args or {}
+            metrics = action_args.get("metrics") if isinstance(action_args.get("metrics"), list) else []
+            env["XCOV_TCL_METRICS"] = "\n".join(str(metric) for metric in metrics)
+            env["XCOV_TCL_SCOPE"] = "" if action_args.get("scope") is None else str(action_args.get("scope"))
+            env["XCOV_TCL_TEST"] = str(action_args.get("test", "merged"))
+            env["XCOV_TCL_FUNCTIONAL_ONLY"] = "1" if action_args.get("functional_only") else "0"
+            if os.environ.get("XVERIF_XCOV_VERDI_HOME"):
+                env["VERDI_HOME"] = os.environ["XVERIF_XCOV_VERDI_HOME"]
+            if env.get("VERDI_HOME") and not env.get("NPIL1_PATH"):
+                env["NPIL1_PATH"] = os.path.join(env["VERDI_HOME"], "share", "NPI", "L1", "TCL")
+            cmd = [verdi, "-batch", "-nologo", "-play", str(script)]
+            log_lifecycle_event("adhoc", "npi.tcl.invoke.begin", True,
+                                {"vdb": self.vdb, "action": action})
             try:
-                self.cov.release_handle(hdl)
-            except Exception:
-                pass
-
-    def _walk_metric(self, hdl: Any, metric: str, scope: str, test_hdl: Any,
-                     rows: List[Json]) -> None:
-        for child in _safe_list(hdl, "child_handles"):
-            self._walk_leaf(child, metric, scope, test_hdl, rows, {}, None)
-            self.cov.release_handle(child)
-
-    def _walk_functional_items(self, test_hdl: Any, scope: Optional[str],
-                               rows: List[Json]) -> None:
-        metric_hdl = _safe_call(test_hdl, "testbench_metric_handle")
-        if not metric_hdl:
-            return
-        try:
-            for child in _safe_list(metric_hdl, "child_handles"):
-                self._walk_functional_leaf(child, test_hdl, rows, {}, scope, None)
-                self.cov.release_handle(child)
+                proc = subprocess.run(cmd, text=True, capture_output=True, cwd=tmpdir,
+                                      env=env, timeout=self.timeout_sec, check=False)
+            except subprocess.TimeoutExpired as exc:
+                log_lifecycle_event("adhoc", "npi.tcl.invoke.timeout", False,
+                                    {"vdb": self.vdb, "action": action})
+                raise XcovError("TCL_NPI_TIMEOUT", "Verdi Tcl coverage action timed out",
+                                action=action, timeout_sec=self.timeout_sec) from exc
+            except OSError as exc:
+                log_lifecycle_event("adhoc", "npi.tcl.invoke.failed", False,
+                                    {"vdb": self.vdb, "action": action, "error": str(exc)})
+                raise XcovError("VERDI_EXEC_FAILED", str(exc)) from exc
+            try:
+                with open(rsp_path, encoding="utf-8") as fp:
+                    payload = json.load(fp)
+            except Exception as exc:
+                log_lifecycle_event("adhoc", "npi.tcl.no_response", False,
+                                    {"vdb": self.vdb, "action": action, "exit_code": proc.returncode})
+                raise XcovError("TCL_NPI_NO_RESPONSE",
+                                "Verdi Tcl coverage action did not produce a valid JSON response",
+                                action=action, exit_code=proc.returncode,
+                                stdout=proc.stdout[-4000:], stderr=proc.stderr[-4000:]) from exc
+            if not payload.get("ok"):
+                err = payload.get("error") if isinstance(payload.get("error"), dict) else {}
+                code = err.get("code", "TCL_NPI_ERROR")
+                message = err.get("message", "Tcl coverage action failed")
+                log_lifecycle_event("adhoc", "npi.tcl.invoke.error", False,
+                                    {"vdb": self.vdb, "action": action, "code": code})
+                raise XcovError(str(code), str(message), tcl_action=action,
+                                stdout=proc.stdout[-2000:], stderr=proc.stderr[-2000:])
+            log_lifecycle_event("adhoc", "npi.tcl.invoke.ok", True,
+                                {"vdb": self.vdb, "action": action, "exit_code": proc.returncode})
+            data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+            return data
         finally:
-            self.release_if_handle(metric_hdl)
-
-    def _walk_functional_leaf(self, hdl: Any, test_hdl: Any, rows: List[Json],
-                              functional_path: Json, scope_filter: Optional[str],
-                              parent_source: Optional[Json]) -> None:
-        typ = _safe_call(hdl, "type")
-        name = _safe_call(hdl, "name")
-        path = dict(functional_path)
-        if typ == "npiCovCovergroup":
-            path = {"covergroup": name}
-        elif typ == "npiCovCoverpoint":
-            path["coverpoint"] = name
-        elif typ == "npiCovCross":
-            path["cross"] = name
-        elif typ == "npiCovCoverBin":
-            path["bin"] = name
-        scope = _functional_scope(path.get("covergroup"))
-        full_name = _functional_full_name(path, _safe_call(hdl, "full_name") or name)
-        raw_evidence = {"file": _safe_call(hdl, "file_name"),
-                        "line": _safe_call(hdl, "line_no", test_hdl)}
-        own_source = _functional_source(typ, name, full_name, raw_evidence)
-        row_source = own_source or parent_source
-        evidence = dict(row_source["evidence"]) if row_source else raw_evidence
-        if scope_filter is None or str(scope or full_name).startswith(scope_filter):
-            covered = _safe_call(hdl, "covered", test_hdl)
-            coverable = _safe_call(hdl, "coverable", test_hdl)
-            count = _safe_call(hdl, "count", test_hdl)
-            if coverable is not None:
-                status = _status_flags(hdl, test_hdl, covered, coverable)
-                rows.append({
-                    "metric": "functional",
-                    "type": typ,
-                    "scope": scope,
-                    "name": name,
-                    "full_name": full_name,
-                    "covered": covered,
-                    "coverable": coverable,
-                    "missing": _missing(covered, coverable),
-                    "count": count,
-                    "coverage_pct": coverage_pct(covered, coverable),
-                    "status": status,
-                    "evidence": evidence,
-                    **path,
-                })
-                if row_source and row_source is not own_source:
-                    rows[-1]["evidence_source"] = {
-                        "inherited": True,
-                        "type": row_source.get("type"),
-                        "name": row_source.get("name"),
-                        "full_name": row_source.get("full_name"),
-                    }
-        for child in _safe_list(hdl, "child_handles"):
-            self._walk_functional_leaf(child, test_hdl, rows, path, scope_filter,
-                                       own_source or parent_source)
-            self.cov.release_handle(child)
-
-    def _walk_leaf(self, hdl: Any, metric: str, scope: str, test_hdl: Any,
-                   rows: List[Json], coverage_path: Json,
-                   parent_source: Optional[Json]) -> None:
-        typ = _safe_call(hdl, "type")
-        name = _safe_call(hdl, "name")
-        full_name = _safe_call(hdl, "full_name") or name
-        path = _code_coverage_path(metric, typ, hdl, test_hdl, name, full_name,
-                                   coverage_path, self.release_if_handle)
-        if metric == "functional":
-            if typ == "npiCovCovergroup":
-                path["covergroup"] = name
-            elif typ == "npiCovCoverpoint":
-                path["coverpoint"] = name
-            elif typ == "npiCovCross":
-                path["cross"] = name
-            elif typ == "npiCovCoverBin":
-                path["bin"] = name
-        covered = _safe_call(hdl, "covered", test_hdl)
-        coverable = _safe_call(hdl, "coverable", test_hdl)
-        count = _safe_call(hdl, "count", test_hdl)
-        raw_evidence = {"file": _safe_call(hdl, "file_name"),
-                        "line": _safe_call(hdl, "line_no", test_hdl)}
-        own_source = _coverage_source(typ, name, full_name, raw_evidence)
-        row_source = own_source or parent_source
-        evidence = dict(row_source["evidence"]) if row_source else raw_evidence
-        if coverable is not None:
-            status = _status_flags(hdl, test_hdl, covered, coverable)
-            row = {
-                "metric": metric,
-                "type": typ,
-                "scope": scope,
-                "name": name,
-                "full_name": full_name,
-                "covered": covered,
-                "coverable": coverable,
-                "missing": _missing(covered, coverable),
-                "count": count,
-                "coverage_pct": coverage_pct(covered, coverable),
-                "status": status,
-                "evidence": evidence,
-                **path,
-            }
-            value = _coverage_value(hdl, test_hdl)
-            if value is not None:
-                row["value"] = value
-            if metric == "toggle":
-                transition = _toggle_transition(hdl, test_hdl, name)
-                if transition is not None:
-                    row["toggle_transition"] = transition
-            if row_source and row_source is not own_source:
-                row["evidence_source"] = {
-                    "inherited": True,
-                    "type": row_source.get("type"),
-                    "name": row_source.get("name"),
-                    "full_name": row_source.get("full_name"),
-                }
-            if (metric == "branch" and typ == "npiCovBranchBin"
-                    and _branch_mask_hint_enabled()
-                    and "branch_bin" in row):
-                bv = row["branch_bin"]
-                if isinstance(bv, str):
-                    hint = _branch_mask_hint(bv)
-                    if hint is not None:
-                        row["branch_mask"] = hint
-            rows.append(row)
-        for child in _safe_list(hdl, "child_handles"):
-            self._walk_leaf(child, metric, scope, test_hdl, rows, path,
-                            own_source or parent_source)
-            self.cov.release_handle(child)
-
-
-def _code_coverage_path(metric: str, typ: Any, hdl: Any, test_hdl: Any,
-                        name: Any, full_name: Any, coverage_path: Json,
-                        release_handle: Any) -> Json:
-    path = dict(coverage_path)
-    label = str(full_name or name or "")
-    short = str(name or full_name or "")
-    if metric == "toggle":
-        if typ == "npiCovSignal":
-            path["toggle_signal"] = label
-        elif typ == "npiCovSignalBit":
-            path["toggle_bit"] = label
-            path.setdefault("toggle_signal", _parent_from_bit(label))
-        elif typ == "npiCovToggleBin":
-            path.setdefault("toggle_transition", _toggle_transition(hdl, test_hdl, short))
-    elif metric == "condition":
-        if typ == "npiCovCondition":
-            path["condition"] = label or short
-            terms = _term_summary(hdl, "condition_term_handles", test_hdl, release_handle)
-            if terms:
-                path["condition_terms"] = terms
-        elif typ == "npiCovConditionBin":
-            path["condition_bin"] = _coverage_value(hdl, test_hdl) or short
-    elif metric == "branch":
-        if typ == "npiCovBranch":
-            path["branch"] = label or short
-            terms = _term_summary(hdl, "branch_term_handles", test_hdl, release_handle)
-            if terms:
-                path["branch_terms"] = terms
-        elif typ == "npiCovBranchBin":
-            path["branch_bin"] = _coverage_value(hdl, test_hdl) or short
-    return {k: v for k, v in path.items() if v not in (None, "")}
-
-
-def _parent_from_bit(label: str) -> str | None:
-    if "[" in label and label.endswith("]"):
-        return label.rsplit("[", 1)[0]
-    if "." in label:
-        return label.rsplit(".", 1)[0]
-    return None
-
-
-def _coverage_value(hdl: Any, test_hdl: Any) -> Any:
-    value = _safe_call(hdl, "value", test_hdl)
-    if value is None:
-        value = _safe_call(hdl, "value")
-    if value in (None, ""):
-        return None
-    if value == -1 or value == "-1":
-        return None
-    return value
-
-
-def _toggle_transition(hdl: Any, test_hdl: Any, fallback: Any) -> str | None:
-    value = _safe_call(hdl, "toggle_type", test_hdl)
-    if value is None:
-        value = _safe_call(hdl, "toggle_type")
-    if value in (None, "", -1, "-1"):
-        value = fallback
-    return str(value) if value not in (None, "") else None
-
-
-def _term_summary(hdl: Any, method: str, test_hdl: Any, release_handle: Any) -> str | None:
-    parts: List[str] = []
-    for term in _safe_list(hdl, method):
-        try:
-            label = _safe_call(term, "name") or _safe_call(term, "full_name")
-            value = _coverage_value(term, test_hdl)
-            if label and value is not None and str(value) != str(label):
-                parts.append(f"{label}:{value}")
-            elif label:
-                parts.append(str(label))
-            elif value is not None:
-                parts.append(str(value))
-        finally:
-            release_handle(term)
-    return ";".join(parts) if parts else None
-
-
-def _coverage_source(typ: Any, name: Any, full_name: Any, evidence: Json) -> Json | None:
-    if not _valid_evidence(evidence):
-        return None
-    return {
-        "type": typ,
-        "name": name,
-        "full_name": full_name,
-        "evidence": dict(evidence),
-    }
-
-
-def _safe_call(obj: Any, name: str, *args: Any) -> Any:
-    try:
-        fn = getattr(obj, name)
-    except Exception:
-        return None
-    try:
-        return fn(*args)
-    except Exception:
-        try:
-            return fn()
-        except Exception:
-            return None
-
-
-def _safe_list(obj: Any, name: str) -> List[Any]:
-    value = _safe_call(obj, name)
-    return list(value or [])
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _scope_parent(full_name: str) -> str | None:
@@ -615,73 +345,32 @@ def _scope_closure(scopes: Iterable[str]) -> List[str]:
     return sorted(names)
 
 
-def _functional_scope(covergroup: Any) -> str | None:
-    if not covergroup:
-        return None
-    name = str(covergroup)
-    if "::" not in name:
-        return name.rsplit(".", 1)[0] if "." in name else None
-    prefix = name.split("::", 1)[0]
-    return prefix if "." in prefix else None
+def _find_verdi() -> Optional[str]:
+    verdi_home = os.environ.get("XVERIF_XCOV_VERDI_HOME") or os.environ.get("VERDI_HOME")
+    if verdi_home:
+        candidate = os.path.join(verdi_home, "bin", "verdi")
+        if os.path.exists(candidate):
+            return candidate
+    return shutil.which("verdi")
 
 
-def _functional_full_name(path: Json, fallback: Any) -> str:
-    parts = [
-        path.get("covergroup"),
-        path.get("coverpoint") or path.get("cross"),
-        path.get("bin"),
-    ]
-    names = [str(part) for part in parts if part not in (None, "")]
-    if names:
-        return ".".join(names)
-    return str(fallback or "")
+def _tcl_script_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "tcl_engine" / "xcov_npi.tcl"
 
 
-def _functional_source(typ: Any, name: Any, full_name: Any, evidence: Json) -> Json | None:
-    if not _valid_evidence(evidence):
-        return None
-    return {
-        "type": typ,
-        "name": name,
-        "full_name": full_name,
-        "evidence": dict(evidence),
-    }
-
-
-def _valid_evidence(evidence: Json) -> bool:
-    if not evidence.get("file"):
-        return False
-    try:
-        return int(evidence.get("line") or 0) > 0
-    except Exception:
-        return False
-
-
-def _status_flags(hdl: Any, test_hdl: Any, covered: Any, coverable: Any) -> List[str]:
-    flags: List[str] = []
-    for method, flag in [
-        ("has_status_excluded", "excluded"),
-        ("has_status_partially_excluded", "partially_excluded"),
-        ("has_status_excluded_at_compile_time", "excluded_at_compile_time"),
-        ("has_status_excluded_at_report_time", "excluded_at_report_time"),
-        ("has_status_unreachable", "unreachable"),
-        ("has_status_illegal", "illegal"),
-        ("has_status_proven", "proven"),
-        ("has_status_attempted", "attempted"),
-        ("has_status_partially_attempted", "partially_attempted"),
-    ]:
-        try:
-            if getattr(hdl, method)(test_hdl):
-                flags.append(flag)
-        except Exception:
-            pass
+def _status_flags_from_values(covered: Any, coverable: Any,
+                              raw: Any = None) -> List[str]:
+    flags = list(raw or []) if isinstance(raw, list) else []
+    flags = [str(flag) for flag in flags if flag not in (None, "")]
     try:
         if int(covered or 0) >= int(coverable or 0) and int(coverable or 0) > 0:
-            flags.insert(0, "covered")
+            base = "covered"
         else:
-            flags.insert(0, "not_covered")
+            base = "not_covered"
     except Exception:
-        flags.insert(0, "not_covered")
+        base = "not_covered"
+    flags = [flag for flag in flags if flag not in {"covered", "not_covered"}]
+    flags.insert(0, base)
     return flags
 
 
@@ -723,17 +412,3 @@ def _branch_mask_hint(mask: str) -> dict | None:
         hint["encoding"] = "multi_bit"
         hint["one_positions"] = ones
     return hint
-
-
-@contextmanager
-def _redirect_stdout_to_stderr():
-    sys.stdout.flush()
-    sys.stderr.flush()
-    saved = os.dup(1)
-    try:
-        os.dup2(2, 1)
-        yield
-    finally:
-        sys.stdout.flush()
-        os.dup2(saved, 1)
-        os.close(saved)

@@ -19,14 +19,14 @@ class XcovError(Exception):
         return err
 
 
-def error_response(action: str, request_id: str, code: str, message: str,
+def error_response(response_action: str, response_request_id: str, error_code: str, error_message: str,
                    **detail: Any) -> Json:
-    err = XcovError(code, message, **detail)
+    err = XcovError(error_code, error_message, **detail)
     return {
         "ok": False,
         "api_version": "xcov.v1",
-        "request_id": request_id,
-        "action": action,
+        "request_id": response_request_id,
+        "action": response_action,
         "summary": {
             "matched_count": 0,
             "returned": 0,

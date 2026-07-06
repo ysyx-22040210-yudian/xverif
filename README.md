@@ -53,8 +53,9 @@ flowchart LR
 
     XDEBUG --> RTLDB["VCS / Verdi daidir"]
     XDEBUG --> FSDB["FSDB waveform"]
-    XDEBUG --> TCL["Tcl backend for Verdi 2018 compatibility"]
+    XDEBUG --> TCL["Tcl NPI backend for Verdi 2018 compatibility"]
     XCOV --> VDB["VCS / Verdi coverage database"]
+    XCOV --> TCL
     XEDA --> EDA["allowlisted EDA commands"]
 
     XBIT --> FACTS["deterministic evidence"]
@@ -87,23 +88,49 @@ flowchart LR
 
 ```text
 xverif/
-  tools/                 # 用户优先使用的统一命令入口
-  xdebug/                # 设计数据库和波形数据库调试工具
+  tools/                 # 用户优先使用的统一命令入口和 wrapper
+  xdebug/                # 设计数据库和波形数据库调试工具，直接 NPI 访问走 Tcl 后端
+  xcov/                  # VCS/Verdi coverage database 查询，直接 NPI 访问走 Tcl 后端
   xbit/                  # bit/literal/slice/expression 计算器
   xentry/                # 多拍 entry / byte fragments 字段解析器
   xloc/                  # UVM log location 压缩和恢复
   xberif/                # 项目 context summary cards/detail 生成与查询
   xsva/                  # SystemVerilog Assertion lowering 和解释
-  xcov/                  # VCS/Verdi coverage database 查询
   xverif_mcp/            # 统一 MCP server
   xeda_runner/           # allowlist EDA command runner
-  benchmarks/            # benchmark、repair loop、XiangShan/UVM 实验
-  reports/               # 评测和实验报告
+  mk/                    # 仓库共享 Makefile 片段和编译参数
+  regression/            # 跨工具回归脚本
   skill/                 # Agent 使用说明和工具 reference
-  doc/                   # 通用文档
+  doc/                   # 通用文档、静态配图和格式说明
+  benchmark_results/     # 已纳入版本管理的 benchmark 结果快照
 ```
 
 用户通常不需要直接进入每个工具的内部目录。推荐先把 `tools/` 加入 `PATH`，之后直接使用 `xdebug`、`xbit`、`xentry`、`xloc`、`xberif`、`xsva`、`xcov` 和 `xeda-runner`。
+
+当前工作区里还可能出现一些本地实验或缓存目录，例如 `benchmarks/`、`benchmark_artifacts/`、`reports/`、`tmp/` 和 `.pytest_cache/`。这些目录用于实验脚本、压测中间产物、报告草稿、临时文件或测试缓存，通常不作为工具源码的一部分提交，提交前需要按任务要求单独挑选结果产物。
+
+| 目录 | 含义 | 用户是否常用 |
+| --- | --- | --- |
+| `tools/` | 所有工具的稳定命令入口，负责设置必要环境并调用对应模块 | 是，推荐加入 `PATH` |
+| `xdebug/` | 设计/波形调试主工具；public CLI 是 C++ 前端，Verdi/FSDB/NPI 查询统一委托给 `tcl_engine/xdebug_npi.tcl` | 是 |
+| `xcov/` | coverage 查询工具；Python 负责协议、过滤、导出，真实 VDB/NPI 查询统一委托给 `tcl_engine/xcov_npi.tcl` | 是 |
+| `xbit/` | Verilog/SystemVerilog literal、slice、mask、表达式计算 | 是 |
+| `xentry/` | entry/descriptor/packet header 的字段切分和 provenance 解释 | 是 |
+| `xloc/` | UVM log 路径压缩、短 ID 解析和源码上下文恢复 | 是 |
+| `xberif/` | 项目背景卡片生成、brief/query、Agent 上下文管理 | 按需 |
+| `xsva/` | SVA property/assertion 列表、lowering、解释和 timeline IR | 按需 |
+| `xverif_mcp/` | MCP server，把各工具暴露给 AI Agent 或支持 MCP 的客户端 | Agent 场景常用 |
+| `xeda_runner/` | allowlist 方式执行 EDA 命令，限制 Agent 只能跑可审计动作 | Agent/自动化场景常用 |
+| `mk/` | 多个工具共享的 Makefile 片段、编译 flag 和公共规则 | 开发者常用 |
+| `regression/` | 仓库级或跨工具回归脚本 | 开发者常用 |
+| `skill/` | 面向 Codex/Agent 的工具 skill 与引用文档 | Agent 场景常用 |
+| `doc/` | 通用文档、静态 SVG 截图、语法说明和说明性资料 | 是 |
+| `benchmark_results/` | 已整理并提交的 benchmark 结果快照 | 查看结果时使用 |
+| `benchmarks/` | 本地 benchmark、repair loop、XiangShan/UVM 实验脚本或运行目录 | 实验任务按需 |
+| `benchmark_artifacts/` | 本地 benchmark 中间产物、截图、归档包或临时复制结果 | 通常不直接使用 |
+| `reports/` | 本地评测报告、Word/Markdown 草稿或导出文件 | 查看/整理报告时使用 |
+| `tmp/` | 临时文件、调试 scratch、一次性生成物 | 通常不提交 |
+| `.pytest_cache/` | pytest 自动生成的本地测试缓存 | 不需要手动使用 |
 
 ## 工具矩阵
 
@@ -193,7 +220,7 @@ export VCS_HOME=/path/to/vcs
 export LD_LIBRARY_PATH="$VERDI_HOME/share/NPI/lib/LINUX64:$LD_LIBRARY_PATH"
 ```
 
-当前 `xdebug` 的 Verdi/NPI 访问路径统一走 Tcl 后端，目标是兼容 Verdi 2018 这类较老版本。`xdebug` 的 CLI、JSON 协议、MCP 协议和测试框架仍保持稳定；不建议新代码再依赖旧的 C++ NPI function 直接实现。
+当前仓库的直接 Verdi/NPI 访问统一走 Tcl 后端，目标是兼容 Verdi 2018 这类较老版本。`xdebug` 使用 `xdebug/tcl_engine/xdebug_npi.tcl`，`xcov` 使用 `xcov/tcl_engine/xcov_npi.tcl`；public CLI、JSON 协议、MCP 协议和测试框架保持稳定。新代码不要新增非 Tcl 的直接 NPI 访问入口，也不要恢复旧私有 engine。
 
 ## 配图与截图建议
 
@@ -1042,7 +1069,7 @@ printf '%s\n' '{"api_version":"xcov.v1","action":"session.open","target":{"vdb":
 xcov --stdio-loop
 ```
 
-真实 coverage 查询需要可访问 Synopsys license server。`xcov` 和 `xdebug` 是不同后端，不要假设 `xdebug` 的 Tcl 后端改造会自动改变 `xcov` 的实现路径。
+真实 coverage 查询需要可访问 Synopsys license server。`xcov` 和 `xdebug` 是不同工具，但直接 NPI 访问策略一致：都只通过 Tcl backend 调 Verdi/NPI；Python/C++ 层只负责协议、调度、过滤、导出和展示。
 
 ## xverif-mcp: AI Agent 统一入口
 
@@ -1273,9 +1300,9 @@ PowerShell：
 $env:PYTHONPATH = "E:\xverif\xverif_mcp\src;E:\xverif"
 ```
 
-### Verdi 2018 不支持某些 C++ NPI 函数
+### Verdi 2018 不支持某些旧式 NPI 函数
 
-当前 `xdebug` 的 NPI 访问路径应使用 Tcl 后端，避免依赖较新 Verdi 才支持的 C++ NPI function。遇到类似问题时，不要补回旧 C++ NPI 实现；应在 Tcl 后端或请求转换层修复兼容性，并在 VM 上用 Verdi 2018 压测。
+当前仓库的 NPI 访问路径应使用 Tcl 后端，避免依赖较新 Verdi 才支持的非 Tcl 直接调用。遇到类似问题时，不要补回旧式实现；应在 `xdebug/tcl_engine/xdebug_npi.tcl`、`xcov/tcl_engine/xcov_npi.tcl` 或请求转换层修复兼容性，并在 VM 上用 Verdi 2018 压测。
 
 ### 查询信号失败
 

@@ -55,15 +55,19 @@ DEPS = $(sort $(CORE_OBJS:.o=.d) \
        $(BUILD)/src/waveform/value/logic_value.d \
        $(BUILD)/src/session/session_catalog.d)
 
-.PHONY: all internal-engines audit-no-cpp-npi unit-test log-test test-infra pytest-contract pytest-synthetic-existing pytest-counter-statistics pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast test-contract test-synthetic test-vip test-active-trace test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke test-regression test-nightly test-mcp-real-lsf mcp-test schema-test contract-test combined-test clean
+.PHONY: all internal-engines audit-tcl-npi-only unit-test log-test test-infra pytest-contract pytest-synthetic-existing pytest-counter-statistics pytest-axi-vip pytest-apb-vip pytest-active-semantics pytest-realdata pytest-session pytest-mcp test-fast test-contract test-synthetic test-vip test-active-trace test-session test-mcp-direct test-mcp-fake-lsf test-realdata-smoke test-regression test-nightly test-mcp-real-lsf mcp-test schema-test contract-test combined-test clean
 
-all: audit-no-cpp-npi $(EXE) internal-engines
+all: audit-tcl-npi-only $(EXE) internal-engines
 
 internal-engines: $(LIBEXEC)/xdebug-engine
 
-audit-no-cpp-npi:
+audit-tcl-npi-only:
 	@if grep -RInE '#include[[:space:]]+[<"]npi(_[^>"]*)?\.h[>"]|#include[[:space:]]+[<"]npi(_fsdb|_hdl|_L1)[^>"]*[>"]|\bnpi(Fsdb|Handle)\b|\bnpi_(init|end|get|handle|release|fsdb|active|trace)[A-Za-z0-9_]*[[:space:]]*\(' src 2>/dev/null; then \
 		echo "ERROR: xdebug C++ sources must not include Verdi NPI headers; use tcl_engine/xdebug_npi.tcl instead." >&2; \
+		exit 1; \
+	fi
+	@if grep -RInE 'xdebug-(design|waveform)-engine|npi[.]mk' src tests regression 2>/dev/null; then \
+		echo "ERROR: legacy direct NPI engine entrypoints are removed; use libexec/xdebug-engine and tcl_engine/xdebug_npi.tcl." >&2; \
 		exit 1; \
 	fi
 

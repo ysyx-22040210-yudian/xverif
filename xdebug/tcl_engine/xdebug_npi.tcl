@@ -87,6 +87,10 @@ proc json_object_raw {pairs} {
 }
 
 proc write_response_raw {json_text} {
+    if {![info exists ::env(XDEBUG_TCL_RESPONSE_JSON)] || $::env(XDEBUG_TCL_RESPONSE_JSON) eq ""} {
+        puts $json_text
+        return
+    }
     set fp [open $::env(XDEBUG_TCL_RESPONSE_JSON) w]
     puts $fp $json_text
     close $fp
@@ -626,4 +630,8 @@ if {[catch {main} err opts]} {
         fail_data "TCL_NPI_ERROR" "$err\n$info"
     }
 }
-debExit
+if {[llength [info commands debExit]]} {
+    debExit
+} else {
+    exit
+}
