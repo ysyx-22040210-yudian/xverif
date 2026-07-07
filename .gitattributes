@@ -1,0 +1,7 @@
+*.sh text eol=lf
+*.tcl text eol=lf
+Makefile text eol=lf
+*/Makefile text eol=lf
+tools/* text eol=lf
+xdebug/tcl_engine/* text eol=lf
+xcov/tcl_engine/* text eol=lf
