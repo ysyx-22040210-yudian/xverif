@@ -166,6 +166,24 @@ export XVERIF_HOME="$PWD"
 export PATH="$XVERIF_HOME/tools:$PATH"
 ```
 
+在已验证的 VM 上，普通用户为 `host`，仓库路径通常是：
+
+```bash
+su - host
+cd /home/host/xverif
+export XVERIF_HOME=/home/host/xverif
+export PATH=/home/host/xverif/tools:$PATH
+export PYTHON=/home/host/xverif/.venv38/bin/python
+```
+
+如果不想依赖 `PATH`，也可以直接使用绝对路径调用：
+
+```bash
+/home/host/xverif/tools/xdebug -h
+/home/host/xverif/tools/xbit conv "8'shff" --json
+/home/host/xverif/tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"/home/host/xverif/xentry/examples/entry.yaml"}'
+```
+
 Tcsh：
 
 ```tcsh
@@ -196,6 +214,20 @@ xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/exam
 xsva list --file xsva/tests/golden_ir/simple_impl/input.sva
 ```
 
+在 VM 普通用户 `host` 下使用绝对路径时，可以直接运行：
+
+```bash
+export PYTHON=/home/host/xverif/.venv38/bin/python
+
+/home/host/xverif/tools/xbit conv "8'shff" --json
+/home/host/xverif/tools/xbit slice "32'hdead_beef" 15 8
+/home/host/xverif/tools/xbit eval "data[15:8] == 8'hbe" --var "data=32'hdead_beef"
+
+/home/host/xverif/tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"/home/host/xverif/xentry/examples/entry.yaml"}'
+
+/home/host/xverif/tools/xsva list --file /home/host/xverif/xsva/tests/golden_ir/simple_impl/input.sva
+```
+
 ### 4. 查询 xdebug action catalog
 
 Bash：
@@ -218,6 +250,17 @@ PowerShell：
 export VERDI_HOME=/path/to/verdi
 export VCS_HOME=/path/to/vcs
 export LD_LIBRARY_PATH="$VERDI_HOME/share/NPI/lib/LINUX64:$LD_LIBRARY_PATH"
+```
+
+Verdi 2018 VM 上的常用设置示例：
+
+```bash
+export VCS_HOME=/home/synopsys/vcs/O-2018.09-SP2
+export VERDI_HOME=/home/synopsys/verdi/Verdi_O-2018.09-SP2
+export VCS_TARGET_ARCH=linux64
+export PATH="$VCS_HOME/bin:$VERDI_HOME/bin:/home/host/xverif/tools:$PATH"
+export LM_LICENSE_FILE=27000@IC_EDA
+export SNPSLMD_LICENSE_FILE=27000@IC_EDA
 ```
 
 当前仓库的直接 Verdi/NPI 访问统一走 Tcl 后端，目标是兼容 Verdi 2018 这类较老版本。`xdebug` 使用 `xdebug/tcl_engine/xdebug_npi.tcl`，`xcov` 使用 `xcov/tcl_engine/xcov_npi.tcl`；public CLI、JSON 协议、MCP 协议和测试框架保持稳定。新代码不要新增非 Tcl 的直接 NPI 访问入口，也不要恢复旧私有 engine。
@@ -797,6 +840,74 @@ sequenceDiagram
 | `daidir` | VCS/Verdi 设计数据库，例如 `simv.daidir` |
 | `fsdb` | FSDB 波形数据库，例如 `waves.fsdb` |
 | `session_id` | 已打开 session 的复用句柄 |
+
+注意区分“被调试数据”和“工具请求”：
+
+- `fsdb` / `daidir` 才是真正的 EDA 原始输入文件或目录。
+- JSON request 不是 Verdi 产物，也不是新的设计数据库；它只是 xdebug 的控制协议，用来告诉工具要执行哪个 action、查哪个信号、查哪个时间点。
+- JSON request 可以写成临时文件，例如 `value.json`，也可以直接从 stdin 输入。两种方式完全等价。
+
+常见输入组合：
+
+| action 类型 | 需要的真实输入 | 典型 action |
+| --- | --- | --- |
+| 只看波形 | 只需要 `fsdb` | `scope.list`、`value.at`、`value.batch_at`、`event.find` |
+| 静态设计追踪 | 只需要 `daidir` / elab 库 | `trace.driver`、`trace.graph`、`source.context` |
+| 某时刻生效 driver | 同时需要 `daidir` 和 `fsdb` | `trace.active_driver`、`trace.active_driver_chain` |
+| 已打开会话复用 | 只需要 `session_id` | 多次连续查询同一 case |
+
+因此，如果只是查询 FSDB 中某个信号在某个时间点的值，真实输入只需要 FSDB。下面 JSON 只是“查什么”的请求：
+
+```bash
+printf '%s\n' '{
+  "api_version": "xdebug.v1",
+  "action": "value.at",
+  "target": {
+    "fsdb": "/home/host/testdata/clkfreq.fsdb",
+    "auto_open": true
+  },
+  "args": {
+    "name": "raw_fsdb_case",
+    "signal": "tb_clkfreq.clk",
+    "time": "0ns",
+    "format": "bin"
+  }
+}' | /home/host/xverif/tools/xdebug --json -
+```
+
+如果要查静态 driver，使用 Verdi/VCS elab 库即可，不需要 FSDB：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "trace.driver",
+  "target": {
+    "daidir": "/path/to/simv.daidir"
+  },
+  "args": {
+    "signal": "top.u_core.ready",
+    "include_source": true
+  }
+}
+```
+
+只有当你要回答“这个时间点哪个 driver 真正生效”时，才同时传入 elab 库和 FSDB：
+
+```json
+{
+  "api_version": "xdebug.v1",
+  "action": "trace.active_driver",
+  "target": {
+    "daidir": "/path/to/simv.daidir",
+    "fsdb": "/path/to/waves.fsdb"
+  },
+  "args": {
+    "signal": "top.u_core.ready",
+    "requested_time": "120ns",
+    "include_control": true
+  }
+}
+```
 
 ### 查询 action catalog
 
