@@ -676,6 +676,9 @@ bool Dispatcher::send_to_socket(const std::string& session_id,
                 for (const char* key : {"recoverable", "candidates", "suggested_actions"}) {
                     if (detail_error.contains(key)) response["error"][key] = detail_error[key];
                 }
+                if (detail_error.contains("details") && detail_error["details"].is_object()) {
+                    response["error"]["details"] = detail_error["details"];
+                }
             }
             if (details.contains("warnings") && details["warnings"].is_array())
                 response["warnings"] = details["warnings"];

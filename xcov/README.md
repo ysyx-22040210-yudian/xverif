@@ -1,9 +1,11 @@
 # xcov
 
 `xcov` is an AI/MCP-oriented query engine for VCS/Verdi coverage databases.
-It accepts `xcov.v1` JSON requests and returns compact `xout` by default.
-Set `output.response_format:"json"` or use `tools/xcov --json -` for machine
-JSON responses.
+Human users can call it with parameter-style subcommands such as
+`cov-holes`, `cov-summary`, `scope-children`, and `source-map`. The JSON
+`xcov.v1` request protocol remains available for scripts, MCP, stdio-loop,
+schema tests, and reproducible bug reports. Compact `xout` is the default;
+use `--json` for machine JSON responses.
 
 xcov follows the same stateful split as xdebug: `tools/xcov --stdio-loop`
 hosts the real coverage database session. Python owns the JSON protocol,
@@ -14,7 +16,26 @@ forwards JSON requests, and handles direct/LSF launcher cleanup.
 
 ## Quick Start
 
-One-shot:
+One-shot parameter CLI:
+
+```bash
+tools/xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 3
+tools/xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 3 --json
+tools/xcov cov-summary --vdb /path/to/simv.vdb --metrics line,toggle,branch
+tools/xcov source-map --vdb /path/to/simv.vdb --file rtl/ctrl.sv --line 88 --window 5
+```
+
+Reusable session CLI:
+
+```bash
+tools/xcov open --vdb /path/to/simv.vdb --name cov0
+tools/xcov tests --session cov0
+tools/xcov metrics --session cov0 --scope top.u_dut
+tools/xcov cov-holes --session cov0 --metrics branch,condition --include "*ctrl*" --max-items 20
+tools/xcov close --session cov0
+```
+
+JSON protocol remains supported:
 
 ```bash
 printf '%s\n' '{"api_version":"xcov.v1","action":"session.open","target":{"vdb":"fake"},"args":{"name":"cov0","fake":true}}' \

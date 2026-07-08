@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from xverif_loop.config import (
     configure_loop_wrapper_environment,
@@ -31,9 +31,11 @@ Json = Dict[str, Any]
 
 
 def default_socket_path() -> str:
+    uid_func = getattr(os, "getuid", None)
+    ident = uid_func() if callable(uid_func) else os.getpid()
     return os.environ.get(
         "XVERIF_LOOP_SOCKET",
-        f"/tmp/xverif-loop-{os.getuid()}.sock",
+        f"/tmp/xverif-loop-{ident}.sock",
     )
 
 
@@ -164,7 +166,7 @@ class LoopWrapperServer:
         self.service = service or LoopWrapperService()
         self._stop = threading.Event()
         self._server_socket: Optional[socket.socket] = None
-        self._threads: list[threading.Thread] = []
+        self._threads: List[threading.Thread] = []
         self._created_socket = False
 
     def serve_forever(self) -> None:
@@ -260,8 +262,8 @@ class LoopWrapperServer:
                 pass
 
 
-def send_requests(socket_path: str, requests: Iterable[Json], timeout_sec: float = 30.0) -> list[Json]:
-    responses: list[Json] = []
+def send_requests(socket_path: str, requests: Iterable[Json], timeout_sec: float = 30.0) -> List[Json]:
+    responses: List[Json] = []
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout_sec)
         sock.connect(socket_path)
@@ -291,7 +293,166 @@ def _session_key(params: Json) -> str:
     return value
 
 
-def server_main(argv: Optional[list[str]] = None) -> int:
+def _parse_scalar(value: str) -> Any:
+    if value == "true":
+        return True
+    if value == "false":
+        return False
+    if value == "null":
+        return None
+    if value and value[0] in "[{":
+        try:
+            return json.loads(value)
+        except Exception:
+            return value
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
+def _set_dotted(root: Json, key: str, value: Any) -> None:
+    if "." not in key:
+        root[key] = value
+        return
+    head, tail = key.split(".", 1)
+    child = root.setdefault(head, {})
+    if not isinstance(child, dict):
+        child = {}
+        root[head] = child
+    _set_dotted(child, tail, value)
+
+
+def _apply_key_values(root: Json, items: Iterable[str]) -> None:
+    for item in items:
+        if "=" not in item or item.startswith("="):
+            raise ValueError(f"expected key=value, got: {item}")
+        key, value = item.split("=", 1)
+        _set_dotted(root, key, _parse_scalar(value))
+
+
+def _add_client_common(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--socket", default=default_socket_path())
+    parser.add_argument("--timeout-sec", type=float, default=30.0)
+    parser.add_argument("--pretty", action="store_true", help="pretty-print JSON responses")
+
+
+def _add_query_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--session", required=True)
+    parser.add_argument("--action", required=True)
+    parser.add_argument("--output-format", choices=("xout", "json", "envelope"), default="xout")
+    parser.add_argument("--arg", action="append", default=[], help="set action args key=value")
+    parser.add_argument("--limit", action="append", default=[], help="set limits key=value")
+    parser.add_argument("--output", action="append", default=[], help="set output key=value")
+
+
+def build_client_shortcut_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="xverif-loop-client",
+        description="Send parameter-style requests to xverif-loop-server",
+    )
+    _add_client_common(parser)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("ping", help="check server liveness")
+
+    p = sub.add_parser("debug-open", help="open an xdebug loop session")
+    p.add_argument("--name", required=True)
+    p.add_argument("--fsdb")
+    p.add_argument("--daidir")
+    p.add_argument("--queue")
+    p.add_argument("--resource")
+
+    sub.add_parser("debug-list", help="list xdebug loop sessions")
+
+    p = sub.add_parser("debug-close", help="close an xdebug loop session")
+    p.add_argument("--session", "--session-id", "--name", dest="session", required=True)
+
+    p = sub.add_parser("debug-query", help="query an xdebug loop session")
+    _add_query_options(p)
+
+    p = sub.add_parser("cov-open", help="open an xcov loop session")
+    p.add_argument("--name", required=True)
+    p.add_argument("--vdb", required=True)
+    p.add_argument("--queue")
+    p.add_argument("--resource")
+
+    sub.add_parser("cov-list", help="list xcov loop sessions")
+
+    p = sub.add_parser("cov-close", help="close an xcov loop session")
+    p.add_argument("--session", "--session-id", "--name", dest="session", required=True)
+
+    p = sub.add_parser("cov-query", help="query an xcov loop session")
+    _add_query_options(p)
+    return parser
+
+
+def request_from_client_shortcut(ns: argparse.Namespace) -> Json:
+    command = ns.command
+    params: Json = {}
+    method = ""
+    if command == "ping":
+        method = "server.ping"
+    elif command == "debug-open":
+        method = "debug.session.open"
+        params = {"name": ns.name}
+        for key in ("fsdb", "daidir", "queue", "resource"):
+            value = getattr(ns, key, None)
+            if value:
+                params[key] = value
+    elif command == "debug-list":
+        method = "debug.session.list"
+    elif command == "debug-close":
+        method = "debug.session.close"
+        params = {"session": ns.session}
+    elif command == "debug-query":
+        method = "debug.query"
+        params = _query_params(ns)
+    elif command == "cov-open":
+        method = "cov.session.open"
+        params = {"name": ns.name, "vdb": ns.vdb}
+        for key in ("queue", "resource"):
+            value = getattr(ns, key, None)
+            if value:
+                params[key] = value
+    elif command == "cov-list":
+        method = "cov.session.list"
+    elif command == "cov-close":
+        method = "cov.session.close"
+        params = {"session": ns.session}
+    elif command == "cov-query":
+        method = "cov.query"
+        params = _query_params(ns)
+    else:
+        raise ValueError(f"unsupported shortcut command: {command}")
+    return {"id": f"cli-{command}", "method": method, "params": params}
+
+
+def _query_params(ns: argparse.Namespace) -> Json:
+    args: Json = {}
+    limits: Json = {}
+    output: Json = {}
+    _apply_key_values(args, ns.arg or [])
+    _apply_key_values(limits, ns.limit or [])
+    _apply_key_values(output, ns.output or [])
+    params: Json = {
+        "session": ns.session,
+        "action": ns.action,
+        "args": args,
+        "output_format": ns.output_format,
+    }
+    if limits:
+        params["limits"] = limits
+    if output:
+        params["output"] = output
+    return params
+
+
+def server_main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Run the xverif SDK-free loop wrapper server")
     parser.add_argument("--socket", default=default_socket_path())
     parser.add_argument("--backend", choices=("direct", "lsf"), default=None)
@@ -306,18 +467,52 @@ def server_main(argv: Optional[list[str]] = None) -> int:
     return 0
 
 
-def client_main(argv: Optional[list[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Send JSONL requests to xverif-loop-server")
-    parser.add_argument("--socket", default=default_socket_path())
-    parser.add_argument("--json", help="single JSON request object")
-    parser.add_argument("--timeout-sec", type=float, default=30.0)
-    args = parser.parse_args(argv)
-    if args.json:
-        requests = [json.loads(args.json)]
+def client_main(argv: Optional[List[str]] = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    shortcut_commands = {
+        "ping", "debug-open", "debug-list", "debug-close", "debug-query",
+        "cov-open", "cov-list", "cov-close", "cov-query",
+    }
+    if not argv or argv[0] in {"-h", "--help"}:
+        build_client_shortcut_parser().print_help()
+        print("\nJSON protocol options:")
+        parser = argparse.ArgumentParser(prog="xverif-loop-client")
+        parser.add_argument("--socket", default=default_socket_path())
+        parser.add_argument("--json", help="single JSON request object")
+        parser.add_argument("--timeout-sec", type=float, default=30.0)
+        parser.add_argument("--pretty", action="store_true", help="pretty-print JSON responses")
+        parser.print_help()
+        return 0
+    shortcut_argv = list(argv)
+    while shortcut_argv and shortcut_argv[0] in {"--socket", "--timeout-sec", "--pretty"}:
+        token = shortcut_argv.pop(0)
+        if token in {"--socket", "--timeout-sec"} and shortcut_argv:
+            shortcut_argv.pop(0)
+    if shortcut_argv and shortcut_argv[0] in shortcut_commands:
+        ns = build_client_shortcut_parser().parse_args(argv)
+        requests = [request_from_client_shortcut(ns)]
+        socket_path = ns.socket
+        timeout_sec = ns.timeout_sec
+        pretty = ns.pretty
     else:
-        requests = [json.loads(line) for line in sys.stdin if line.strip()]
-    for rsp in send_requests(args.socket, requests, timeout_sec=args.timeout_sec):
-        print(json.dumps(rsp, ensure_ascii=False, separators=(",", ":")))
+        parser = argparse.ArgumentParser(description="Send requests to xverif-loop-server")
+        parser.add_argument("--socket", default=default_socket_path())
+        parser.add_argument("--json", help="single JSON request object")
+        parser.add_argument("--timeout-sec", type=float, default=30.0)
+        parser.add_argument("--pretty", action="store_true", help="pretty-print JSON responses")
+        args = parser.parse_args(argv)
+        if args.json:
+            requests = [json.loads(args.json)]
+        else:
+            requests = [json.loads(line) for line in sys.stdin if line.strip()]
+        socket_path = args.socket
+        timeout_sec = args.timeout_sec
+        pretty = args.pretty
+    for rsp in send_requests(socket_path, requests, timeout_sec=timeout_sec):
+        if pretty:
+            print(json.dumps(rsp, ensure_ascii=False, indent=2))
+        else:
+            print(json.dumps(rsp, ensure_ascii=False, separators=(",", ":")))
     return 0
 
 

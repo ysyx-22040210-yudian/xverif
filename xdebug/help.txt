@@ -16,9 +16,37 @@ Usage
   xdebug --json -
       Read one JSON request and print the original JSON response.
 
+  xdebug actions [--json]
+      List available actions without writing a JSON request.
+
+  xdebug schema --action <name> [--kind request|response] [--json]
+      Print the request or response schema for one action.
+
+  xdebug value-at --fsdb <waves.fsdb>|--session <id> --signal <sig> --time <time> [--format hex]
+      Query one signal value from an FSDB or existing session.
+
+  xdebug value-batch --fsdb <waves.fsdb>|--session <id> --signal <sig> [--signal <sig> ...] --time <time>
+      Query several signals at the same time.
+
+  xdebug trace-driver --daidir <simv.daidir>|--session <id> --signal <sig> [--include-source]
+      Query the static RTL driver using the Verdi/VCS elaboration database.
+
+  xdebug active-driver --daidir <simv.daidir> --fsdb <waves.fsdb> --signal <sig> --time <time>
+      Join waveform time with design causality and locate the active driver.
+
+  xdebug session-open --name <id> [--daidir simv.daidir] [--fsdb waves.fsdb]
+      Open a reusable debug session. Use session-list/session-close to inspect or close it.
+
+  xdebug action <action> [--session id] [--daidir path] [--fsdb path] [--arg key=value]
+      Generic parameter-style shortcut for actions that do not yet have a named subcommand.
+
 Request / output contract
 -------------------------
-  All xdebug capabilities are requested through JSON:
+  Human users should prefer the parameter-style shortcuts above. The CLI
+  translates those flags into the same request object used by the backend.
+
+  JSON is still the stable machine protocol for scripts, MCP, stdio-loop,
+  schema tests and reproducible bug reports:
 
     api_version / action / target / args / limits / output
 
@@ -227,43 +255,28 @@ Output control
 
 Examples
 --------
-  List machine-readable actions:
+  List actions:
 
-    printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
+    xdebug actions
+    xdebug actions --json
 
   Query a design driver:
 
-    printf '%s\n' '{
-      "api_version":"xdebug.v1",
-      "action":"trace.driver",
-      "target":{"daidir":"simv.daidir"},
-      "args":{"signal":"top.u.ready"}
-    }' | xdebug -
+    xdebug trace-driver --daidir simv.daidir --signal top.u.ready --include-source
 
   Open a session, then query it explicitly:
 
-    printf '%s\n' '{
-      "api_version":"xdebug.v1",
-      "action":"session.open",
-      "target":{"daidir":"simv.daidir","fsdb":"waves.fsdb"},
-      "args":{"name":"case_a"}
-    }' | xdebug -
+    xdebug session-open --name case_a --daidir simv.daidir --fsdb waves.fsdb
 
-    printf '%s\n' '{
-      "api_version":"xdebug.v1",
-      "action":"value.at",
-      "target":{"session_id":"case_a"},
-      "args":{"signal":"top.clk","time":"10ns"}
-    }' | xdebug -
+    xdebug value-at --session case_a --signal top.clk --time 10ns
 
   Join waveform time to active design driver:
 
-    printf '%s\n' '{
-      "api_version":"xdebug.v1",
-      "action":"trace.active_driver",
-      "target":{"session_id":"case_a"},
-      "args":{"signal":"top.u.ready","requested_time":"100ns"}
-    }' | xdebug -
+    xdebug active-driver --session case_a --signal top.u.ready --time 100ns
+
+  Generic action shortcut:
+
+    xdebug action signal.changes --fsdb waves.fsdb --arg signal=top.clk --arg begin=0ns --arg end=1us --limit max_rows=20
 
 Logs and troubleshooting
 ------------------------

@@ -13,17 +13,20 @@ from .format import dumps, error_response, to_xout
 from .fragments import load_fragments_file
 
 
-HELP_TEXT = """xentry - JSON-first multi-beat entry field decoder
+HELP_TEXT = """xentry - multi-beat entry field decoder
 
 Usage:
   xentry -h
   xentry -help
+  xentry decode --config entry.yaml --input fragments.jsonl [--json]
+  xentry explain --config entry.yaml [--json]
+  xentry validate --config entry.yaml [--input fragments.jsonl]
   xentry -
   xentry request.json
   xentry '{"api_version":"xentry.v1","action":"decode",...}'
-  xentry decode --config entry.yaml --input fragments.jsonl --json
 
-JSON request:
+Parameter commands are the normal human CLI. JSON request remains available
+for scripts, agents, and regression tests:
   {
     "api_version": "xentry.v1",
     "action": "decode",

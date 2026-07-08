@@ -12,24 +12,7 @@
 
 ## Quick Start
 
-JSON request 是推荐入口；默认输出为 `xout` 结构化文本：
-
-```bash
-printf '%s\n' '{
-  "api_version": "xentry.v1",
-  "action": "decode",
-  "config_path": "xentry/examples/entry.yaml",
-  "input_path": "xentry/examples/fragments.jsonl"
-}' | tools/xentry -
-```
-
-也可以直接传入单个 JSON 字符串：
-
-```bash
-tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
-```
-
-或使用兼容的人类 CLI：
+日常使用推荐参数式命令；默认输出为 `xout` 结构化文本：
 
 ```bash
 tools/xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl
@@ -37,10 +20,16 @@ tools/xentry explain --config xentry/examples/entry.yaml
 tools/xentry validate --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl
 ```
 
+JSON request 是兼容入口，主要给脚本、Agent、stdio/回归场景使用；也可以直接传入单个 JSON 字符串：
+
+```bash
+tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+```
+
 需要完整 JSON response 时加 `--json`：
 
 ```bash
-tools/xentry --json '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+tools/xentry explain --config xentry/examples/entry.yaml --json
 tools/xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
 ```
 
@@ -157,7 +146,7 @@ fields:
 
 ## Agent 使用原则
 
-当你需要解释 entry、descriptor、context、metadata、table entry、WQE、CQE 或 header field 时，不要手工拼接 bit，也不要自己做 hex slicing。构造 JSON request 调用 `xentry`，只基于 `fields/raw_hex/raw_bin/source/errors/warnings` 做分析。
+当你需要解释 entry、descriptor、context、metadata、table entry、WQE、CQE 或 header field 时，不要手工拼接 bit，也不要自己做 hex slicing。优先用 `xentry decode --config ... --input ...` 或 `xentry explain --config ...` 调用工具，只基于 `fields/raw_hex/raw_bin/source/errors/warnings` 做分析。
 
 ## Shell 命令入口
 

@@ -33,6 +33,108 @@ struct CliOptions {
     std::string input_arg;
 };
 
+struct ShortcutParseResult {
+    bool matched = false;
+    bool ok = false;
+    xdebug::Json request = xdebug::Json::object();
+    std::string error;
+};
+
+std::string executable_dir();
+
+bool is_shortcut_command(const std::string& arg) {
+    static const char* commands[] = {
+        "action", "actions", "schema",
+        "session-open", "session-list", "session-close", "session-doctor", "session-kill", "session-gc",
+        "scope-list", "value-at", "value-batch", "trace-driver", "trace-graph",
+        "source-context", "active-driver", "active-driver-chain"
+    };
+    for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); ++i) {
+        if (arg == commands[i]) return true;
+    }
+    return false;
+}
+
+bool take_value(int argc, char** argv, int& i, std::string& value, std::string& error) {
+    if (i + 1 >= argc) {
+        error = std::string("missing value for ") + argv[i];
+        return false;
+    }
+    value = argv[++i];
+    return true;
+}
+
+xdebug::Json parse_scalar_value(const std::string& value) {
+    if (value == "true") return true;
+    if (value == "false") return false;
+    if (value == "null") return nullptr;
+    if (!value.empty() && (value[0] == '{' || value[0] == '[')) {
+        try {
+            return xdebug::Json::parse(value);
+        } catch (...) {
+            return value;
+        }
+    }
+    char* end = nullptr;
+    long long integer = std::strtoll(value.c_str(), &end, 10);
+    if (end && *end == '\0') return integer;
+    char* fend = nullptr;
+    double real = std::strtod(value.c_str(), &fend);
+    if (fend && *fend == '\0' && value.find('.') != std::string::npos) return real;
+    return value;
+}
+
+xdebug::Json split_csv(const std::string& text) {
+    xdebug::Json out = xdebug::Json::array();
+    std::string item;
+    std::istringstream in(text);
+    while (std::getline(in, item, ',')) {
+        if (!item.empty()) out.push_back(item);
+    }
+    return out;
+}
+
+void set_nested_arg(xdebug::Json& root, const std::string& dotted_key, const xdebug::Json& value) {
+    size_t dot = dotted_key.find('.');
+    if (dot == std::string::npos) {
+        root[dotted_key] = value;
+        return;
+    }
+    std::string head = dotted_key.substr(0, dot);
+    std::string tail = dotted_key.substr(dot + 1);
+    if (!root.contains(head) || !root[head].is_object()) root[head] = xdebug::Json::object();
+    set_nested_arg(root[head], tail, value);
+}
+
+bool apply_key_value(xdebug::Json& object, const std::string& item, std::string& error) {
+    size_t eq = item.find('=');
+    if (eq == std::string::npos || eq == 0) {
+        error = "expected key=value, got: " + item;
+        return false;
+    }
+    set_nested_arg(object, item.substr(0, eq), parse_scalar_value(item.substr(eq + 1)));
+    return true;
+}
+
+void print_shortcut_help() {
+    std::cout
+        << "xdebug parameter shortcuts\n"
+        << "Usage:\n"
+        << "  xdebug actions [--json]\n"
+        << "  xdebug schema --action <name> [--kind request|response] [--json]\n"
+        << "  xdebug session-open --name <id> [--daidir simv.daidir] [--fsdb waves.fsdb]\n"
+        << "  xdebug session-list [--json]\n"
+        << "  xdebug session-close --session <id>\n"
+        << "  xdebug scope-list --fsdb <waves.fsdb>|--session <id> [--path top] [--max-rows N]\n"
+        << "  xdebug value-at --fsdb <waves.fsdb>|--session <id> --signal <sig> --time <time> [--format hex]\n"
+        << "  xdebug value-batch --fsdb <waves.fsdb>|--session <id> --signal <sig> [--signal <sig> ...] --time <time>\n"
+        << "  xdebug trace-driver --daidir <simv.daidir>|--session <id> --signal <sig> [--include-source]\n"
+        << "  xdebug active-driver --session <id>|--daidir <simv.daidir> --fsdb <waves.fsdb> --signal <sig> --time <time>\n"
+        << "  xdebug action <action> [--session id] [--daidir path] [--fsdb path] [--arg key=value] [--target key=value]\n"
+        << "\n"
+        << "JSON request files and stdin remain supported: xdebug --json request.json or xdebug --json -\n";
+}
+
 bool env_wants_json() {
     const char* value = std::getenv("XVERIF_OUTPUT");
     return value != nullptr && std::string(value) == "json";
@@ -50,6 +152,201 @@ void print_response(const xdebug::Json& response, OutputFormat format) {
     } else {
         std::cout << xdebug::render_xout_response(response);
     }
+}
+
+ShortcutParseResult parse_shortcut(int argc, char** argv, OutputFormat& format) {
+    ShortcutParseResult result;
+    if (argc < 2) return result;
+    int command_index = 1;
+    while (command_index < argc) {
+        std::string opt(argv[command_index]);
+        if (opt == "--json") {
+            format = OutputFormat::Json;
+            ++command_index;
+        } else if (opt == "--text" || opt == "--xout") {
+            format = OutputFormat::Xout;
+            ++command_index;
+        } else {
+            break;
+        }
+    }
+    if (command_index >= argc) return result;
+    std::string command(argv[command_index]);
+    if (!is_shortcut_command(command)) return result;
+    result.matched = true;
+
+    for (int i = command_index + 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "-h" || arg == "--help") {
+            result.error = "__HELP__";
+            return result;
+        }
+    }
+
+    std::string action = command;
+    if (command == "session-open") action = "session.open";
+    else if (command == "session-list") action = "session.list";
+    else if (command == "session-close") action = "session.close";
+    else if (command == "session-doctor") action = "session.doctor";
+    else if (command == "session-kill") action = "session.kill";
+    else if (command == "session-gc") action = "session.gc";
+    else if (command == "scope-list") action = "scope.list";
+    else if (command == "value-at") action = "value.at";
+    else if (command == "value-batch") action = "value.batch_at";
+    else if (command == "trace-driver") action = "trace.driver";
+    else if (command == "trace-graph") action = "trace.graph";
+    else if (command == "source-context") action = "source.context";
+    else if (command == "active-driver") action = "trace.active_driver";
+    else if (command == "active-driver-chain") action = "trace.active_driver_chain";
+
+    int start = command_index + 1;
+    if (command == "action") {
+        if (argc <= command_index + 1 || std::string(argv[command_index + 1]).find("--") == 0) {
+            result.error = "action shortcut requires an action name";
+            return result;
+        }
+        action = argv[command_index + 1];
+        start = command_index + 2;
+    }
+
+    xdebug::Json request = xdebug::Json::object();
+    request["api_version"] = xdebug::kApiVersion;
+    request["action"] = action;
+    request["target"] = xdebug::Json::object();
+    request["args"] = xdebug::Json::object();
+    request["limits"] = xdebug::Json::object();
+    request["output"] = xdebug::Json::object();
+
+    xdebug::Json& target = request["target"];
+    xdebug::Json& args = request["args"];
+    xdebug::Json& limits = request["limits"];
+    xdebug::Json& output = request["output"];
+
+    for (int i = start; i < argc; ++i) {
+        std::string arg(argv[i]);
+        std::string value;
+        if (arg == "--json") {
+            format = OutputFormat::Json;
+            output["format"] = "json";
+        } else if (arg == "--text" || arg == "--xout") {
+            format = OutputFormat::Xout;
+        } else if (arg == "--session" || arg == "--session-id") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            target["session_id"] = value;
+            args["session_id"] = value;
+        } else if (arg == "--name") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["name"] = value;
+        } else if (arg == "--daidir") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            target["daidir"] = value;
+        } else if (arg == "--fsdb") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            target["fsdb"] = value;
+        } else if (arg == "--signal") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            if (action == "value.batch_at") {
+                if (!args.contains("signals") || !args["signals"].is_array()) args["signals"] = xdebug::Json::array();
+                args["signals"].push_back(value);
+            } else {
+                args["signal"] = value;
+            }
+        } else if (arg == "--signals") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["signals"] = split_csv(value);
+        } else if (arg == "--time" || arg == "--at") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            if (action == "trace.active_driver" || action == "trace.active_driver_chain") args["requested_time"] = value;
+            else args["time"] = value;
+        } else if (arg == "--requested-time") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["requested_time"] = value;
+        } else if (arg == "--format" || arg == "--radix") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["format"] = value;
+            args["radix"] = value;
+        } else if (arg == "--path") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["path"] = value;
+        } else if (arg == "--scope") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["scope"] = value;
+            if (action == "scope.list") args["path"] = value;
+        } else if (arg == "--kind") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["kind"] = value;
+        } else if (arg == "--action") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["action"] = value;
+        } else if (arg == "--transport") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["transport"] = value;
+        } else if (arg == "--host") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["host"] = value;
+        } else if (arg == "--bind-host") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["bind_host"] = value;
+        } else if (arg == "--port") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            args["port"] = parse_scalar_value(value);
+        } else if (arg == "--include-source") {
+            args["include_source"] = true;
+        } else if (arg == "--include-trace") {
+            args["include_trace"] = true;
+        } else if (arg == "--include-control") {
+            args["include_control"] = true;
+        } else if (arg == "--include-raw") {
+            args["include_raw"] = true;
+        } else if (arg == "--verbosity") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            output["verbosity"] = value;
+        } else if (arg == "--max-rows") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            limits["max_rows"] = parse_scalar_value(value);
+        } else if (arg == "--max-results" || arg == "--max-items") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            limits["max_results"] = parse_scalar_value(value);
+            limits["max_items"] = parse_scalar_value(value);
+        } else if (arg == "--max-depth") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            limits["max_depth"] = parse_scalar_value(value);
+            args["max_depth"] = parse_scalar_value(value);
+        } else if (arg == "--timeout-ms") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            limits["timeout_ms"] = parse_scalar_value(value);
+        } else if (arg == "--arg") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            if (!apply_key_value(args, value, result.error)) return result;
+        } else if (arg == "--target") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            if (!apply_key_value(target, value, result.error)) return result;
+        } else if (arg == "--limit") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            if (!apply_key_value(limits, value, result.error)) return result;
+        } else if (arg == "--output") {
+            if (!take_value(argc, argv, i, value, result.error)) return result;
+            if (!apply_key_value(output, value, result.error)) return result;
+        } else {
+            result.error = "unknown shortcut argument: " + arg;
+            return result;
+        }
+    }
+
+    if (target.empty()) request.erase("target");
+    if (args.empty()) request.erase("args");
+    if (limits.empty()) request.erase("limits");
+    if (output.empty()) request.erase("output");
+    result.request = request;
+    result.ok = true;
+    return result;
+}
+
+int dispatch_request(const xdebug::Json& request, OutputFormat format) {
+    xdebug::Dispatcher dispatcher(executable_dir());
+    xdebug::Json response = dispatcher.dispatch(request);
+    print_response(response, format);
+    return response.value("ok", false) ? 0 : 1;
 }
 
 std::string executable_dir() {
@@ -311,6 +608,19 @@ int main(int argc, char** argv) {
     options.format = env_wants_json() ? OutputFormat::Json : OutputFormat::Xout;
     if (argc >= 2 && std::string(argv[1]) == "log") {
         return run_log_command(argc, argv, options.format);
+    }
+    ShortcutParseResult shortcut = parse_shortcut(argc, argv, options.format);
+    if (shortcut.matched) {
+        if (shortcut.error == "__HELP__") {
+            print_shortcut_help();
+            return 0;
+        }
+        if (!shortcut.ok) {
+            xdebug::Json response = xdebug::make_error(xdebug::Json::object(), "", "INVALID_CLI", shortcut.error);
+            print_response(response, options.format);
+            return 1;
+        }
+        return dispatch_request(shortcut.request, options.format);
     }
     bool stdio_loop = false;
     for (int i = 1; i < argc; ++i) {

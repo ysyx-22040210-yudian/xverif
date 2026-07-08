@@ -36,7 +36,9 @@ tools/xverif-loop-client
 ```
 
 `tools/xverif-loop-server` / `tools/xverif-loop-client` 是不依赖 MCP SDK 的
-UDS JSONL wrapper，只覆盖 stateful `xdebug`/`xcov` session open/list/query/close。
+UDS wrapper，只覆盖 stateful `xdebug`/`xcov` session open/list/query/close。
+日常手动调用可使用 `xverif-loop-client ping/debug-open/debug-query/cov-query`
+这类参数式命令；JSONL 仍作为脚本和批处理协议保留。
 它复用同一套 stdio-loop session manager 和 direct/LSF launcher，适合不能安装
 MCP SDK 或不想走 MCP 协议、但仍需要 LSF 维护 `--stdio-loop` 后端的场景。
 
@@ -232,7 +234,7 @@ AI MCP client
 非 MCP wrapper 链路：
 
 ```text
-JSONL client
+xverif-loop-client parameter CLI or JSONL client
   -> xverif-loop-server Unix domain socket
   -> LoopWrapperService
        -> McpSessionManager (xdebug)
@@ -255,6 +257,20 @@ tools/xverif-loop-client --socket /tmp/xverif-loop.sock --json \
 
 tools/xverif-loop-client --socket /tmp/xverif-loop.sock --json \
   '{"id":"2","method":"debug.query","params":{"session":"s0","action":"value.at","args":{"signal":"top.clk"},"output_format":"json"}}'
+```
+
+同样的操作也可以不用手写 JSON：
+
+```bash
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock ping
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-open --name s0 --fsdb waves.fsdb
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-query \
+  --session s0 \
+  --action value.at \
+  --arg signal=top.clk \
+  --arg time=10ns \
+  --output-format json
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-close --session s0
 ```
 
 ## 环境变量

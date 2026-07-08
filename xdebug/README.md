@@ -1,6 +1,6 @@
 # xdebug
 
-xdebug 是 xtrace 与 xwave 合并后的统一调试工具。公开入口使用 JSON request 描述动作，默认输出 `xout` 结构化文本；需要机器解析、schema 校验或回归兼容时显式加 `--json` 获取原 JSON response。旧的 xtrace/xwave 人类 CLI 不再作为主路径维护。
+xdebug 是 xtrace 与 xwave 合并后的统一调试工具。日常调试优先使用参数式命令，例如 `xdebug value-at --fsdb ... --signal ... --time ...`、`xdebug trace-driver --daidir ... --signal ...`。JSON request 仍是脚本、MCP、stdio-loop、schema 校验和回归测试使用的稳定控制协议；默认输出 `xout` 结构化文本，需要机器解析完整字段时加 `--json`。
 
 仓库内 skill source-of-truth 位于 [skill/SKILL.md](skill/SKILL.md)。更细的字段字典和 API 速查位于 [skill/references](skill/references)。
 
@@ -8,19 +8,21 @@ Action 协议由 `ActionSpec` / `ActionRegistry` 约束。`actions` 输出来自
 
 ## Quick Start
 
-`-h` 和 `-help` 是 xdebug 唯一的非 JSON 命令，用于查看详尽的人类可读帮助：
+`-h` 和 `-help` 用于查看详尽的人类可读帮助：
 
 ```bash
 tools/xdebug -h
 tools/xdebug -help
 ```
 
-默认输出是 `xout`，机器可读帮助仍通过 JSON action 获取；如果要让脚本读取完整字段，使用 `--json`：
+默认输出是 `xout`，普通用户可以直接使用参数式命令；如果要让脚本读取完整字段，使用 `--json`：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | tools/xdebug --json -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"schema","args":{"action":"signal.statistics","kind":"request"}}' | tools/xdebug --json -
+tools/xdebug actions
+tools/xdebug actions --json
+tools/xdebug schema --action signal.statistics --kind request --json
+tools/xdebug value-at --fsdb waves.fsdb --signal top.clk --time 10ns --format bin
+tools/xdebug trace-driver --daidir simv.daidir --signal top.u.ready --include-source
 ```
 
 每个 action 的机器可读契约位于：
@@ -39,10 +41,10 @@ xdebug/examples/responses/<action>.basic.json
 > **环境要求**：Python 3.11+、GCC 5.0+、可用 Verdi/VCS/FSDB 环境。直接 NPI/FSDB 查询统一通过 `tcl_engine/xdebug_npi.tcl` 在 Verdi batch Tcl 中执行，目标兼容 Verdi **O-2018.09-SP2** 这类较老版本。不要新增或恢复非 Tcl 的直接 NPI engine；如果遇到版本兼容问题，应优先修 Tcl 后端或 Python 请求转换层。
 
 ```bash
-tools/xdebug -
+tools/xdebug actions
 ```
 
-从 stdin 传入 JSON request，默认返回 xout：
+也可以从 stdin 传入 JSON request，默认返回 xout。这个入口主要给脚本、Agent 和回归测试使用：
 
 ```bash
 printf '%s\n' '{"api_version":"xdebug.v1","action":"value.at","target":{"session_id":"case_a"},"args":{"signal":"top.clk","time":"10ns"}}' \
@@ -105,9 +107,10 @@ setenv PATH "$XVERIF_HOME/tools:$PATH"
 
 ```bash
 xdebug -h
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
-xdebug request.json
+xdebug actions
+xdebug actions --json
+xdebug value-at --fsdb waves.fsdb --signal top.clk --time 10ns
+xdebug trace-driver --daidir simv.daidir --signal top.u.ready --include-source
 ```
 
 推荐使用 `tools/xdebug` 或 `PATH` 中的 `xdebug`。
@@ -123,18 +126,8 @@ xdebug request.json
 
 启用方式：
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "session.open",
-  "target": {
-    "fsdb": "waves.fsdb"
-  },
-  "args": {
-    "name": "wave_file",
-    "transport": "file"
-  }
-}
+```bash
+xdebug session-open --name wave_file --fsdb waves.fsdb --transport file
 ```
 
 也可以设置新建 session 的默认 transport：
@@ -245,6 +238,11 @@ XVERIF_LOOP_BACKEND=lsf XVERIF_LOOP_SOCKET=/tmp/xverif-loop.sock tools/xverif-lo
 
 tools/xverif-loop-client --socket /tmp/xverif-loop.sock --json \
   '{"id":"1","method":"debug.session.open","params":{"name":"s0","fsdb":"waves.fsdb"}}'
+
+# 等价的参数式写法
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-open --name s0 --fsdb waves.fsdb
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-query \
+  --session s0 --action value.at --arg signal=top.clk --arg time=10ns --output-format json
 ```
 
 重复调试建议先打开 session，再用 `target.session_id` 访问：

@@ -136,7 +136,7 @@ xverif/
 
 | 工具 | 解决的问题 | 主要输入 | 主要输出 | 是否依赖 EDA |
 | --- | --- | --- | --- | --- |
-| [`xdebug`](xdebug/README.md) | 设计和波形事实查询 | `simv.daidir`、FSDB、JSON request | driver/load/value/event/trace evidence | 真实查询需要 Verdi/VCS/FSDB |
+| [`xdebug`](xdebug/README.md) | 设计和波形事实查询 | `simv.daidir`、FSDB、参数式查询命令 | driver/load/value/event/trace evidence | 真实查询需要 Verdi/VCS/FSDB |
 | [`xbit`](xbit/README.md) | bit、literal、slice、表达式计算 | literal、变量、表达式 | 规范化值、比较结果、解释 | 否 |
 | [`xentry`](xentry/README.md) | 多拍 entry 字段解析 | YAML/JSON config、fragments | field slices、provenance | 否 |
 | [`xloc`](xloc/README.md) | UVM log 位置压缩/恢复 | log、sidecar JSONL map | `L_XXXXXXXX` 映射、源码上下文 | 否 |
@@ -180,8 +180,10 @@ export PYTHON=/home/host/xverif/.venv38/bin/python
 
 ```bash
 /home/host/xverif/tools/xdebug -h
+/home/host/xverif/tools/xdebug actions --json
 /home/host/xverif/tools/xbit conv "8'shff" --json
-/home/host/xverif/tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"/home/host/xverif/xentry/examples/entry.yaml"}'
+/home/host/xverif/tools/xentry explain --config /home/host/xverif/xentry/examples/entry.yaml
+/home/host/xverif/tools/xcov cov-holes --vdb fake --fake --metrics line,toggle --max-items 5 --json
 ```
 
 Tcsh：
@@ -210,8 +212,10 @@ xeda-runner --help
 ```bash
 xbit conv "8'shff" --json
 xbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef
-xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+xentry explain --config xentry/examples/entry.yaml
+xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
 xsva list --file xsva/tests/golden_ir/simple_impl/input.sva
+xcov cov-holes --vdb fake --fake --metrics line,toggle --max-items 3
 ```
 
 在 VM 普通用户 `host` 下使用绝对路径时，可以直接运行：
@@ -223,9 +227,11 @@ export PYTHON=/home/host/xverif/.venv38/bin/python
 /home/host/xverif/tools/xbit slice "32'hdead_beef" 15 8
 /home/host/xverif/tools/xbit eval "data[15:8] == 8'hbe" --var "data=32'hdead_beef"
 
-/home/host/xverif/tools/xentry '{"api_version":"xentry.v1","action":"explain","config_path":"/home/host/xverif/xentry/examples/entry.yaml"}'
+/home/host/xverif/tools/xentry explain --config /home/host/xverif/xentry/examples/entry.yaml
+/home/host/xverif/tools/xentry decode --config /home/host/xverif/xentry/examples/entry.yaml --input /home/host/xverif/xentry/examples/fragments.jsonl --json
 
 /home/host/xverif/tools/xsva list --file /home/host/xverif/xsva/tests/golden_ir/simple_impl/input.sva
+/home/host/xverif/tools/xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 2 --json
 ```
 
 ### 4. 查询 xdebug action catalog
@@ -233,13 +239,14 @@ export PYTHON=/home/host/xverif/.venv38/bin/python
 Bash：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions
+xdebug actions --json
 ```
 
 PowerShell：
 
 ```powershell
-'{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions --json
 ```
 
 ### 5. 真实 EDA 场景准备
@@ -273,7 +280,7 @@ export SNPSLMD_LICENSE_FILE=27000@IC_EDA
 | --- | --- | --- |
 | `doc/images/00-xverif-architecture.svg` | xverif 总体架构图 | README 顶部静态图 |
 | `doc/images/01-env-setup.svg` | 终端中完成 PATH 设置、`xbit --help`、`xdebug -h` | PowerShell 或 VM terminal |
-| `doc/images/06-xdebug-actions.svg` | `xdebug --json -` 输出 action catalog 的片段 | `actions` request |
+| `doc/images/06-xdebug-actions.svg` | `xdebug actions` 输出 action catalog 的片段 | `actions` shortcut |
 | `doc/images/08-xdebug-value-batch.svg` | 查询 FSDB 某信号值的输出 | `value.at` 或 `value.batch_at` |
 | `doc/images/11-mcp-tools.svg` | AI 客户端中列出的 `xverif_*` MCP tools | MCP client 工具列表 |
 | `doc/images/04-xloc-resolve-context.svg` | UVM log 中 `L_XXXXXXXX` 和 resolve 结果 | `xloc resolve` |
@@ -384,8 +391,8 @@ doc/images/03-xentry-explain-decode.svg
 截图命令：
 
 ```bash
-xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
-printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"xentry/examples/entry.yaml","input_path":"xentry/examples/fragments.jsonl"}' | xentry -
+xentry explain --config xentry/examples/entry.yaml
+xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
 ```
 
 截图范围：
@@ -418,7 +425,7 @@ doc/images/04-xloc-resolve-context.svg
 ```bash
 xloc stats out/sim.log
 xloc resolve L_00000001 --map out/sim.log.xloc.jsonl
-xloc context L_00000001 --map out/sim.log.xloc.jsonl --lines 5
+xloc context L_00000001 --map out/sim.log.xloc.jsonl --before 5 --after 5
 ```
 
 截图范围：
@@ -477,15 +484,15 @@ doc/images/06-xdebug-actions.svg
 Bash：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions
+xdebug actions --json
 ```
 
 PowerShell：
 
 ```powershell
-'{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
-'{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions
+xdebug actions --json
 ```
 
 截图范围：
@@ -498,7 +505,7 @@ PowerShell：
 - `actions` 是工具能力目录。
 - 人看默认输出，脚本和 Agent 用 `--json`。
 
-#### 7. xdebug session.open 截图
+#### 7. xdebug session-open 截图
 
 建议文件：
 
@@ -506,37 +513,21 @@ PowerShell：
 doc/images/07-xdebug-session-open.svg
 ```
 
-建议准备一个请求文件：
-
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "session.open",
-  "target": {
-    "daidir": "simv.daidir",
-    "fsdb": "waves.fsdb"
-  },
-  "args": {
-    "name": "case_a"
-  }
-}
-```
-
 截图命令：
 
 ```bash
-xdebug --json open_session.json
+xdebug session-open --name case_a --daidir simv.daidir --fsdb waves.fsdb --json
 ```
 
 截图范围：
 
-- 请求文件中的 `target.daidir`、`target.fsdb`、`args.name`。
+- 命令中的 `--daidir`、`--fsdb`、`--name`。
 - 响应中的 `ok`、`session_id`、transport 或 endpoint 摘要。
 
 需要突出：
 
 - 真实 debug 推荐先打开 session。
-- 后续 query 使用 `target.session_id` 复用资源。
+- 后续 query 使用 `--session case_a` 复用资源。
 
 需要隐藏：
 
@@ -550,37 +541,27 @@ xdebug --json open_session.json
 doc/images/08-xdebug-value-batch.svg
 ```
 
-截图请求：
-
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "value.batch_at",
-  "target": {
-    "session_id": "case_a"
-  },
-  "args": {
-    "time": "100ns",
-    "signals": [
-      "top.u_core.valid",
-      "top.u_core.ready",
-      "top.u_core.bits"
-    ],
-    "format": "hex"
-  }
-}
-```
-
 截图命令：
 
 ```bash
-xdebug batch_value.json
-xdebug --json batch_value.json
+xdebug value-batch \
+  --session case_a \
+  --signal top.u_core.valid \
+  --signal top.u_core.ready \
+  --signal top.u_core.bits \
+  --time 100ns \
+  --format hex
+xdebug value-batch \
+  --session case_a \
+  --signals top.u_core.valid,top.u_core.ready,top.u_core.bits \
+  --time 100ns \
+  --format hex \
+  --json
 ```
 
 截图范围：
 
-- 请求中的 `time` 和 `signals`。
+- 命令中的 `--time` 和 `--signal/--signals`。
 - 响应中的每个 signal value。
 - 如果有 missing signal，截 `missing_by_reason` 或每行 `status/reason`。
 
@@ -597,22 +578,22 @@ xdebug --json batch_value.json
 doc/images/09-xdebug-active-driver.svg
 ```
 
-截图请求：
+截图命令：
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "trace.active_driver",
-  "target": {
-    "daidir": "simv.daidir",
-    "fsdb": "waves.fsdb"
-  },
-  "args": {
-    "signal": "top.u_core.ready",
-    "requested_time": "120ns",
-    "include_control": true
-  }
-}
+```bash
+xdebug active-driver \
+  --daidir simv.daidir \
+  --fsdb waves.fsdb \
+  --signal top.u_core.ready \
+  --time 120ns \
+  --include-control
+xdebug active-driver \
+  --daidir simv.daidir \
+  --fsdb waves.fsdb \
+  --signal top.u_core.ready \
+  --time 120ns \
+  --include-control \
+  --json
 ```
 
 截图范围：
@@ -650,7 +631,9 @@ doc/images/10-xcov-holes.svg
 示例命令：
 
 ```bash
-xcov --stdio-loop
+xcov cov-summary --vdb /path/to/simv.vdb --metrics line,toggle,branch
+xcov cov-holes --vdb /path/to/simv.vdb --metrics line,toggle,branch --max-items 20
+xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 3 --json
 ```
 
 或者通过 MCP 调用：
@@ -766,8 +749,37 @@ summary:
 
 ```bash
 xbit conv "8'shff" --json
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions --json
+xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 3 --json
 ```
+
+### 人用参数，协议用 JSON
+
+所有 x 系列工具都提供面向人的参数式命令。普通用户日常优先使用这种形式：
+
+```bash
+xdebug value-at --fsdb /home/host/testdata/clkfreq.fsdb --signal tb_clkfreq.clk --time 0ns --format bin
+xdebug trace-driver --daidir /path/to/simv.daidir --signal top.u_core.ready --include-source
+xdebug active-driver --daidir /path/to/simv.daidir --fsdb /path/to/waves.fsdb --signal top.u_core.ready --time 120ns --include-control
+
+xcov cov-holes --vdb /path/to/simv.vdb --metrics line,toggle,branch --max-items 20
+xbit slice "32'hdead_beef" 15 8
+xentry decode --config entry.yaml --input fragments.jsonl --json
+xloc context L_00000001 --map sim.log.xloc.jsonl --before 5 --after 5
+xberif brief --mode debug
+xsva explain --file assertions.sv --property p_ready
+xeda-runner run --action sim --target compile --option TEST=smoke_test --dry-run
+xverif-loop-client debug-query --session case_a --action value.at --arg signal=top.clk --arg time=10ns
+```
+
+JSON request 是 `xdebug`、`xcov` 和 MCP/stdio-loop 的稳定控制协议，不是 Verdi、FSDB 或 VDB 生成的原始数据文件。保留 JSON 的原因是脚本、Agent、批处理和 schema 测试需要一个可校验、可扩展、可回放的请求格式；人类命令行会把 `--fsdb/--signal/--time` 这类参数翻译成同一个请求，再进入现有 dispatcher 和 Tcl NPI 后端。
+
+也就是说：
+
+- 看波形的真实输入是 FSDB。
+- 查静态设计因果的真实输入是 `simv.daidir` / elab 库。
+- 查 coverage 的真实输入是 VDB。
+- JSON 只是“要执行什么动作、查哪个对象、限制返回多少”的工具协议。
 
 ### JSON request envelope
 
@@ -859,155 +871,96 @@ sequenceDiagram
 因此，如果只是查询 FSDB 中某个信号在某个时间点的值，真实输入只需要 FSDB。下面 JSON 只是“查什么”的请求：
 
 ```bash
-printf '%s\n' '{
-  "api_version": "xdebug.v1",
-  "action": "value.at",
-  "target": {
-    "fsdb": "/home/host/testdata/clkfreq.fsdb",
-    "auto_open": true
-  },
-  "args": {
-    "name": "raw_fsdb_case",
-    "signal": "tb_clkfreq.clk",
-    "time": "0ns",
-    "format": "bin"
-  }
-}' | /home/host/xverif/tools/xdebug --json -
+/home/host/xverif/tools/xdebug value-at \
+  --fsdb /home/host/testdata/clkfreq.fsdb \
+  --signal tb_clkfreq.clk \
+  --time 0ns \
+  --format bin \
+  --json
 ```
 
 如果要查静态 driver，使用 Verdi/VCS elab 库即可，不需要 FSDB：
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "trace.driver",
-  "target": {
-    "daidir": "/path/to/simv.daidir"
-  },
-  "args": {
-    "signal": "top.u_core.ready",
-    "include_source": true
-  }
-}
+```bash
+/home/host/xverif/tools/xdebug trace-driver \
+  --daidir /path/to/simv.daidir \
+  --signal top.u_core.ready \
+  --include-source
 ```
 
 只有当你要回答“这个时间点哪个 driver 真正生效”时，才同时传入 elab 库和 FSDB：
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "trace.active_driver",
-  "target": {
-    "daidir": "/path/to/simv.daidir",
-    "fsdb": "/path/to/waves.fsdb"
-  },
-  "args": {
-    "signal": "top.u_core.ready",
-    "requested_time": "120ns",
-    "include_control": true
-  }
-}
+```bash
+/home/host/xverif/tools/xdebug active-driver \
+  --daidir /path/to/simv.daidir \
+  --fsdb /path/to/waves.fsdb \
+  --signal top.u_core.ready \
+  --time 120ns \
+  --include-control
 ```
 
 ### 查询 action catalog
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug -
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions
+xdebug actions --json
+xdebug schema --action value.at --kind request --json
 ```
 
 ### 打开 session
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "session.open",
-  "target": {
-    "daidir": "simv.daidir",
-    "fsdb": "waves.fsdb"
-  },
-  "args": {
-    "name": "case_a"
-  }
-}
-```
-
-保存为 `open_session.json` 后执行：
-
 ```bash
-xdebug --json open_session.json
+xdebug session-open --name case_a --daidir simv.daidir --fsdb waves.fsdb
+xdebug session-list
+xdebug session-close --session case_a
 ```
 
 ### 查某个时间点的信号值
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "value.at",
-  "target": {
-    "session_id": "case_a"
-  },
-  "args": {
-    "signal": "top.u_core.valid",
-    "time": "100ns",
-    "format": "hex"
-  }
-}
+```bash
+xdebug value-at --session case_a --signal top.u_core.valid --time 100ns --format hex
 ```
 
 ### 批量取值
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "value.batch_at",
-  "target": {
-    "session_id": "case_a"
-  },
-  "args": {
-    "time": "100ns",
-    "signals": [
-      "top.u_core.valid",
-      "top.u_core.ready",
-      "top.u_core.bits"
-    ],
-    "format": "hex"
-  }
-}
+```bash
+xdebug value-batch \
+  --session case_a \
+  --signal top.u_core.valid \
+  --signal top.u_core.ready \
+  --signal top.u_core.bits \
+  --time 100ns \
+  --format hex
 ```
 
 ### 查 driver
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "trace.driver",
-  "target": {
-    "daidir": "simv.daidir"
-  },
-  "args": {
-    "signal": "top.u_core.ready",
-    "include_source": true
-  }
-}
+```bash
+xdebug trace-driver --daidir simv.daidir --signal top.u_core.ready --include-source
 ```
 
 ### 查当前时间点生效 driver
 
-```json
-{
-  "api_version": "xdebug.v1",
-  "action": "trace.active_driver",
-  "target": {
-    "daidir": "simv.daidir",
-    "fsdb": "waves.fsdb"
-  },
-  "args": {
-    "signal": "top.u_core.ready",
-    "requested_time": "120ns",
-    "include_control": true
-  }
-}
+```bash
+xdebug active-driver \
+  --daidir simv.daidir \
+  --fsdb waves.fsdb \
+  --signal top.u_core.ready \
+  --time 120ns \
+  --include-control
+```
+
+### 通用参数入口
+
+如果某个 action 还没有专门子命令，可以用 `xdebug action` 直接传动作名和 `key=value`：
+
+```bash
+xdebug action signal.changes \
+  --fsdb waves.fsdb \
+  --arg signal=top.u_core.valid \
+  --arg begin=0ns \
+  --arg end=1us \
+  --limit max_rows=20
 ```
 
 ### 推荐 debug 顺序
@@ -1063,14 +1016,14 @@ xbit slice 32'hdead_beef 15 8
 ### explain 配置
 
 ```bash
-xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
-xentry --json '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+xentry explain --config xentry/examples/entry.yaml
+xentry explain --config xentry/examples/entry.yaml --json
 ```
 
 ### decode fragments
 
 ```bash
-printf '%s\n' '{"api_version":"xentry.v1","action":"decode","config_path":"xentry/examples/entry.yaml","input_path":"xentry/examples/fragments.jsonl"}' | xentry -
+xentry decode --config xentry/examples/entry.yaml --input xentry/examples/fragments.jsonl --json
 ```
 
 ## xloc: UVM 日志位置压缩
@@ -1095,7 +1048,7 @@ L_00000001
 
 ```bash
 xloc resolve L_00000001 --map out/sim.log.xloc.jsonl
-xloc context L_00000001 --map out/sim.log.xloc.jsonl --lines 5
+xloc context L_00000001 --map out/sim.log.xloc.jsonl --before 5 --after 5
 xloc stats out/sim.log
 xloc annotate out/sim.log --map out/sim.log.xloc.jsonl
 ```
@@ -1171,7 +1124,48 @@ xsva explain --file xsva/tests/golden_ir/path_expand/input.sva --property p_path
 ### fake smoke
 
 ```bash
-printf '%s\n' '{"api_version":"xcov.v1","action":"session.open","target":{"vdb":"fake"},"args":{"name":"cov0","fake":true}}' | xcov --json -
+xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 3
+xcov cov-holes --vdb fake --fake --metrics toggle,branch --max-items 3 --json
+```
+
+### 真实 VDB 查询
+
+最简单的用法是直接把 VDB 路径传给查询命令。`xcov` 会在当前进程里临时打开 coverage session，查完后自动关闭：
+
+```bash
+xcov cov-summary --vdb /path/to/simv.vdb --metrics line,toggle,branch
+xcov cov-holes --vdb /path/to/simv.vdb --scope top.u_dut --metrics line,toggle --max-items 20
+xcov scope-children --vdb /path/to/simv.vdb --scope top --recursive --max-items 50
+xcov source-map --vdb /path/to/simv.vdb --file rtl/ctrl.sv --line 88 --window 5
+```
+
+如果要连续多次查询同一个 VDB，可以显式打开 session，再复用 `--session`：
+
+```bash
+xcov open --vdb /path/to/simv.vdb --name cov0
+xcov tests --session cov0
+xcov metrics --session cov0 --scope top.u_dut
+xcov cov-holes --session cov0 --metrics branch,condition --include "*ctrl*" --max-items 20
+xcov close --session cov0
+```
+
+导出结果时指定输出格式和路径：
+
+```bash
+xcov export-holes \
+  --vdb /path/to/simv.vdb \
+  --metrics line,toggle,branch \
+  --output-path holes.md \
+  --artifact-format md \
+  --output-mode file
+```
+
+通用入口可直接运行任意 `xcov.v1` action：
+
+```bash
+xcov query cov.object.search --vdb /path/to/simv.vdb --include "*fifo*" --match-field full_name
+xcov schema --action cov.holes --kind request --json
+xcov actions
 ```
 
 ### stdio loop
@@ -1305,7 +1299,7 @@ flowchart TD
 
 ```bash
 xbit conv "8'shff" --json
-xentry '{"api_version":"xentry.v1","action":"explain","config_path":"xentry/examples/entry.yaml"}'
+xentry explain --config xentry/examples/entry.yaml
 xsva list --file xsva/tests/golden_ir/simple_impl/input.sva
 ```
 
@@ -1427,7 +1421,7 @@ $env:PYTHONPATH = "E:\xverif\xverif_mcp\src;E:\xverif"
 建议步骤：
 
 ```bash
-printf '%s\n' '{"api_version":"xdebug.v1","action":"actions"}' | xdebug --json -
+xdebug actions --json
 ```
 
 然后使用 `signal.scan`、`trace.driver`、`value.batch_at` 等动作逐步缩小范围。

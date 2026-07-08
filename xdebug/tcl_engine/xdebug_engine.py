@@ -363,6 +363,23 @@ def make_error_response(request, action, code, message, recoverable=True):
     })
 
 
+def make_action_error_response(request, action, error, recoverable=True):
+    payload = {
+        "code": error.get("code", "ACTION_FAILED"),
+        "message": error.get("message", "action failed"),
+        "recoverable": recoverable,
+        "candidates": error.get("candidates", []),
+        "suggested_actions": error.get("suggested_actions", []),
+    }
+    details = {k: v for k, v in error.items()
+               if k not in {"code", "message", "recoverable", "candidates", "suggested_actions"}}
+    if details:
+        payload["details"] = details
+    response = make_public_response(request, action, False, error=payload)
+    response["details"] = {"error": payload}
+    return response
+
+
 def internal_ok(data=None):
     return {"api_version": INTERNAL_API_VERSION, "ok": True, "data": data or {}, "error": None}
 
@@ -415,6 +432,33 @@ def parse_timeout_ms(request, default_ms):
     except Exception:
         value = 0
     return value if value > 0 else default_ms
+
+
+def classify_verdi_no_response(stdout, stderr, exit_code):
+    text = ((stdout or "") + "\n" + (stderr or "")).lower()
+    if "not generated with the -kdb option" in text:
+        return {
+            "code": "KDB_REQUIRED",
+            "message": "Verdi design queries require a simv.daidir generated with VCS -kdb",
+            "exit_code": exit_code,
+            "stdout": (stdout or "")[-4000:],
+            "stderr": (stderr or "")[-4000:],
+        }
+    if "cannot open" in text and "read access" in text:
+        return {
+            "code": "DESIGN_DB_ACCESS_FAILED",
+            "message": "Verdi could not read one or more design database files",
+            "exit_code": exit_code,
+            "stdout": (stdout or "")[-4000:],
+            "stderr": (stderr or "")[-4000:],
+        }
+    return {
+        "code": "TCL_NPI_NO_RESPONSE",
+        "message": "Verdi Tcl action did not produce a valid JSON response",
+        "exit_code": exit_code,
+        "stdout": (stdout or "")[-4000:],
+        "stderr": (stderr or "")[-4000:],
+    }
 
 
 def design_args_for_target(target):
@@ -496,11 +540,7 @@ def run_tcl_npi(request, state):
 
     payload = read_json_file(rsp_path)
     if not isinstance(payload, dict):
-        return False, {"code": "TCL_NPI_NO_RESPONSE",
-                       "message": "Verdi Tcl action did not produce a valid JSON response",
-                       "exit_code": proc.returncode,
-                       "stdout": stdout[-4000:],
-                       "stderr": stderr[-4000:]}
+        return False, classify_verdi_no_response(stdout, stderr, proc.returncode)
     if not payload.get("ok"):
         err = payload.get("error") or {}
         return False, {"code": err.get("code", "TCL_NPI_ERROR"),
@@ -2010,8 +2050,7 @@ def wrap_public_action_response(request, ok, data_or_err, state=None):
         summary = data.get("summary") if isinstance(data.get("summary"), dict) else {}
         return make_public_response(request, action, True, data=data, summary=summary,
                                     session=session_record_json(state["record"]) if state and state.get("record") else None)
-    return make_error_response(request, action, data_or_err.get("code", "ACTION_FAILED"),
-                               data_or_err.get("message", "action failed"))
+    return make_action_error_response(request, action, data_or_err)
 
 
 def write_endpoint(record):
