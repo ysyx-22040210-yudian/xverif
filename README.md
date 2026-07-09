@@ -774,6 +774,17 @@ xverif-loop-client debug-query --session case_a --action value.at --arg signal=t
 
 JSON request 是 `xdebug`、`xcov` 和 MCP/stdio-loop 的稳定控制协议，不是 Verdi、FSDB 或 VDB 生成的原始数据文件。保留 JSON 的原因是脚本、Agent、批处理和 schema 测试需要一个可校验、可扩展、可回放的请求格式；人类命令行会把 `--fsdb/--signal/--time` 这类参数翻译成同一个请求，再进入现有 dispatcher 和 Tcl NPI 后端。
 
+相对只靠命令行参数，JSON 协议的优势在于：
+
+- 复杂查询更容易表达：`target`、`args`、`limits`、`output` 可以稳定承载数组、嵌套过滤条件、导出选项和后续扩展字段，不需要把所有结构都压成一长串 shell 参数。
+- 更适合 Agent/MCP 调用：AI 工具调用天然是结构化参数，JSON 能直接表达 action、输入资源、查询条件和输出格式，避免 Agent 拼接脆弱的 shell 字符串。
+- 可以做 schema 校验：脚本和回归测试能检查字段缺失、类型错误、版本不兼容等问题，失败时返回统一的 `error.code` 和 `error.message`。
+- 便于归档和回放：一次失败查询可以保存成 `request.json`，后续在 VM、CI 或用户本机原样重跑，适合 benchmark、bug report 和 regression。
+- 减少 shell quoting 风险：信号名、表达式、数组、glob/filter 和特殊字符在 bash/tcsh/PowerShell 中转义规则不同；JSON 文件或 stdin 更稳定。
+- 跨语言接口稳定：C++ 前端、Python wrapper、Tcl backend、MCP server 和外部脚本都能读写 JSON，适合作为内部协议层。
+
+因此本项目推荐的分层是：人类日常使用参数式 CLI；参数 CLI 生成同一份 JSON request；dispatcher 再调用 Tcl NPI、FSDB 或 VDB 后端。直接手写 JSON 主要留给自动化、Agent、批量回归和复杂查询。
+
 也就是说：
 
 - 看波形的真实输入是 FSDB。
