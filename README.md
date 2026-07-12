@@ -772,6 +772,61 @@ xeda-runner run --action sim --target compile --option TEST=smoke_test --dry-run
 xverif-loop-client debug-query --session case_a --action value.at --arg signal=top.clk --arg time=10ns
 ```
 
+### `actions --json` 中的 `--json` 是什么意思
+
+在下面这类参数式命令中：
+
+```bash
+xdebug actions --json
+xcov actions --json
+```
+
+`actions` 决定“执行什么操作”，即列出工具支持的 action；`--json` 只决定“结果用什么格式输出”。它不会改变 `actions` 的功能，不会把 FSDB、VDB 或 daidir 转成 JSON，也不表示用户必须提供一个 JSON 请求文件。
+
+不加 `--json` 时，工具返回适合人直接阅读的 xout 文本：
+
+```bash
+xdebug actions
+```
+
+```text
+@xdebug.actions.v1
+summary:
+  matched_count: 60
+
+data:
+  session.open
+  value.at
+  trace.driver
+```
+
+加上 `--json` 后，查询内容相同，但返回完整、可由脚本解析的 JSON：
+
+```bash
+xdebug actions --json
+```
+
+```json
+{
+  "ok": true,
+  "action": "actions",
+  "summary": {
+    "matched_count": 60
+  },
+  "data": {
+    "items": [
+      {"name": "session.open"},
+      {"name": "value.at"},
+      {"name": "trace.driver"}
+    ]
+  }
+}
+```
+
+同样的输出格式规则适用于 `xdebug`、`xcov` 的参数式子命令，以及 `xentry`、`xbit`、`xloc`、`xsva` 中支持 `--json` 的命令：默认输出给人看，增加 `--json` 后输出给脚本、MCP、Agent 或回归测试解析。
+
+需要特别区分：`xverif-loop-client --json '<object>'` 的 `--json` 是直接发送一条 JSON-RPC 请求；`xberif` 的 `--json` 是全局输出选项，需要放在子命令前，例如 `xberif --json status`。各工具的具体差异见后面的“JSON 参数含义汇总”表。
+
 JSON request 是 `xdebug`、`xcov` 和 MCP/stdio-loop 的稳定控制协议，不是 Verdi、FSDB 或 VDB 生成的原始数据文件。保留 JSON 的原因是脚本、Agent、批处理和 schema 测试需要一个可校验、可扩展、可回放的请求格式；人类命令行会把 `--fsdb/--signal/--time` 这类参数翻译成同一个请求，再进入现有 dispatcher 和 Tcl NPI 后端。
 
 相对只靠命令行参数，JSON 协议的优势在于：
