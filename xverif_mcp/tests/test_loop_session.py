@@ -210,6 +210,21 @@ class TestLoopSessionQuery:
         assert len(results) == 2, f"expected 2 results, got {len(results)}; errors={errors}"
         assert all(r.get("ok") for r in results)
 
+    def test_zero_request_timeout_waits_for_delayed_response(self, fake_xdebug_bin):
+        s = XdebugLoopSession(
+            alias="unlimited", fsdb="test.fsdb", daidir=None,
+            launcher=DirectLauncher(), xdebug_bin=fake_xdebug_bin,
+            startup_timeout_sec=5.0, request_timeout_sec=0,
+        )
+        try:
+            assert s.open().get("ok")
+            result = s.query("value.at", {"signal": "clk", "sleep": 0.15},
+                             output_format="json")
+            assert result.get("ok")
+            assert result["summary"]["value"] == "1"
+        finally:
+            s.close(force=True)
+
 
 class TestLoopSessionClose:
     def test_close_changes_state(self, session):

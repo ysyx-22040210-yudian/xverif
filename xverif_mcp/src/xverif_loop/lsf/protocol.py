@@ -109,8 +109,8 @@ class JsonlProcess:
 
     def wait_ready(self, protocol: str, timeout_sec: float = 30.0) -> Json:
         self._log_stdio("ready.wait.begin", True, protocol=protocol, timeout_sec=timeout_sec)
-        deadline = time.time() + timeout_sec
-        while time.time() < deadline:
+        deadline = None if timeout_sec <= 0 else time.time() + timeout_sec
+        while deadline is None or time.time() < deadline:
             if self.proc.poll() is not None:
                 self._log_stdio("ready.process_exited", False,
                                 protocol=protocol, returncode=self.proc.returncode,
@@ -157,12 +157,12 @@ class JsonlProcess:
         self.proc.stdin.flush()
 
     def read_json_response(self, request_id: str, timeout_sec: float = 30.0) -> Json:
-        deadline = time.time() + timeout_sec
+        deadline = None if timeout_sec <= 0 else time.time() + timeout_sec
         with self.read_lock:
             cached = self.pending.pop(request_id, None)
             if cached is not None:
                 return cached
-            while time.time() < deadline:
+            while deadline is None or time.time() < deadline:
                 if self.proc.poll() is not None:
                     self._log_stdio("response.process_exited", False,
                                     request_id=request_id,

@@ -84,6 +84,31 @@ Synopsys license server. In sandboxed execution, run them outside the sandbox.
 Do not add another direct NPI implementation path; keep direct coverage NPI
 calls in `tcl_engine/xcov_npi.tcl`.
 
+## Timeout Policy
+
+Real coverage traversal can take a long time on large VDBs or Verdi 2018.
+xcov therefore waits indefinitely by default for the Tcl NPI process, session
+startup, and coverage queries. Unset values, zero, and negative values mean
+"no timeout". A positive value opts back into a finite limit:
+
+```bash
+# Explicitly unlimited (also the default)
+export XVERIF_XCOV_TCL_TIMEOUT_SEC=0
+export XVERIF_XCOV_STARTUP_TIMEOUT_SEC=0
+export XVERIF_XCOV_REQUEST_TIMEOUT_SEC=0
+
+# Optional CI protection
+export XVERIF_XCOV_TCL_TIMEOUT_SEC=600
+export XVERIF_XCOV_STARTUP_TIMEOUT_SEC=600
+export XVERIF_XCOV_REQUEST_TIMEOUT_SEC=900
+```
+
+`xverif-loop-client` also defaults `cov.*` methods to unlimited socket wait.
+Use `--timeout-sec 0` to request that behavior explicitly, or a positive value
+to bound one client call. xdebug keeps its existing defaults. Session close and
+process cleanup remain bounded so interrupted jobs do not leave child tools
+running.
+
 ## MCP Tools
 
 `xverif_mcp` exposes xcov as a stateful backend:
@@ -176,3 +201,10 @@ rejected unless `output.allow_absolute_path=true` is set explicitly.
   `max_children`; it is not a general object index yet.
 - `functional.summary` and `functional.holes` support
   `levels=["covergroup","coverpoint","cross","bin"]`.
+
+## Python Extension SDK
+
+See [`../xverif_sdk/README.md`](../xverif_sdk/README.md) for the public
+`XcovClient`, stdio transport, and the multi-VDB coverage convergence example.
+Downstream scripts should use that JSON API instead of importing xcov backend
+internals or calling NPI directly.

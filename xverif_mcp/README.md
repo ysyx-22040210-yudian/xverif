@@ -273,6 +273,23 @@ tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-query \
 tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-close --session s0
 ```
 
+Coverage commands do not time out by default. The parameter CLI and raw JSON-RPC
+client both inspect the method: `cov.*` uses an unlimited socket wait, while
+`debug.*` and `server.ping` retain the 30-second client default. Zero or a
+negative value explicitly disables the client timeout; a positive value enables
+one:
+
+```bash
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock \
+  cov-query --session cov0 --action cov.holes
+
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock --timeout-sec 0 \
+  cov-query --session cov0 --action cov.holes
+
+tools/xverif-loop-client --socket /tmp/xverif-loop.sock --timeout-sec 900 \
+  cov-query --session cov0 --action cov.holes
+```
+
 ## 环境变量
 
 | 变量 | 说明 |
@@ -301,6 +318,9 @@ tools/xverif-loop-client --socket /tmp/xverif-loop.sock debug-close --session s0
 | `XVERIF_XCOV_BIN` | 覆盖 xcov 可执行文件路径，默认 `tools/xcov` |
 | `XVERIF_XCOV_PYTHON` | 覆盖 xcov 使用的 Python runtime |
 | `XVERIF_XCOV_VERDI_HOME` | 覆盖 xcov 使用的 Verdi 安装路径 |
+| `XVERIF_XCOV_TCL_TIMEOUT_SEC` | 单次 Verdi Tcl NPI 调用超时；默认 `0`（无限等待），正数启用秒数限制 |
+| `XVERIF_XCOV_STARTUP_TIMEOUT_SEC` | xcov session open/ready 超时；默认 `0`（无限等待） |
+| `XVERIF_XCOV_REQUEST_TIMEOUT_SEC` | xcov session query/one-shot 超时；默认 `0`（无限等待） |
 | `XVERIF_XCOV_LOG_DIR` | 覆盖 xcov 日志目录，默认 `~/.xverif/xcov` |
 | `XVERIF_XCOV_LOG=0` | 关闭 xcov 日志 |
 | `XVERIF_MCP_FAKE_LSF=1` | 本地测试用 fake LSF runner |

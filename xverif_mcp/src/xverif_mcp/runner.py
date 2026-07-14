@@ -14,7 +14,10 @@ Json = Dict[str, Any]
 
 class StatelessCliRunner:
     def __init__(self, timeout_sec: Optional[float] = None) -> None:
-        self.timeout_sec = timeout_sec or default_timeout()
+        self.timeout_sec = default_timeout() if timeout_sec is None else timeout_sec
+
+    def _effective_timeout(self, timeout_sec: Optional[float]) -> float:
+        return self.timeout_sec if timeout_sec is None else timeout_sec
 
     def tool_path(self, tool: str) -> str:
         return default_tool_path(tool)
@@ -33,7 +36,7 @@ class StatelessCliRunner:
         if raw["exit_code"] != 0 and not raw["stdout"].strip():
             # Distinguish timeout from other failures
             if "timed out" in raw.get("stderr", ""):
-                return tool_timeout(tool, timeout_sec or self.timeout_sec)
+                return tool_timeout(tool, self._effective_timeout(timeout_sec))
             return cli_failed(tool, raw["exit_code"], raw["stdout"],
                               raw["stderr"])
         try:
@@ -73,13 +76,14 @@ class StatelessCliRunner:
         env = dict(os.environ)
         if extra_env:
             env.update(extra_env)
+        effective_timeout = self._effective_timeout(timeout_sec)
         try:
             proc = subprocess.run(
                 cmd,
                 input=input_text,
                 capture_output=True,
                 text=True,
-                timeout=timeout_sec or self.timeout_sec,
+                timeout=None if effective_timeout <= 0 else effective_timeout,
                 check=False,
                 env=env,
                 cwd=cwd or os.getcwd(),
@@ -87,7 +91,7 @@ class StatelessCliRunner:
         except subprocess.TimeoutExpired:
             return {"exit_code": -1, "stdout": "",
                     "stderr": f"timed out after "
-                              f"{timeout_sec or self.timeout_sec:g}s"}
+                              f"{effective_timeout:g}s"}
         except OSError as exc:
             return {"exit_code": -1, "stdout": "", "stderr": str(exc)}
         return {"exit_code": proc.returncode, "stdout": proc.stdout,

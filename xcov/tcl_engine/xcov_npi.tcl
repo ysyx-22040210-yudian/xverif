@@ -227,7 +227,7 @@ proc status_array {hdl test covered coverable} {
     }]} {
         lappend flags not_covered
     }
-    foreach pair {
+    foreach {status label} {
         npiCovStatusExcluded excluded
         npiCovStatusPartiallyExcluded partially_excluded
         npiCovStatusExcludedAtCompileTime excluded_at_compile_time
@@ -238,7 +238,6 @@ proc status_array {hdl test covered coverable} {
         npiCovStatusAttempted attempted
         npiCovStatusPartiallyAttempted partially_attempted
     } {
-        lassign $pair status label
         if {[cov_has_status $hdl $status $test]} {lappend flags $label}
     }
     return [json_array $flags]
@@ -254,7 +253,7 @@ proc coverage_value {hdl test} {
 proc count_value {hdl test} {
     set value [cov_get $hdl npiCovSize $test]
     if {$value eq ""} {set value [cov_get $hdl npiCovSize ""]}
-    if {$value eq ""} {return "__JSON_NULL__"}
+    if {$value eq ""} {return "null"}
     return $value
 }
 
@@ -265,7 +264,7 @@ proc row_base {metric typ scope name full_name hdl test row_source path_pairs} {
     if {$covered eq ""} {set covered 0}
     if {$coverable eq ""} {return ""}
     set missing [expr {int($coverable) - int($covered)}]
-    set pct "__JSON_NULL__"
+    set pct "null"
     if {$coverable > 0} {set pct [expr {100.0 * double($covered) / double($coverable)}]}
     set scope_json [expr {$scope eq "__JSON_NULL__" ? "null" : [json_string $scope]}]
     set pairs [list \

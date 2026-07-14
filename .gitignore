@@ -33,6 +33,8 @@ regression/*
 !xsva/tests/**
 !xverif_mcp/tests/
 !xverif_mcp/tests/**
+!xverif_sdk/tests/
+!xverif_sdk/tests/**
 !xeda_runner/tests/
 !xeda_runner/tests/**
 xdebug/testdata/**/out/

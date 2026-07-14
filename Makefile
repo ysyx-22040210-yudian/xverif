@@ -1,4 +1,4 @@
-.PHONY: all xdebug xbit xentry xloc xberif xcov test full-test clean xcov-test install-skill
+.PHONY: all xdebug xbit xentry xloc xberif xcov test full-test clean xcov-test sdk-test install-skill
 
 PYTHON ?= python3
 SKILL_NAME ?= xverif
@@ -26,6 +26,9 @@ xcov:
 
 xcov-test:
 	$(MAKE) -C xcov PYTHON=$(PYTHON) test
+
+sdk-test:
+	PYTHONPATH=. $(PYTHON) -m pytest xverif_sdk/tests -q
 
 install-skill:
 	@set -eu; \
@@ -65,6 +68,7 @@ test: xdebug xbit xentry xloc xberif xcov
 	$(MAKE) -C xloc test
 	$(MAKE) -C xberif PYTHON=$(PYTHON) test
 	$(MAKE) -C xcov PYTHON=$(PYTHON) test
+	$(MAKE) sdk-test PYTHON=$(PYTHON)
 	$(MAKE) -C xdebug/testdata/combined/active_driver fixture
 	regression/run_xdebug_regression.sh
 

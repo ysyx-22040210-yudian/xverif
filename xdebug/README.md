@@ -888,6 +888,8 @@ make -C xdebug log-test
 
 ## 参考文档
 
+- [../xverif_sdk/README.md](../xverif_sdk/README.md)：基于 xdebug JSON/stdio-loop
+  开发波形分析和模块连线脚本的公共 Python SDK。
 - [docs/JSON_API.md](docs/JSON_API.md)：JSON envelope、target、输出策略。
 - [docs/PAYLOAD_COMPACT.md](docs/PAYLOAD_COMPACT.md)：业务 payload 压缩契约。
 - [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md)：面向 agent 的最短调试指南。

@@ -344,7 +344,8 @@ class XdebugLoopSession:
         if not self.handle:
             return _error("SESSION_PROCESS_MISSING", "no loop process")
         with self._lock:
-            return self.handle.request(req, timeout_sec=timeout or self.request_timeout_sec)
+            effective_timeout = self.request_timeout_sec if timeout is None else timeout
+            return self.handle.request(req, timeout_sec=effective_timeout)
 
     def public_json(self) -> Json:
         h = self.handle

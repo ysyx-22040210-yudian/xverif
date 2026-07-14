@@ -19,6 +19,8 @@ from xverif_loop.config import (
     loop_backend,
     startup_timeout,
     request_timeout,
+    xcov_startup_timeout,
+    xcov_request_timeout,
 )
 from xverif_loop.logging import (
     configure_loop_wrapper_logging,
@@ -63,16 +65,16 @@ class LoopWrapperService:
     ) -> None:
         configure_loop_wrapper_environment()
         configure_loop_wrapper_logging()
-        if startup_timeout_sec is None:
-            startup_timeout_sec = startup_timeout()
-        if request_timeout_sec is None:
-            request_timeout_sec = request_timeout()
+        debug_startup_timeout = startup_timeout() if startup_timeout_sec is None else startup_timeout_sec
+        debug_request_timeout = request_timeout() if request_timeout_sec is None else request_timeout_sec
+        cov_startup_timeout = xcov_startup_timeout() if startup_timeout_sec is None else startup_timeout_sec
+        cov_request_timeout = xcov_request_timeout() if request_timeout_sec is None else request_timeout_sec
         self.mode = mode or loop_backend()
         self.debug = McpSessionManager(
             mode=self.mode,
             xdebug_bin=xdebug_bin or default_xdebug_bin(),
-            startup_timeout_sec=startup_timeout_sec,
-            request_timeout_sec=request_timeout_sec,
+            startup_timeout_sec=debug_startup_timeout,
+            request_timeout_sec=debug_request_timeout,
             backend="xdebug",
             api_version="xdebug.v1",
             ready_protocol="xdebug-stdio-loop",
@@ -82,8 +84,8 @@ class LoopWrapperService:
         self.cov = McpSessionManager(
             mode=self.mode,
             xdebug_bin=xcov_bin or default_xcov_bin(),
-            startup_timeout_sec=startup_timeout_sec,
-            request_timeout_sec=request_timeout_sec,
+            startup_timeout_sec=cov_startup_timeout,
+            request_timeout_sec=cov_request_timeout,
             backend="xcov",
             api_version="xcov.v1",
             ready_protocol="xcov-stdio-loop",
@@ -262,14 +264,25 @@ class LoopWrapperServer:
                 pass
 
 
-def send_requests(socket_path: str, requests: Iterable[Json], timeout_sec: float = 30.0) -> List[Json]:
+def _socket_timeout_for_requests(requests: Iterable[Json],
+                                 timeout_sec: Optional[float]) -> float:
+    if timeout_sec is not None:
+        return timeout_sec
+    return 0.0 if any(str(req.get("method", "")).startswith("cov.")
+                      for req in requests) else 30.0
+
+
+def send_requests(socket_path: str, requests: Iterable[Json],
+                  timeout_sec: Optional[float] = None) -> List[Json]:
+    request_list = list(requests)
+    effective_timeout = _socket_timeout_for_requests(request_list, timeout_sec)
     responses: List[Json] = []
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-        sock.settimeout(timeout_sec)
+        sock.settimeout(None if effective_timeout <= 0 else effective_timeout)
         sock.connect(socket_path)
         reader = sock.makefile("r", encoding="utf-8")
         writer = sock.makefile("w", encoding="utf-8")
-        for req in requests:
+        for req in request_list:
             writer.write(json.dumps(req, ensure_ascii=False, separators=(",", ":")) + "\n")
             writer.flush()
             line = reader.readline()
@@ -337,7 +350,11 @@ def _apply_key_values(root: Json, items: Iterable[str]) -> None:
 
 def _add_client_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--socket", default=default_socket_path())
-    parser.add_argument("--timeout-sec", type=float, default=30.0)
+    parser.add_argument(
+        "--timeout-sec", type=float, default=None,
+        help="socket timeout in seconds; default: unlimited for cov.*, 30 for other methods; "
+             "0 disables the timeout",
+    )
     parser.add_argument("--pretty", action="store_true", help="pretty-print JSON responses")
 
 
@@ -479,7 +496,8 @@ def client_main(argv: Optional[List[str]] = None) -> int:
         parser = argparse.ArgumentParser(prog="xverif-loop-client")
         parser.add_argument("--socket", default=default_socket_path())
         parser.add_argument("--json", help="single JSON request object")
-        parser.add_argument("--timeout-sec", type=float, default=30.0)
+        parser.add_argument("--timeout-sec", type=float, default=None,
+                            help="default: unlimited for cov.*, 30 for other methods; 0 disables")
         parser.add_argument("--pretty", action="store_true", help="pretty-print JSON responses")
         parser.print_help()
         return 0
@@ -498,7 +516,8 @@ def client_main(argv: Optional[List[str]] = None) -> int:
         parser = argparse.ArgumentParser(description="Send requests to xverif-loop-server")
         parser.add_argument("--socket", default=default_socket_path())
         parser.add_argument("--json", help="single JSON request object")
-        parser.add_argument("--timeout-sec", type=float, default=30.0)
+        parser.add_argument("--timeout-sec", type=float, default=None,
+                            help="default: unlimited for cov.*, 30 for other methods; 0 disables")
         parser.add_argument("--pretty", action="store_true", help="pretty-print JSON responses")
         args = parser.parse_args(argv)
         if args.json:

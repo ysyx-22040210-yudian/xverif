@@ -5,7 +5,7 @@ import json
 from typing import Any, Dict, Optional
 
 from xverif_mcp.config import (default_xcov_bin, mcp_backend,
-                                startup_timeout, request_timeout)
+                                xcov_startup_timeout, xcov_request_timeout)
 from xverif_mcp.sessions.session_manager import McpSessionManager
 
 Json = Dict[str, Any]
@@ -16,9 +16,9 @@ class XverifCoverageAdapter:
                  startup_timeout_sec: Optional[float] = None,
                  request_timeout_sec: Optional[float] = None) -> None:
         if startup_timeout_sec is None:
-            startup_timeout_sec = startup_timeout()
+            startup_timeout_sec = xcov_startup_timeout()
         if request_timeout_sec is None:
-            request_timeout_sec = request_timeout()
+            request_timeout_sec = xcov_request_timeout()
         self.mode = mode or mcp_backend()
         self._sessions = McpSessionManager(
             mode=self.mode,
@@ -41,6 +41,7 @@ class XverifCoverageAdapter:
 
     def request(self, request: dict, output_format: str = "xout") -> Any:
         from xverif_mcp.runner import StatelessCliRunner
+        runner = StatelessCliRunner(timeout_sec=xcov_request_timeout())
         req = dict(request)
         req.setdefault("api_version", "xcov.v1")
         req.setdefault("output", {})
@@ -48,7 +49,7 @@ class XverifCoverageAdapter:
             req["output"]["response_format"] = "json"
         else:
             req["output"].pop("response_format", None)
-        raw = StatelessCliRunner()._run_raw("xcov", ["-"], json.dumps(req))
+        raw = runner._run_raw("xcov", ["-"], json.dumps(req))
         if output_format == "xout":
             return raw["stdout"]
         try:
@@ -62,8 +63,8 @@ class XverifCoverageAdapter:
         from xverif_mcp.runner import StatelessCliRunner
         req = dict(req)
         req.setdefault("output", {})["response_format"] = "json"
-        return StatelessCliRunner().run_json("xcov", ["--json", "-"],
-                                             json.dumps(req))
+        return StatelessCliRunner(timeout_sec=xcov_request_timeout()).run_json(
+            "xcov", ["--json", "-"], json.dumps(req))
 
     def session_open(self, name: str, vdb: str, **kwargs: Any) -> Json:
         return self._sessions.open_session(name=name, fsdb=vdb, **kwargs)

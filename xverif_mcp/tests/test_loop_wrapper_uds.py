@@ -13,7 +13,12 @@ import pytest
 
 from xverif_loop.config import configure_mcp_environment
 from xverif_loop.logging import configure_mcp_logging
-from xverif_loop.wrapper import LoopWrapperServer, LoopWrapperService, send_requests
+from xverif_loop.wrapper import (
+    LoopWrapperServer,
+    LoopWrapperService,
+    _socket_timeout_for_requests,
+    send_requests,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -23,7 +28,9 @@ def _restore_shared_defaults():
     configure_mcp_logging()
 
 
-def _make_fake_loop(path: Path, *, protocol: str, api_version: str, slow_query: bool = False) -> str:
+def _make_fake_loop(path: Path, *, protocol: str, api_version: str,
+                    slow_query: bool = False, query_delay: float = 0.0) -> str:
+    delay = 999.0 if slow_query else query_delay
     path.write_text(
         f"""#!/usr/bin/env python3
 import json, os, sys, time
@@ -47,8 +54,8 @@ for line in sys.stdin:
         name = req.get("args", {{}}).get("name", "fake")
         result = {{"ok": True, "action": action, "summary": {{"session_id": name, "mode": "fake"}}}}
     else:
-        if {slow_query!r}:
-            time.sleep(999)
+        if {delay!r}:
+            time.sleep({delay!r})
         result = {{"ok": True, "action": action, "summary": {{"echo_args": req.get("args", {{}})}}}}
     if wants_json:
         rsp = {{"id": rid, "ok": True, "payload_format": "json", "json": result}}
@@ -92,6 +99,38 @@ def _read_ndjson(path: Path) -> list[dict]:
 
 def _session_log(root: Path, alias: str, name: str) -> list[dict]:
     return _read_ndjson(root / "sessions" / alias / f"{name}.ndjson")
+
+
+def test_loop_wrapper_uses_xcov_unlimited_defaults(tmp_path, monkeypatch):
+    monkeypatch.setenv("XVERIF_LOOP_STARTUP_TIMEOUT_SEC", "181")
+    monkeypatch.setenv("XVERIF_LOOP_REQUEST_TIMEOUT_SEC", "361")
+    monkeypatch.delenv("XVERIF_XCOV_STARTUP_TIMEOUT_SEC", raising=False)
+    monkeypatch.delenv("XVERIF_XCOV_REQUEST_TIMEOUT_SEC", raising=False)
+    service = LoopWrapperService(mode="direct", xdebug_bin="xdebug", xcov_bin="xcov")
+    assert service.debug.startup_timeout_sec == 181
+    assert service.debug.request_timeout_sec == 361
+    assert service.cov.startup_timeout_sec == 0
+    assert service.cov.request_timeout_sec == 0
+
+
+def test_loop_wrapper_explicit_timeouts_apply_to_both_backends():
+    service = LoopWrapperService(
+        mode="direct", xdebug_bin="xdebug", xcov_bin="xcov",
+        startup_timeout_sec=7, request_timeout_sec=11,
+    )
+    assert service.debug.startup_timeout_sec == 7
+    assert service.debug.request_timeout_sec == 11
+    assert service.cov.startup_timeout_sec == 7
+    assert service.cov.request_timeout_sec == 11
+
+
+def test_client_timeout_defaults_are_method_specific():
+    assert _socket_timeout_for_requests(
+        [{"method": "cov.query"}], None) == 0
+    assert _socket_timeout_for_requests(
+        [{"method": "debug.query"}], None) == 30
+    assert _socket_timeout_for_requests(
+        [{"method": "cov.query"}], 12) == 12
 
 
 def test_loop_wrapper_ping(tmp_path, monkeypatch):
@@ -148,6 +187,28 @@ def test_loop_wrapper_cov_session_lifecycle(tmp_path, monkeypatch):
         assert [r["ok"] for r in responses] == [True, True, True]
         assert responses[0]["result"]["session"]["vdb"] == "merged.vdb"
         assert responses[1]["result"]["action"] == "coverage.summary"
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+
+def test_loop_wrapper_cov_query_waits_with_zero_timeout(tmp_path, monkeypatch):
+    monkeypatch.setenv("XVERIF_LOOP_LOG_DIR", str(tmp_path / "logs"))
+    debug = _make_fake_loop(tmp_path / "fake_xdebug", protocol="xdebug-stdio-loop",
+                            api_version="xdebug")
+    cov = _make_fake_loop(tmp_path / "fake_xcov", protocol="xcov-stdio-loop",
+                          api_version="xcov", query_delay=0.15)
+    service = LoopWrapperService(mode="direct", xdebug_bin=debug, xcov_bin=cov)
+    server, thread, sock = _start_server(tmp_path, service)
+    try:
+        responses = send_requests(sock, [
+            {"id": "open", "method": "cov.session.open",
+             "params": {"name": "delayed", "vdb": "merged.vdb"}},
+            {"id": "query", "method": "cov.query", "params": {
+                "session": "delayed", "action": "coverage.summary",
+                "output_format": "json"}},
+        ], timeout_sec=0)
+        assert [response["ok"] for response in responses] == [True, True]
     finally:
         server.shutdown()
         thread.join(timeout=5)

@@ -7,6 +7,7 @@ import os
 import stat
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -106,3 +107,24 @@ class TestXverifOutputFormats:
         assert isinstance(result, dict)
         assert not result.get("ok")
         assert result["error"]["code"] == "XVERIF_CLI_FAILED"
+
+
+@pytest.mark.parametrize(
+    ("runner_timeout", "call_timeout", "expected"),
+    [(0, None, None), (-1, None, None), (2.5, None, 2.5), (30, 0, None)],
+)
+def test_runner_nonpositive_timeout_is_unlimited(
+        monkeypatch, runner_timeout, call_timeout, expected):
+    observed = []
+
+    def fake_run(cmd, **kwargs):
+        observed.append(kwargs["timeout"])
+        return SimpleNamespace(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("xverif_mcp.runner.subprocess.run", fake_run)
+    runner = StatelessCliRunner(timeout_sec=runner_timeout)
+    runner.tool_path = lambda tool: "fake-tool"
+    result = runner._run_raw("xcov", ["--json", "-"], "{}",
+                             timeout_sec=call_timeout)
+    assert result["exit_code"] == 0
+    assert observed == [expected]

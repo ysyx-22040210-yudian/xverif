@@ -7,6 +7,8 @@ import sys
 from types import SimpleNamespace
 from pathlib import Path
 
+import pytest
+
 from xcov.actions import Dispatcher
 from xcov.backend import CoverageBackend, NpiCoverageBackend
 from xcov.errors import XcovError
@@ -104,6 +106,49 @@ def test_real_backend_does_not_use_python_npi_bindings():
     ]
     for forbidden in forbidden_terms:
         assert forbidden not in backend_py
+
+
+def test_tcl_status_iteration_and_raw_nulls_are_json_safe():
+    tcl = (ROOT / "xcov" / "tcl_engine" / "xcov_npi.tcl").read_text(
+        encoding="utf-8")
+    assert "foreach {status label} {" in tcl
+    assert "lassign $pair status label" not in tcl
+    assert 'if {$value eq ""} {return "null"}' in tcl
+    assert 'set pct "null"' in tcl
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [(None, None), ("0", None), ("-1", None), ("2.5", 2.5)],
+)
+def test_tcl_backend_timeout_configuration(monkeypatch, configured, expected):
+    monkeypatch.setattr("xcov.backend._find_verdi", lambda: "verdi")
+    if configured is None:
+        monkeypatch.delenv("XVERIF_XCOV_TCL_TIMEOUT_SEC", raising=False)
+    else:
+        monkeypatch.setenv("XVERIF_XCOV_TCL_TIMEOUT_SEC", configured)
+    observed = []
+
+    def fake_run(cmd, text, capture_output, cwd, env, timeout, check):
+        observed.append(timeout)
+        Path(env["XCOV_TCL_RESPONSE_JSON"]).write_text(
+            json.dumps({"ok": True, "data": {"items": []}}),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("xcov.backend.subprocess.run", fake_run)
+    backend = NpiCoverageBackend("fake.vdb")
+    assert backend.timeout_sec == expected
+    assert observed == [expected]
+
+
+@pytest.mark.parametrize("configured", [0, -1])
+def test_tcl_backend_nonpositive_constructor_timeout_is_unlimited(monkeypatch, configured):
+    monkeypatch.delenv("XVERIF_XCOV_TCL_TIMEOUT_SEC", raising=False)
+    monkeypatch.setattr(NpiCoverageBackend, "_run_tcl", lambda self, action: {"items": []})
+    backend = NpiCoverageBackend("fake.vdb", timeout_sec=configured)
+    assert backend.timeout_sec is None
 
 
 def test_tcl_backend_success_response_returns_data(monkeypatch):

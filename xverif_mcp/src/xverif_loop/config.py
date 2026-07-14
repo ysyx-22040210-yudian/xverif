@@ -93,6 +93,16 @@ def request_timeout() -> float:
     return float(os.environ.get(_REQUEST_TIMEOUT_ENV, "360"))
 
 
+def xcov_startup_timeout() -> float:
+    """Return the xcov session-open timeout; zero disables the timeout."""
+    return float(os.environ.get("XVERIF_XCOV_STARTUP_TIMEOUT_SEC", "0"))
+
+
+def xcov_request_timeout() -> float:
+    """Return the xcov query timeout; zero disables the timeout."""
+    return float(os.environ.get("XVERIF_XCOV_REQUEST_TIMEOUT_SEC", "0"))
+
+
 def close_timeout() -> float:
     return float(os.environ.get(_CLOSE_TIMEOUT_ENV, "30"))
 

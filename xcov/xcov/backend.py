@@ -167,12 +167,16 @@ class FakeCoverageBackend(CoverageBackend):
 @dataclass
 class NpiCoverageBackend(CoverageBackend):
     vdb: str
-    timeout_sec: float = 180.0
+    timeout_sec: Optional[float] = None
     _tests: Optional[List[Json]] = None
     _scopes: Optional[List[Json]] = None
 
     def __post_init__(self) -> None:
-        self.timeout_sec = float(os.environ.get("XVERIF_XCOV_TCL_TIMEOUT_SEC", self.timeout_sec))
+        raw_timeout = os.environ.get("XVERIF_XCOV_TCL_TIMEOUT_SEC")
+        configured = float(raw_timeout) if raw_timeout is not None else self.timeout_sec
+        self.timeout_sec = (float(configured)
+                            if configured is not None and float(configured) > 0
+                            else None)
         log_lifecycle_event("adhoc", "npi.tcl.backend.ready", True, {"vdb": self.vdb})
         self._tests = self._run_tcl("tests.list").get("items", [])
 
