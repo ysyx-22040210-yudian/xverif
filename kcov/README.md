@@ -202,9 +202,11 @@ rejected unless `output.allow_absolute_path=true` is set explicitly.
 - `functional.summary` and `functional.holes` support
   `levels=["covergroup","coverpoint","cross","bin"]`.
 
-## Python Extension SDK
+## Script Integration
 
-See [`../kverif_sdk/README.md`](../kverif_sdk/README.md) for the public
-`KcovClient`, stdio transport, and the multi-VDB coverage convergence example.
-Downstream scripts should use that JSON API instead of importing kcov backend
-internals or calling NPI directly.
+Downstream automation should invoke `tools/kcov` with command-line parameters
+and request `--json` output. Do not import `kcov` internals or call NPI
+directly. A multi-VDB convergence example for Bash is available at
+[`../examples/secondary_development/sh/coverage_convergence.sh`](../examples/secondary_development/sh/coverage_convergence.sh),
+and the complete CLI integration guide is
+[`../doc/secondary_development_guide.md`](../doc/secondary_development_guide.md).

@@ -888,8 +888,10 @@ make -C kdebug log-test
 
 ## 参考文档
 
-- [../kverif_sdk/README.md](../kverif_sdk/README.md)：基于 kdebug JSON/stdio-loop
-  开发波形分析和模块连线脚本的公共 Python SDK。
+- [../examples/secondary_development/README.md](../examples/secondary_development/README.md)：
+  Shell/Perl 直接调用 kdebug 命令和参数的波形、连线与 coverage 示例。
+- [../doc/secondary_development_guide.md](../doc/secondary_development_guide.md)：
+  CLI/JSON 二次开发、错误处理、并发和 VM 测试手册。
 - [docs/JSON_API.md](docs/JSON_API.md)：JSON envelope、target、输出策略。
 - [docs/PAYLOAD_COMPACT.md](docs/PAYLOAD_COMPACT.md)：业务 payload 压缩契约。
 - [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md)：面向 agent 的最短调试指南。
