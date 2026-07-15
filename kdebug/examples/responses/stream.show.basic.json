@@ -1,0 +1,1 @@
+{"api_version":"kdebug.v1","ok":true,"action":"stream.show","summary":{"stream":"req_stream","handshake":"vld/rdy","packet_enabled":true},"data":{"config":{"name":"req_stream","clock":"top.clk","clock_edge":"posedge","vld":"top.req_vld","rdy":"top.req_rdy"},"issues":[]},"warnings":[]}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">ksva usage screenshot guide</title>
+  <desc id="desc">Screenshot showing SVA list and explanation output.</desc>
+  <rect width="1200" height="675" fill="#f8fafc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">ksva: structured assertion explanation</text>
+  <rect x="70" y="120" width="1060" height="430" rx="16" fill="#0b1220"/>
+  <text x="100" y="165" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ ksva list --file input.sva</text>
+  <text x="130" y="205" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">property p_valid_ready</text>
+  <text x="130" y="240" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">assert a_valid_ready</text>
+  <text x="100" y="300" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ ksva explain --property p_valid_ready</text>
+  <text x="130" y="340" fill="#d1fae5" font-family="Consolas,monospace" font-size="20">antecedent: valid is high on sampled clock</text>
+  <text x="130" y="378" fill="#d1fae5" font-family="Consolas,monospace" font-size="20">operator: |-&gt; overlapped implication</text>
+  <text x="130" y="416" fill="#d1fae5" font-family="Consolas,monospace" font-size="20">consequent: ready must be high in the same attempt</text>
+  <text x="100" y="502" fill="#bfdbfe" font-family="Arial,Helvetica,sans-serif" font-size="20">Highlight: temporal semantics are parsed into deterministic IR/explanation.</text>
+</svg>

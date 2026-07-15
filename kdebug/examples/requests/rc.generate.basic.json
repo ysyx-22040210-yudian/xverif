@@ -1,0 +1,12 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "rc.generate",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "config_path": "wave_view.json",
+    "rc_path": "signal.rc",
+    "include_preview": true
+  }
+}

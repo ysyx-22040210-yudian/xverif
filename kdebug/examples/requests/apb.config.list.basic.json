@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "apb.config.list",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "include_accesses": false
+  }
+}

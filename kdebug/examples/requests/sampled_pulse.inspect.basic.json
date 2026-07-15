@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "sampled_pulse.inspect",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "signal": "top.u.ready"
+  }
+}

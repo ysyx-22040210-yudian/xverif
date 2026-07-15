@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export KVERIF_HOME="${KVERIF_HOME:-$(cd "$script_dir/.." && pwd)}"
+exec "${PYTHON:-python3}" "$KVERIF_HOME/keda_runner/keda_runner.py" "$@"

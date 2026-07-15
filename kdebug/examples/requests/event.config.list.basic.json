@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "event.config.list",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "max_examples": 5
+  }
+}

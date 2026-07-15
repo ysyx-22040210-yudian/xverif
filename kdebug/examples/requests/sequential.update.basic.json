@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "sequential.update",
+  "target": {
+    "daidir": "simv.daidir"
+  },
+  "args": {
+    "signal": "top.u.ready"
+  }
+}

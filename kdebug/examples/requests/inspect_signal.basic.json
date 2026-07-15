@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "inspect_signal",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "signal": "top.u.ready"
+  }
+}

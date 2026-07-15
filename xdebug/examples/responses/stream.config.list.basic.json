@@ -1,1 +1,0 @@
-{"api_version":"xdebug.v1","ok":true,"action":"stream.config.list","summary":{"count":1},"data":{"streams":[{"name":"req_stream","clock":"top.clk","clock_edge":"posedge","handshake":"vld/rdy","packet":"sop/eop","field_count":3}]},"warnings":[]}

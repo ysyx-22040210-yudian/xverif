@@ -1,0 +1,11 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "event.find",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "expr": "valid && !ready",
+    "max_examples": 5
+  }
+}

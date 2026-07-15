@@ -1,0 +1,20 @@
+// ksva test file - Phase 1 MVP test cases
+
+property p_req_ack;
+  @(posedge clk) disable iff (!rst_n)
+  req |-> ##[1:4] ack;
+endproperty
+
+property p_data_match;
+  logic [31:0] v;
+  @(posedge clk) disable iff (!rst_n)
+  (req, v = data) |-> ##[1:4] ack && rsp_data == v;
+endproperty
+
+property p_rose_req;
+  @(posedge clk)
+  $rose(req) |=> ack;
+endproperty
+
+a_req_ack: assert property (p_req_ack);
+a_data_match: assert property (p_data_match);

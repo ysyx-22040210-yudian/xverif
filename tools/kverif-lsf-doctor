@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$script_dir/.." && pwd)"
+export KVERIF_HOME="${KVERIF_HOME:-$root}"
+export PYTHONPATH="$root/kverif_mcp/src:$root:${PYTHONPATH:-}"
+
+"${PYTHON:-python3}" -m kverif_mcp.lsf.doctor "$@"

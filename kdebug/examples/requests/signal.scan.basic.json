@@ -1,0 +1,16 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "signal.scan",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "signal": "top.u.ready",
+    "begin": "0ns",
+    "end": "100ns",
+    "format": "hex"
+  },
+  "limits": {
+    "max_rows": 16
+  }
+}

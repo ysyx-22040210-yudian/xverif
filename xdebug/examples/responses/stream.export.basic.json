@@ -1,1 +1,0 @@
-{"api_version":"xdebug.v1","ok":true,"action":"stream.export","summary":{"stream":"req_stream","transfer_count":128,"truncated":false},"data":{"output_file":"/tmp/req_stream.tsv","meta_file":"/tmp/req_stream.tsv.meta.json","kind":"transfer","format":"tsv","row_count":128},"warnings":[]}

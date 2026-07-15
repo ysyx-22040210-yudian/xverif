@@ -1,0 +1,20 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "window.verify",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "conditions": [
+      {
+        "signal": "top.u.valid",
+        "op": "==",
+        "value": "'h1"
+      }
+    ],
+    "time_range": {
+      "begin": "0ns",
+      "end": "1us"
+    }
+  }
+}

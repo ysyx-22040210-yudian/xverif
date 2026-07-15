@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">kverif architecture</title>
+  <desc id="desc">Overview diagram showing CLI and MCP clients calling kverif tools and EDA backends.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.box{fill:#fff;stroke:#25324a;stroke-width:2;rx:10}.tool{fill:#e8f2ff;stroke:#2563eb;stroke-width:2;rx:10}.eda{fill:#fff7ed;stroke:#ea580c;stroke-width:2;rx:10}.out{fill:#ecfdf5;stroke:#059669;stroke-width:2;rx:10}.text{font-family:Arial,Helvetica,sans-serif;fill:#14213d}.title{font-size:34px;font-weight:700}.h{font-size:20px;font-weight:700}.p{font-size:16px}.small{font-size:14px}.line{stroke:#526179;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#526179"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1200" height="675"/>
+  <text class="text title" x="52" y="64">kverif: deterministic verification tools for humans and agents</text>
+  <text class="text p" x="54" y="94">CLI users and MCP agents query design, waveform, coverage, logs, SVA, bit math, and EDA runs through controlled interfaces.</text>
+
+  <rect class="box" x="70" y="150" width="190" height="92"/>
+  <text class="text h" x="105" y="187">Engineer</text>
+  <text class="text small" x="100" y="214">terminal / scripts</text>
+  <rect class="box" x="70" y="292" width="190" height="92"/>
+  <text class="text h" x="105" y="329">AI Agent</text>
+  <text class="text small" x="105" y="356">MCP client</text>
+
+  <rect class="box" x="330" y="132" width="230" height="126"/>
+  <text class="text h" x="382" y="170">tools/ CLI</text>
+  <text class="text small" x="362" y="200">kdebug, kbit, kentry</text>
+  <text class="text small" x="362" y="222">kloc, kberif, ksva</text>
+  <rect class="box" x="330" y="292" width="230" height="126"/>
+  <text class="text h" x="378" y="330">kverif-mcp</text>
+  <text class="text small" x="360" y="360">stateful + stateless tools</text>
+  <text class="text small" x="374" y="382">structured responses</text>
+
+  <rect class="tool" x="640" y="92" width="170" height="70"/>
+  <text class="text h" x="694" y="134">kdebug</text>
+  <rect class="tool" x="640" y="182" width="170" height="70"/>
+  <text class="text h" x="706" y="224">kcov</text>
+  <rect class="tool" x="640" y="272" width="170" height="70"/>
+  <text class="text h" x="707" y="314">kbit</text>
+  <rect class="tool" x="640" y="362" width="170" height="70"/>
+  <text class="text h" x="699" y="404">kentry</text>
+  <rect class="tool" x="640" y="452" width="170" height="70"/>
+  <text class="text h" x="708" y="494">kloc</text>
+  <rect class="tool" x="640" y="542" width="170" height="70"/>
+  <text class="text h" x="688" y="584">kberif / ksva</text>
+
+  <rect class="eda" x="905" y="92" width="220" height="76"/>
+  <text class="text h" x="963" y="126">Verdi Tcl</text>
+  <text class="text small" x="950" y="150">Verdi 2018 compatible</text>
+  <rect class="eda" x="905" y="198" width="220" height="76"/>
+  <text class="text h" x="976" y="232">FSDB</text>
+  <text class="text small" x="944" y="256">waveform facts</text>
+  <rect class="eda" x="905" y="304" width="220" height="76"/>
+  <text class="text h" x="976" y="338">VDB</text>
+  <text class="text small" x="934" y="362">coverage facts</text>
+  <rect class="out" x="905" y="452" width="220" height="86"/>
+  <text class="text h" x="952" y="488">Evidence</text>
+  <text class="text small" x="940" y="514">kout / JSON / reports</text>
+
+  <path class="line" d="M260 196 H330"/>
+  <path class="line" d="M260 338 H330"/>
+  <path class="line" d="M560 195 C590 170,605 130,640 127"/>
+  <path class="line" d="M560 355 C590 355,608 307,640 307"/>
+  <path class="line" d="M810 127 H905"/>
+  <path class="line" d="M810 217 H905"/>
+  <path class="line" d="M810 217 C870 220,865 340,905 342"/>
+  <path class="line" d="M810 307 C870 320,865 470,905 492"/>
+  <path class="line" d="M810 397 C865 410,870 475,905 492"/>
+  <path class="line" d="M810 487 H905"/>
+  <path class="line" d="M810 577 C880 575,860 520,905 504"/>
+</svg>

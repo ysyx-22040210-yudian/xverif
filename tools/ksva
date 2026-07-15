@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$script_dir/.." && pwd)"
+
+python_bin="${PYTHON:-}"
+if [[ -z "$python_bin" ]]; then
+  if [[ -x "${HOME}/miniconda3/bin/python" ]]; then
+    python_bin="${HOME}/miniconda3/bin/python"
+  else
+    python_bin="python3"
+  fi
+fi
+
+export PYTHONPATH="$root/ksva${PYTHONPATH:+:${PYTHONPATH}}"
+exec "$python_bin" -m ksva "$@"

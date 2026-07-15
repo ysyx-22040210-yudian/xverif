@@ -1,0 +1,11 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "handshake.inspect",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "valid": "top.u.valid",
+    "ready": "top.u.ready"
+  }
+}

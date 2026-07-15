@@ -1,0 +1,12 @@
+[project]
+name = "ksva"
+version = "0.1.0"
+description = "SystemVerilog Assertion 语义编译工具 — 把 SVA 文本转换为结构化 IR 并可读解释"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+ksva = "ksva.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,98 @@
+"""Stateless CLI runner for non-session tools (kbit, kentry, kloc, kberif, ksva)."""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+from typing import Any, Dict, List, Optional, Union
+
+from .config import default_tool_path, default_timeout
+from .errors import cli_failed, bad_json, tool_timeout
+
+Json = Dict[str, Any]
+
+
+class StatelessCliRunner:
+    def __init__(self, timeout_sec: Optional[float] = None) -> None:
+        self.timeout_sec = default_timeout() if timeout_sec is None else timeout_sec
+
+    def _effective_timeout(self, timeout_sec: Optional[float]) -> float:
+        return self.timeout_sec if timeout_sec is None else timeout_sec
+
+    def tool_path(self, tool: str) -> str:
+        return default_tool_path(tool)
+
+    def run_json(
+        self,
+        tool: str,
+        argv: List[str],
+        input_text: Optional[str] = None,
+        timeout_sec: Optional[float] = None,
+        extra_env: Optional[Dict[str, str]] = None,
+        cwd: Optional[str] = None,
+    ) -> Json:
+        raw = self._run_raw(tool, argv, input_text, timeout_sec, extra_env,
+                            cwd=cwd)
+        if raw["exit_code"] != 0 and not raw["stdout"].strip():
+            # Distinguish timeout from other failures
+            if "timed out" in raw.get("stderr", ""):
+                return tool_timeout(tool, self._effective_timeout(timeout_sec))
+            return cli_failed(tool, raw["exit_code"], raw["stdout"],
+                              raw["stderr"])
+        try:
+            payload = json.loads(raw["stdout"])
+        except Exception:
+            return bad_json(tool, raw["stdout"], raw["stderr"])
+        if isinstance(payload, dict):
+            return payload
+        return bad_json(tool, raw["stdout"], raw["stderr"])
+
+    def run_text(
+        self,
+        tool: str,
+        argv: List[str],
+        input_text: Optional[str] = None,
+        timeout_sec: Optional[float] = None,
+        extra_env: Optional[Dict[str, str]] = None,
+        cwd: Optional[str] = None,
+    ) -> Union[str, Json]:
+        raw = self._run_raw(tool, argv, input_text, timeout_sec, extra_env,
+                            cwd=cwd)
+        if raw["exit_code"] != 0:
+            return cli_failed(tool, raw["exit_code"], raw["stdout"],
+                              raw["stderr"])
+        return raw["stdout"]
+
+    def _run_raw(
+        self,
+        tool: str,
+        argv: List[str],
+        input_text: Optional[str] = None,
+        timeout_sec: Optional[float] = None,
+        extra_env: Optional[Dict[str, str]] = None,
+        cwd: Optional[str] = None,
+    ) -> dict:
+        cmd = [self.tool_path(tool)] + argv
+        env = dict(os.environ)
+        if extra_env:
+            env.update(extra_env)
+        effective_timeout = self._effective_timeout(timeout_sec)
+        try:
+            proc = subprocess.run(
+                cmd,
+                input=input_text,
+                capture_output=True,
+                text=True,
+                timeout=None if effective_timeout <= 0 else effective_timeout,
+                check=False,
+                env=env,
+                cwd=cwd or os.getcwd(),
+            )
+        except subprocess.TimeoutExpired:
+            return {"exit_code": -1, "stdout": "",
+                    "stderr": f"timed out after "
+                              f"{effective_timeout:g}s"}
+        except OSError as exc:
+            return {"exit_code": -1, "stdout": "", "stderr": str(exc)}
+        return {"exit_code": proc.returncode, "stdout": proc.stdout,
+                "stderr": proc.stderr}

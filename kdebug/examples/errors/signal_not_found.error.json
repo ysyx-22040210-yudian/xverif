@@ -1,0 +1,19 @@
+{
+  "api_version": "kdebug.v1",
+  "ok": false,
+  "action": "trace.driver",
+  "summary": {
+    "signal": "top.u.missing"
+  },
+  "data": null,
+  "error": {
+    "code": "SIGNAL_NOT_FOUND",
+    "message": "signal not found: top.u.missing",
+    "recoverable": true,
+    "candidates": [],
+    "suggested_actions": []
+  },
+  "meta": {
+    "truncated": false
+  }
+}

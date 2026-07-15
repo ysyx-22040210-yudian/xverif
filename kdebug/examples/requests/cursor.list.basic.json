@@ -1,0 +1,7 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "cursor.list",
+  "target": {
+    "session_id": "case_a"
+  }
+}

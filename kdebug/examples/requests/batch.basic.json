@@ -1,0 +1,12 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "batch",
+  "args": {
+    "requests": [
+      {
+        "api_version": "kdebug.v1",
+        "action": "schema"
+      }
+    ]
+  }
+}

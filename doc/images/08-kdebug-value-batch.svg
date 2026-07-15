@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">kdebug value batch screenshot guide</title>
+  <desc id="desc">Screenshot showing kdebug value.batch_at request and handshake values.</desc>
+  <rect width="1200" height="675" fill="#f7fafc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">kdebug: batch waveform values</text>
+  <rect x="70" y="125" width="1060" height="410" rx="16" fill="#111827"/>
+  <text x="100" y="170" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ kdebug batch_value.json</text>
+  <text x="100" y="222" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">@kdebug.value.batch_at.v1</text>
+  <text x="100" y="272" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">time: 100ns</text>
+  <text x="100" y="322" fill="#d1fae5" font-family="Consolas,monospace" font-size="20">top.u_core.valid = 1</text>
+  <text x="100" y="362" fill="#d1fae5" font-family="Consolas,monospace" font-size="20">top.u_core.ready = 0</text>
+  <text x="100" y="402" fill="#d1fae5" font-family="Consolas,monospace" font-size="20">top.u_core.bits  = 0xdeadbeef</text>
+  <rect x="650" y="255" width="420" height="160" rx="12" fill="#1e3a8a"/>
+  <text x="680" y="305" fill="#dbeafe" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700">Screenshot focus</text>
+  <text x="680" y="345" fill="#dbeafe" font-family="Arial,Helvetica,sans-serif" font-size="19">same-time valid / ready / data</text>
+  <text x="680" y="380" fill="#dbeafe" font-family="Arial,Helvetica,sans-serif" font-size="19">plus missing_by_reason if any</text>
+</svg>

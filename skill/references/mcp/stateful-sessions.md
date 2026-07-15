@@ -1,20 +1,20 @@
 # MCP stateful sessions
 
-MCP 的 xdebug/xcov stateful session 通过同一套 stdio-loop session manager 实现。
+MCP 的 kdebug/kcov stateful session 通过同一套 stdio-loop session manager 实现。
 
-## xdebug
+## kdebug
 
-- `xverif_debug_session_open(name, fsdb=None, daidir=None, queue=None, resource=None)`
-- `xverif_debug_query(session, action, args=None, limits=None, output=None, output_format="xout")`
-- `xverif_debug_session_list()`
-- `xverif_debug_session_close(name=..., session_id=...)`
+- `kverif_debug_session_open(name, fsdb=None, daidir=None, queue=None, resource=None)`
+- `kverif_debug_query(session, action, args=None, limits=None, output=None, output_format="kout")`
+- `kverif_debug_session_list()`
+- `kverif_debug_session_close(name=..., session_id=...)`
 
-## xcov
+## kcov
 
-- `xverif_cov_session_open(name, vdb, queue=None, resource=None)`
-- `xverif_cov_query(session, action, args=None, limits=None, output=None, output_format="xout")`
-- `xverif_cov_session_list()`
-- `xverif_cov_session_close(name=..., session_id=...)`
+- `kverif_cov_session_open(name, vdb, queue=None, resource=None)`
+- `kverif_cov_query(session, action, args=None, limits=None, output=None, output_format="kout")`
+- `kverif_cov_session_list()`
+- `kverif_cov_session_close(name=..., session_id=...)`
 
 ## 规则
 

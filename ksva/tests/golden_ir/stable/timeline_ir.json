@@ -1,0 +1,45 @@
+{
+  "schema_version": "ksva.timeline_ir.v1",
+  "property": "p_stable",
+  "kind": "property",
+  "clock": {
+    "edge": "unknown",
+    "signal": ""
+  },
+  "disable_expr": "",
+  "trigger": {
+    "cycle": 0,
+    "expr": "valid & & ! ready",
+    "captures": []
+  },
+  "obligations": [
+    {
+      "id": "ob_0_1",
+      "kind": "stable",
+      "expr": "valid & & $stable ( data )",
+      "has_window": false,
+      "window": null,
+      "depends_on_captures": [],
+      "requirement": "",
+      "failure_condition": null
+    }
+  ],
+  "match_paths": [
+    {
+      "id": "path_0",
+      "description": "Path 0: valid & & $stable ( data ) stays the same as the p",
+      "obligations": [
+        "stable"
+      ]
+    }
+  ],
+  "failure_conditions": [],
+  "semantic_notes": [
+    {
+      "kind": "summary",
+      "expr": "##1 valid & & $stable ( data )",
+      "text": "valid & & $stable ( data ) must be true at cycle +1."
+    }
+  ],
+  "diagnostics": []
+}

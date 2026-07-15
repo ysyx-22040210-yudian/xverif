@@ -1,34 +1,34 @@
-.PHONY: all xdebug xbit xentry xloc xberif xcov test full-test clean xcov-test sdk-test install-skill
+.PHONY: all kdebug kbit kentry kloc kberif kcov test full-test clean kcov-test sdk-test install-skill
 
 PYTHON ?= python3
-SKILL_NAME ?= xverif
+SKILL_NAME ?= kverif
 SKILL_SRC ?= skill
 
-all: xdebug xbit xentry xloc xberif xcov
+all: kdebug kbit kentry kloc kberif kcov
 
-xdebug:
-	$(MAKE) -C xdebug
+kdebug:
+	$(MAKE) -C kdebug
 
-xbit:
-	$(MAKE) -C xbit
+kbit:
+	$(MAKE) -C kbit
 
-xentry:
-	$(MAKE) -C xentry
+kentry:
+	$(MAKE) -C kentry
 
-xloc:
-	$(MAKE) -C xloc
+kloc:
+	$(MAKE) -C kloc
 
-xberif:
-	$(MAKE) -C xberif
+kberif:
+	$(MAKE) -C kberif
 
-xcov:
+kcov:
 	@true
 
-xcov-test:
-	$(MAKE) -C xcov PYTHON=$(PYTHON) test
+kcov-test:
+	$(MAKE) -C kcov PYTHON=$(PYTHON) test
 
 sdk-test:
-	PYTHONPATH=. $(PYTHON) -m pytest xverif_sdk/tests -q
+	PYTHONPATH=. $(PYTHON) -m pytest kverif_sdk/tests -q
 
 install-skill:
 	@set -eu; \
@@ -58,30 +58,30 @@ install-skill:
 	done; \
 	echo "Done. Backups, if any, were moved to ~/.codex/ or ~/.claude/ so agents do not load old and new skills twice."
 
-test: xdebug xbit xentry xloc xberif xcov
-	$(MAKE) -C xdebug PYTHON=$(PYTHON) schema-test
-	$(MAKE) -C xdebug PYTHON=$(PYTHON) contract-test
-	$(MAKE) -C xdebug unit-test
-	$(MAKE) -C xdebug PYTHON=$(PYTHON) mcp-test
-	$(MAKE) -C xbit PYTHON=$(PYTHON) test
-	$(MAKE) -C xentry PYTHON=$(PYTHON) test
-	$(MAKE) -C xloc test
-	$(MAKE) -C xberif PYTHON=$(PYTHON) test
-	$(MAKE) -C xcov PYTHON=$(PYTHON) test
+test: kdebug kbit kentry kloc kberif kcov
+	$(MAKE) -C kdebug PYTHON=$(PYTHON) schema-test
+	$(MAKE) -C kdebug PYTHON=$(PYTHON) contract-test
+	$(MAKE) -C kdebug unit-test
+	$(MAKE) -C kdebug PYTHON=$(PYTHON) mcp-test
+	$(MAKE) -C kbit PYTHON=$(PYTHON) test
+	$(MAKE) -C kentry PYTHON=$(PYTHON) test
+	$(MAKE) -C kloc test
+	$(MAKE) -C kberif PYTHON=$(PYTHON) test
+	$(MAKE) -C kcov PYTHON=$(PYTHON) test
 	$(MAKE) sdk-test PYTHON=$(PYTHON)
-	$(MAKE) -C xdebug/testdata/combined/active_driver fixture
-	regression/run_xdebug_regression.sh
+	$(MAKE) -C kdebug/testdata/combined/active_driver fixture
+	regression/run_kdebug_regression.sh
 
-full-test: xdebug xbit xentry xloc xberif
-	$(MAKE) -C xbit PYTHON=$(PYTHON) test
-	$(MAKE) -C xentry PYTHON=$(PYTHON) test
-	$(MAKE) -C xloc test
-	$(MAKE) -C xberif PYTHON=$(PYTHON) test
+full-test: kdebug kbit kentry kloc kberif
+	$(MAKE) -C kbit PYTHON=$(PYTHON) test
+	$(MAKE) -C kentry PYTHON=$(PYTHON) test
+	$(MAKE) -C kloc test
+	$(MAKE) -C kberif PYTHON=$(PYTHON) test
 	regression/run_full_regression.sh
 
 clean:
-	$(MAKE) -C xdebug clean
-	$(MAKE) -C xbit clean
-	$(MAKE) -C xentry clean
-	$(MAKE) -C xloc clean
-	$(MAKE) -C xberif clean
+	$(MAKE) -C kdebug clean
+	$(MAKE) -C kbit clean
+	$(MAKE) -C kentry clean
+	$(MAKE) -C kloc clean
+	$(MAKE) -C kberif clean

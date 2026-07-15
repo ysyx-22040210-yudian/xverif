@@ -1,0 +1,16 @@
+{
+  "api_version": "kdebug.v1",
+  "ok": true,
+  "action": "sampled_pulse.inspect",
+  "summary": {
+    "truncated": false
+  },
+  "data": {
+    "examples": [
+      {
+        "time": "100ns"
+      }
+    ]
+  },
+  "warnings": []
+}

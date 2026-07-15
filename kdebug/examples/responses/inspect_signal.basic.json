@@ -1,0 +1,16 @@
+{
+  "api_version": "kdebug.v1",
+  "ok": true,
+  "action": "inspect_signal",
+  "summary": {
+    "truncated": false
+  },
+  "data": {
+    "examples": [
+      {
+        "time": "100ns"
+      }
+    ]
+  },
+  "warnings": []
+}

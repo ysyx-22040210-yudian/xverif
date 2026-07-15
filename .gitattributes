@@ -3,5 +3,5 @@
 Makefile text eol=lf
 */Makefile text eol=lf
 tools/* text eol=lf
-xdebug/tcl_engine/* text eol=lf
-xcov/tcl_engine/* text eol=lf
+kdebug/tcl_engine/* text eol=lf
+kcov/tcl_engine/* text eol=lf

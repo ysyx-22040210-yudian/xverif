@@ -1,0 +1,1810 @@
+{
+  "version": "kdebug.action_specs.v1",
+  "actions": [
+    {
+      "name": "actions",
+      "category": "builtin",
+      "status": "stable",
+      "requires": "none",
+      "handler_kind": "actions",
+      "schemas": {
+        "request": "schemas/v1/actions/actions.request.schema.json",
+        "response": "schemas/v1/actions/actions.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/actions.basic.json"
+        ],
+        "response": [
+          "examples/responses/actions.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "apb.config.list",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/apb.config.list.request.schema.json",
+        "response": "schemas/v1/actions/apb.config.list.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/apb.config.list.basic.json"
+        ],
+        "response": [
+          "examples/responses/apb.config.list.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "apb.config.load",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/apb.config.load.request.schema.json",
+        "response": "schemas/v1/actions/apb.config.load.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/apb.config.load.basic.json"
+        ],
+        "response": [
+          "examples/responses/apb.config.load.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "apb.cursor",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/apb.cursor.request.schema.json",
+        "response": "schemas/v1/actions/apb.cursor.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/apb.cursor.basic.json"
+        ],
+        "response": [
+          "examples/responses/apb.cursor.basic.json"
+        ]
+      },
+      "required_args": [
+        "name",
+        "op"
+      ]
+    },
+    {
+      "name": "apb.query",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/apb.query.request.schema.json",
+        "response": "schemas/v1/actions/apb.query.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/apb.query.basic.json"
+        ],
+        "response": [
+          "examples/responses/apb.query.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "apb.transfer_window",
+      "category": "waveform",
+      "status": "experimental",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/apb.transfer_window.request.schema.json",
+        "response": "schemas/v1/actions/apb.transfer_window.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/apb.transfer_window.basic.json"
+        ],
+        "response": [
+          "examples/responses/apb.transfer_window.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.analysis",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.analysis.request.schema.json",
+        "response": "schemas/v1/actions/axi.analysis.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.analysis.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.analysis.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.export",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.export.request.schema.json",
+        "response": "schemas/v1/actions/axi.export.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.export.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.export.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.channel_stall",
+      "category": "waveform",
+      "status": "experimental",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.channel_stall.request.schema.json",
+        "response": "schemas/v1/actions/axi.channel_stall.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.channel_stall.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.channel_stall.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.config.list",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.config.list.request.schema.json",
+        "response": "schemas/v1/actions/axi.config.list.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.config.list.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.config.list.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "axi.config.load",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.config.load.request.schema.json",
+        "response": "schemas/v1/actions/axi.config.load.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.config.load.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.config.load.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.cursor",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.cursor.request.schema.json",
+        "response": "schemas/v1/actions/axi.cursor.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.cursor.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.cursor.basic.json"
+        ]
+      },
+      "required_args": [
+        "name",
+        "op"
+      ]
+    },
+    {
+      "name": "axi.latency_outlier",
+      "category": "waveform",
+      "status": "experimental",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.latency_outlier.request.schema.json",
+        "response": "schemas/v1/actions/axi.latency_outlier.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.latency_outlier.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.latency_outlier.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.outstanding_timeline",
+      "category": "waveform",
+      "status": "experimental",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.outstanding_timeline.request.schema.json",
+        "response": "schemas/v1/actions/axi.outstanding_timeline.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.outstanding_timeline.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.outstanding_timeline.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.query",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.query.request.schema.json",
+        "response": "schemas/v1/actions/axi.query.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.query.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.query.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "axi.request_response_pair",
+      "category": "waveform",
+      "status": "experimental",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/axi.request_response_pair.request.schema.json",
+        "response": "schemas/v1/actions/axi.request_response_pair.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/axi.request_response_pair.basic.json"
+        ],
+        "response": [
+          "examples/responses/axi.request_response_pair.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "batch",
+      "category": "builtin",
+      "status": "stable",
+      "requires": "none",
+      "handler_kind": "batch",
+      "schemas": {
+        "request": "schemas/v1/actions/batch.request.schema.json",
+        "response": "schemas/v1/actions/batch.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/batch.basic.json"
+        ],
+        "response": [
+          "examples/responses/batch.basic.json"
+        ]
+      },
+      "required_args": [
+        "requests"
+      ]
+    },
+    {
+      "name": "control.explain",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/control.explain.request.schema.json",
+        "response": "schemas/v1/actions/control.explain.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/control.explain.basic.json"
+        ],
+        "response": [
+          "examples/responses/control.explain.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "counter.explain",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/counter.explain.request.schema.json",
+        "response": "schemas/v1/actions/counter.explain.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/counter.explain.basic.json"
+        ],
+        "response": [
+          "examples/responses/counter.explain.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "counter.statistics",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/counter.statistics.request.schema.json",
+        "response": "schemas/v1/actions/counter.statistics.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/counter.statistics.basic.json"
+        ],
+        "response": [
+          "examples/responses/counter.statistics.basic.json"
+        ]
+      },
+      "required_args": [
+        "clock",
+        "time_range",
+        "vld",
+        "cnt"
+      ]
+    },
+    {
+      "name": "cursor.delete",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/cursor.delete.request.schema.json",
+        "response": "schemas/v1/actions/cursor.delete.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/cursor.delete.basic.json"
+        ],
+        "response": [
+          "examples/responses/cursor.delete.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "cursor.get",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/cursor.get.request.schema.json",
+        "response": "schemas/v1/actions/cursor.get.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/cursor.get.basic.json"
+        ],
+        "response": [
+          "examples/responses/cursor.get.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "cursor.list",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/cursor.list.request.schema.json",
+        "response": "schemas/v1/actions/cursor.list.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/cursor.list.basic.json"
+        ],
+        "response": [
+          "examples/responses/cursor.list.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "cursor.set",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/cursor.set.request.schema.json",
+        "response": "schemas/v1/actions/cursor.set.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/cursor.set.basic.json"
+        ],
+        "response": [
+          "examples/responses/cursor.set.basic.json"
+        ]
+      },
+      "required_args": [
+        "time"
+      ]
+    },
+    {
+      "name": "cursor.use",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/cursor.use.request.schema.json",
+        "response": "schemas/v1/actions/cursor.use.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/cursor.use.basic.json"
+        ],
+        "response": [
+          "examples/responses/cursor.use.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "detect_anomaly",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/detect_anomaly.request.schema.json",
+        "response": "schemas/v1/actions/detect_anomaly.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/detect_anomaly.basic.json"
+        ],
+        "response": [
+          "examples/responses/detect_anomaly.basic.json"
+        ]
+      },
+      "required_args": [
+        "signals"
+      ]
+    },
+    {
+      "name": "event.config.list",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/event.config.list.request.schema.json",
+        "response": "schemas/v1/actions/event.config.list.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/event.config.list.basic.json"
+        ],
+        "response": [
+          "examples/responses/event.config.list.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "event.config.load",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/event.config.load.request.schema.json",
+        "response": "schemas/v1/actions/event.config.load.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/event.config.load.basic.json"
+        ],
+        "response": [
+          "examples/responses/event.config.load.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "event.export",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/event.export.request.schema.json",
+        "response": "schemas/v1/actions/event.export.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/event.export.basic.json"
+        ],
+        "response": [
+          "examples/responses/event.export.basic.json"
+        ]
+      },
+      "required_args": [
+        "expr"
+      ]
+    },
+    {
+      "name": "event.find",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/event.find.request.schema.json",
+        "response": "schemas/v1/actions/event.find.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/event.find.basic.json"
+        ],
+        "response": [
+          "examples/responses/event.find.basic.json"
+        ]
+      },
+      "required_args": [
+        "expr"
+      ]
+    },
+    {
+      "name": "expr.eval_at",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/expr.eval_at.request.schema.json",
+        "response": "schemas/v1/actions/expr.eval_at.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/expr.eval_at.basic.json"
+        ],
+        "response": [
+          "examples/responses/expr.eval_at.basic.json"
+        ]
+      },
+      "required_args": [
+        "expr",
+        "time"
+      ]
+    },
+    {
+      "name": "expr.normalize",
+      "category": "design",
+      "status": "stable",
+      "requires": "none",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/expr.normalize.request.schema.json",
+        "response": "schemas/v1/actions/expr.normalize.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/expr.normalize.basic.json"
+        ],
+        "response": [
+          "examples/responses/expr.normalize.basic.json"
+        ]
+      },
+      "required_args": [
+        "expr"
+      ]
+    },
+    {
+      "name": "fsm.explain",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/fsm.explain.request.schema.json",
+        "response": "schemas/v1/actions/fsm.explain.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/fsm.explain.basic.json"
+        ],
+        "response": [
+          "examples/responses/fsm.explain.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "handshake.inspect",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/handshake.inspect.request.schema.json",
+        "response": "schemas/v1/actions/handshake.inspect.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/handshake.inspect.basic.json"
+        ],
+        "response": [
+          "examples/responses/handshake.inspect.basic.json"
+        ]
+      },
+      "required_args": [
+        "valid",
+        "ready"
+      ]
+    },
+    {
+      "name": "inspect_signal",
+      "category": "waveform",
+      "status": "deprecated",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/inspect_signal.request.schema.json",
+        "response": "schemas/v1/actions/inspect_signal.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/inspect_signal.basic.json"
+        ],
+        "response": [
+          "examples/responses/inspect_signal.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "instance.map",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/instance.map.request.schema.json",
+        "response": "schemas/v1/actions/instance.map.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/instance.map.basic.json"
+        ],
+        "response": [
+          "examples/responses/instance.map.basic.json"
+        ]
+      },
+      "required_args": [
+        "instance"
+      ]
+    },
+    {
+      "name": "interface.resolve",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/interface.resolve.request.schema.json",
+        "response": "schemas/v1/actions/interface.resolve.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/interface.resolve.basic.json"
+        ],
+        "response": [
+          "examples/responses/interface.resolve.basic.json"
+        ]
+      },
+      "required_args": [
+        "interface"
+      ]
+    },
+    {
+      "name": "list.add",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.add.request.schema.json",
+        "response": "schemas/v1/actions/list.add.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.add.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.add.basic.json"
+        ]
+      },
+      "required_args": [
+        "name",
+        "signals"
+      ]
+    },
+    {
+      "name": "list.create",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.create.request.schema.json",
+        "response": "schemas/v1/actions/list.create.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.create.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.create.basic.json"
+        ]
+      },
+      "required_args": [
+        "name",
+        "signals"
+      ]
+    },
+    {
+      "name": "list.delete",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.delete.request.schema.json",
+        "response": "schemas/v1/actions/list.delete.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.delete.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.delete.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "list.diff",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.diff.request.schema.json",
+        "response": "schemas/v1/actions/list.diff.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.diff.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.diff.basic.json"
+        ]
+      },
+      "required_args": [
+        "name",
+        "time_a",
+        "time_b"
+      ]
+    },
+    {
+      "name": "list.show",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.show.request.schema.json",
+        "response": "schemas/v1/actions/list.show.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.show.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.show.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "list.validate",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.validate.request.schema.json",
+        "response": "schemas/v1/actions/list.validate.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.validate.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.validate.basic.json"
+        ]
+      },
+      "required_args": [
+        "name"
+      ]
+    },
+    {
+      "name": "list.value_at",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/list.value_at.request.schema.json",
+        "response": "schemas/v1/actions/list.value_at.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/list.value_at.basic.json"
+        ],
+        "response": [
+          "examples/responses/list.value_at.basic.json"
+        ]
+      },
+      "required_args": [
+        "name",
+        "time"
+      ]
+    },
+    {
+      "name": "port.trace",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/port.trace.request.schema.json",
+        "response": "schemas/v1/actions/port.trace.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/port.trace.basic.json"
+        ],
+        "response": [
+          "examples/responses/port.trace.basic.json"
+        ]
+      },
+      "required_args": [
+        "port"
+      ]
+    },
+    {
+      "name": "procedural.assignment",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/procedural.assignment.request.schema.json",
+        "response": "schemas/v1/actions/procedural.assignment.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/procedural.assignment.basic.json"
+        ],
+        "response": [
+          "examples/responses/procedural.assignment.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "sampled_pulse.inspect",
+      "category": "waveform",
+      "status": "experimental",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/sampled_pulse.inspect.request.schema.json",
+        "response": "schemas/v1/actions/sampled_pulse.inspect.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/sampled_pulse.inspect.basic.json"
+        ],
+        "response": [
+          "examples/responses/sampled_pulse.inspect.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "schema",
+      "category": "builtin",
+      "status": "stable",
+      "requires": "none",
+      "handler_kind": "schema",
+      "schemas": {
+        "request": "schemas/v1/actions/schema.request.schema.json",
+        "response": "schemas/v1/actions/schema.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/schema.basic.json"
+        ],
+        "response": [
+          "examples/responses/schema.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "scope.list",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/scope.list.request.schema.json",
+        "response": "schemas/v1/actions/scope.list.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/scope.list.basic.json"
+        ],
+        "response": [
+          "examples/responses/scope.list.basic.json"
+        ]
+      },
+      "required_args": [
+        "scope"
+      ]
+    },
+    {
+      "name": "sequential.update",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/sequential.update.request.schema.json",
+        "response": "schemas/v1/actions/sequential.update.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/sequential.update.basic.json"
+        ],
+        "response": [
+          "examples/responses/sequential.update.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "session.close",
+      "category": "session",
+      "status": "stable",
+      "requires": "session",
+      "handler_kind": "session",
+      "schemas": {
+        "request": "schemas/v1/actions/session.close.request.schema.json",
+        "response": "schemas/v1/actions/session.close.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/session.close.basic.json"
+        ],
+        "response": [
+          "examples/responses/session.close.basic.json"
+        ]
+      },
+      "required_args": [
+        "session_id"
+      ]
+    },
+    {
+      "name": "session.doctor",
+      "category": "session",
+      "status": "stable",
+      "requires": "session",
+      "handler_kind": "session",
+      "schemas": {
+        "request": "schemas/v1/actions/session.doctor.request.schema.json",
+        "response": "schemas/v1/actions/session.doctor.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/session.doctor.basic.json"
+        ],
+        "response": [
+          "examples/responses/session.doctor.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "session.gc",
+      "category": "session",
+      "status": "stable",
+      "requires": "none",
+      "handler_kind": "session",
+      "schemas": {
+        "request": "schemas/v1/actions/session.gc.request.schema.json",
+        "response": "schemas/v1/actions/session.gc.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/session.gc.basic.json"
+        ],
+        "response": [
+          "examples/responses/session.gc.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "session.kill",
+      "category": "session",
+      "status": "stable",
+      "requires": "session",
+      "handler_kind": "session",
+      "schemas": {
+        "request": "schemas/v1/actions/session.kill.request.schema.json",
+        "response": "schemas/v1/actions/session.kill.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/session.kill.basic.json"
+        ],
+        "response": [
+          "examples/responses/session.kill.basic.json"
+        ]
+      },
+      "required_args": [
+        "session_id"
+      ]
+    },
+    {
+      "name": "session.list",
+      "category": "session",
+      "status": "stable",
+      "requires": "session",
+      "handler_kind": "session",
+      "schemas": {
+        "request": "schemas/v1/actions/session.list.request.schema.json",
+        "response": "schemas/v1/actions/session.list.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/session.list.basic.json"
+        ],
+        "response": [
+          "examples/responses/session.list.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "session.open",
+      "category": "session",
+      "status": "stable",
+      "requires": "any",
+      "handler_kind": "session",
+      "schemas": {
+        "request": "schemas/v1/actions/session.open.request.schema.json",
+        "response": "schemas/v1/actions/session.open.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/session.open.basic.json"
+        ],
+        "response": [
+          "examples/responses/session.open.basic.json"
+        ]
+      }
+    },
+    {
+      "name": "signal.canonicalize",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.canonicalize.request.schema.json",
+        "response": "schemas/v1/actions/signal.canonicalize.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.canonicalize.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.canonicalize.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "signal.changes",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.changes.request.schema.json",
+        "response": "schemas/v1/actions/signal.changes.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.changes.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.changes.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "signal.resolve",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.resolve.request.schema.json",
+        "response": "schemas/v1/actions/signal.resolve.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.resolve.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.resolve.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "signal.stability",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.stability.request.schema.json",
+        "response": "schemas/v1/actions/signal.stability.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.stability.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.stability.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "signal.statistics",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.statistics.request.schema.json",
+        "response": "schemas/v1/actions/signal.statistics.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.statistics.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.statistics.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "signal.trend",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.trend.request.schema.json",
+        "response": "schemas/v1/actions/signal.trend.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.trend.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.trend.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "source.context",
+      "category": "design",
+      "status": "stable",
+      "requires": "none",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/source.context.request.schema.json",
+        "response": "schemas/v1/actions/source.context.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/source.context.basic.json"
+        ],
+        "response": [
+          "examples/responses/source.context.basic.json"
+        ]
+      },
+      "required_args": [
+        "file",
+        "line"
+      ]
+    },
+    {
+      "name": "trace.active_driver",
+      "category": "combined",
+      "status": "stable",
+      "requires": "any",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.active_driver.request.schema.json",
+        "response": "schemas/v1/actions/trace.active_driver.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.active_driver.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.active_driver.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal",
+        "requested_time"
+      ]
+    },
+    {
+      "name": "trace.active_driver_chain",
+      "category": "combined",
+      "status": "stable",
+      "requires": "any",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.active_driver_chain.request.schema.json",
+        "response": "schemas/v1/actions/trace.active_driver_chain.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.active_driver_chain.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.active_driver_chain.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal",
+        "requested_time"
+      ]
+    },
+    {
+      "name": "trace.driver",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.driver.request.schema.json",
+        "response": "schemas/v1/actions/trace.driver.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.driver.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.driver.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "trace.expand",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.expand.request.schema.json",
+        "response": "schemas/v1/actions/trace.expand.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.expand.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.expand.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "trace.explain",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.explain.request.schema.json",
+        "response": "schemas/v1/actions/trace.explain.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.explain.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.explain.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "trace.graph",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.graph.request.schema.json",
+        "response": "schemas/v1/actions/trace.graph.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.graph.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.graph.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "trace.load",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.load.request.schema.json",
+        "response": "schemas/v1/actions/trace.load.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.load.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.load.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "trace.path",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.path.request.schema.json",
+        "response": "schemas/v1/actions/trace.path.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.path.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.path.basic.json"
+        ]
+      },
+      "required_args": [
+        "from_signal",
+        "to_signal"
+      ]
+    },
+    {
+      "name": "trace.query",
+      "category": "design",
+      "status": "stable",
+      "requires": "design",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/trace.query.request.schema.json",
+        "response": "schemas/v1/actions/trace.query.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/trace.query.basic.json"
+        ],
+        "response": [
+          "examples/responses/trace.query.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "rc.generate",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/rc.generate.request.schema.json",
+        "response": "schemas/v1/actions/rc.generate.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/rc.generate.basic.json"
+        ],
+        "response": [
+          "examples/responses/rc.generate.basic.json"
+        ]
+      },
+      "required_args": [
+        "config_path",
+        "rc_path"
+      ]
+    },
+    {
+      "name": "value.at",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/value.at.request.schema.json",
+        "response": "schemas/v1/actions/value.at.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/value.at.basic.json"
+        ],
+        "response": [
+          "examples/responses/value.at.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal",
+        "time"
+      ]
+    },
+    {
+      "name": "value.batch_at",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/value.batch_at.request.schema.json",
+        "response": "schemas/v1/actions/value.batch_at.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/value.batch_at.basic.json"
+        ],
+        "response": [
+          "examples/responses/value.batch_at.basic.json"
+        ]
+      },
+      "required_args": [
+        "signals",
+        "time"
+      ]
+    },
+    {
+      "name": "signal.scan",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/signal.scan.request.schema.json",
+        "response": "schemas/v1/actions/signal.scan.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/signal.scan.basic.json"
+        ],
+        "response": [
+          "examples/responses/signal.scan.basic.json"
+        ]
+      },
+      "required_args": [
+        "signal"
+      ]
+    },
+    {
+      "name": "verify.conditions",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/verify.conditions.request.schema.json",
+        "response": "schemas/v1/actions/verify.conditions.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/verify.conditions.basic.json"
+        ],
+        "response": [
+          "examples/responses/verify.conditions.basic.json"
+        ]
+      },
+      "required_args": [
+        "conditions",
+        "time"
+      ]
+    },
+    {
+      "name": "window.verify",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/window.verify.request.schema.json",
+        "response": "schemas/v1/actions/window.verify.response.schema.json"
+      },
+      "examples": {
+        "request": [
+          "examples/requests/window.verify.basic.json"
+        ],
+        "response": [
+          "examples/responses/window.verify.basic.json"
+        ]
+      },
+      "required_args": [
+        "conditions",
+        "time_range"
+      ]
+    },
+    {
+      "name": "stream.config.load",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/stream.config.load.request.schema.json",
+        "response": "schemas/v1/actions/stream.config.load.response.schema.json"
+      },
+      "examples": {
+        "request": ["examples/requests/stream.config.load.basic.json"],
+        "response": ["examples/responses/stream.config.load.basic.json"]
+      },
+      "required_args": ["streams"]
+    },
+    {
+      "name": "stream.config.list",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/stream.config.list.request.schema.json",
+        "response": "schemas/v1/actions/stream.config.list.response.schema.json"
+      },
+      "examples": {
+        "request": ["examples/requests/stream.config.list.basic.json"],
+        "response": ["examples/responses/stream.config.list.basic.json"]
+      }
+    },
+    {
+      "name": "stream.show",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/stream.show.request.schema.json",
+        "response": "schemas/v1/actions/stream.show.response.schema.json"
+      },
+      "examples": {
+        "request": ["examples/requests/stream.show.basic.json"],
+        "response": ["examples/responses/stream.show.basic.json"]
+      },
+      "required_args": ["stream"]
+    },
+    {
+      "name": "stream.validate",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/stream.validate.request.schema.json",
+        "response": "schemas/v1/actions/stream.validate.response.schema.json"
+      },
+      "examples": {
+        "request": ["examples/requests/stream.validate.basic.json"],
+        "response": ["examples/responses/stream.validate.basic.json"]
+      },
+      "required_args": ["stream"]
+    },
+    {
+      "name": "stream.query",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/stream.query.request.schema.json",
+        "response": "schemas/v1/actions/stream.query.response.schema.json"
+      },
+      "examples": {
+        "request": ["examples/requests/stream.query.basic.json"],
+        "response": ["examples/responses/stream.query.basic.json"]
+      },
+      "required_args": ["stream", "query"]
+    },
+    {
+      "name": "stream.export",
+      "category": "waveform",
+      "status": "stable",
+      "requires": "waveform",
+      "handler_kind": "engine_forward",
+      "schemas": {
+        "request": "schemas/v1/actions/stream.export.request.schema.json",
+        "response": "schemas/v1/actions/stream.export.response.schema.json"
+      },
+      "examples": {
+        "request": ["examples/requests/stream.export.basic.json"],
+        "response": ["examples/responses/stream.export.basic.json"]
+      },
+      "required_args": ["stream"]
+    },
+    {
+      "name": "signal.search",
+      "category": "design",
+      "status": "removed",
+      "requires": "design",
+      "handler_kind": "removed",
+      "schemas": {},
+      "examples": {}
+    }
+  ]
+}

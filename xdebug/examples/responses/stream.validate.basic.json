@@ -1,1 +1,0 @@
-{"api_version":"xdebug.v1","ok":true,"action":"stream.validate","summary":{"stream":"req_stream","ok":true},"data":{"issues":[],"dynamic":{"stream":"req_stream","transfer_count":128}},"warnings":[]}

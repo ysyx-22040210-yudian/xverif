@@ -1,0 +1,12 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "trace.active_driver",
+  "target": {
+    "session_id": "my_debug_session"
+  },
+  "args": {
+    "signal": "top.u.ready",
+    "requested_time": "120ns",
+    "include_trace": false
+  }
+}

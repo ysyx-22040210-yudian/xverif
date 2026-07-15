@@ -2,7 +2,7 @@
 
 ## 日志位置
 
-默认根目录：`~/.xverif/mcp`，可用 `XVERIF_MCP_LOG_DIR` 覆盖。
+默认根目录：`~/.kverif/mcp`，可用 `KVERIF_MCP_LOG_DIR` 覆盖。
 
 - server：`logs/server.ndjson`
 - session：`sessions/<alias>/session.ndjson`
@@ -11,12 +11,12 @@
 
 ## 定位顺序
 
-1. 工具不可见：调用 `xverif_tools`，检查 `XVERIF_MCP_ENABLE_*`。
+1. 工具不可见：调用 `kverif_tools`，检查 `KVERIF_MCP_ENABLE_*`。
 2. FastMCP/SDK 启动失败：确认 Python 3.11+ 和 `mcp[cli]`。
 3. session open 失败：看 `session.ndjson` 和 `stdio.ndjson`。
 4. ready timeout/stdout pollution/backend exit：看 `stdio.ndjson`。
 5. LSF job id、bsub、bkill、cleanup：看 `lsf.ndjson`。
-6. xdebug backend native 问题：继续读 xdebug troubleshooting。
+6. kdebug backend native 问题：继续读 kdebug troubleshooting。
 
 ## 常见错误
 

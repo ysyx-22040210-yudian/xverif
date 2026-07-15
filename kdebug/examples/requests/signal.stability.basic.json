@@ -1,0 +1,11 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "signal.stability",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "signal": "top.u.ready",
+    "max_items": 20
+  }
+}

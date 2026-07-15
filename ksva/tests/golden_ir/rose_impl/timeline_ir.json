@@ -1,0 +1,47 @@
+{
+  "schema_version": "ksva.timeline_ir.v1",
+  "property": "p_rose",
+  "kind": "property",
+  "clock": {
+    "edge": "posedge",
+    "signal": "clk"
+  },
+  "disable_expr": "",
+  "trigger": {
+    "cycle": 0,
+    "expr": "$rose ( req )",
+    "captures": []
+  },
+  "obligations": [
+    {
+      "id": "ob_0_1",
+      "kind": "point",
+      "expr": "ack",
+      "has_window": false,
+      "window": null,
+      "depends_on_captures": [],
+      "requirement": "",
+      "failure_condition": "ack is false at cycle +1"
+    }
+  ],
+  "match_paths": [
+    {
+      "id": "path_0",
+      "description": "Path 0: ack must be true at cycle +1",
+      "obligations": [
+        "point"
+      ]
+    }
+  ],
+  "failure_conditions": [
+    "ack is false at cycle +1"
+  ],
+  "semantic_notes": [
+    {
+      "kind": "summary",
+      "expr": "##1 ack",
+      "text": "ack must be true at cycle +1."
+    }
+  ],
+  "diagnostics": []
+}

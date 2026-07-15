@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">keda-runner screenshot guide</title>
+  <desc id="desc">Terminal style screenshot showing keda-runner init, list, describe, and dry-run.</desc>
+  <rect width="1200" height="675" fill="#f8fafc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">keda-runner: allowlisted EDA commands</text>
+  <rect x="70" y="120" width="1060" height="440" rx="16" fill="#0b1220"/>
+  <text x="100" y="165" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ keda-runner init</text>
+  <text x="130" y="205" fill="#e5e7eb" font-family="Consolas,monospace" font-size="19">env snapshot cached: env0</text>
+  <text x="100" y="255" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ keda-runner list-actions</text>
+  <text x="130" y="295" fill="#e5e7eb" font-family="Consolas,monospace" font-size="19">sim, lint, cov, report</text>
+  <text x="100" y="345" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ keda-runner describe-action --action sim</text>
+  <text x="130" y="385" fill="#e5e7eb" font-family="Consolas,monospace" font-size="19">targets: compile, run, regression</text>
+  <text x="100" y="435" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ keda-runner run --action sim --target compile --option TEST=smoke --dry-run</text>
+  <text x="130" y="475" fill="#d1fae5" font-family="Consolas,monospace" font-size="19">would run allowlisted command; no shell string execution</text>
+</svg>

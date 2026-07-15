@@ -1,39 +1,39 @@
-# xverif 二次开发使用指导手册
+# kverif 二次开发使用指导手册
 
-本文面向需要基于 xverif 开发项目验证脚本、回归分析工具、内部平台适配器或新
+本文面向需要基于 kverif 开发项目验证脚本、回归分析工具、内部平台适配器或新
 action 的验证工程师。阅读后应能够完成以下工作：
 
 - 基于 FSDB 编写波形活动、异常窗口和协议检查脚本。
 - 基于 VCS `-kdb` 生成的 daidir 编写模块边界和集成连线检查脚本。
 - 基于多轮 VDB 编写 coverage 趋势、平台期和回归准入脚本。
-- 将 xverif 接入内部 RPC、LSF、CI 或测试框架。
-- 在不破坏 Verdi 2018 兼容性的前提下，为 xdebug 或 xcov 增加能力。
+- 将 kverif 接入内部 RPC、LSF、CI 或测试框架。
+- 在不破坏 Verdi 2018 兼容性的前提下，为 kdebug 或 kcov 增加能力。
 
-本文以仓库当前的 `xverif_sdk 0.1`、`xdebug.v1` 和 `xcov.v1` 为基线。SDK
-速查见 [`../xverif_sdk/README.md`](../xverif_sdk/README.md)，底层 xdebug JSON
-契约见 [`../xdebug/docs/JSON_API.md`](../xdebug/docs/JSON_API.md)。
+本文以仓库当前的 `kverif_sdk 0.1`、`kdebug.v1` 和 `kcov.v1` 为基线。SDK
+速查见 [`../kverif_sdk/README.md`](../kverif_sdk/README.md)，底层 kdebug JSON
+契约见 [`../kdebug/docs/JSON_API.md`](../kdebug/docs/JSON_API.md)。
 
 ## 1. 先选择正确的扩展入口
 
-xverif 不是要求所有需求都修改工具核心。大多数项目需求应该在 SDK 或稳定 JSON
+kverif 不是要求所有需求都修改工具核心。大多数项目需求应该在 SDK 或稳定 JSON
 协议上实现。
 
 | 需求 | 推荐入口 | 是否修改工具核心 |
 | --- | --- | --- |
-| 分析一批 FSDB 信号 | `XdebugClient` 或 `analyze_wave_window` | 否 |
+| 分析一批 FSDB 信号 | `KdebugClient` 或 `analyze_wave_window` | 否 |
 | 追踪模块端口 driver/graph | `trace_module_connections` | 否 |
 | 比较多轮 coverage | `analyze_coverage_convergence` | 否 |
 | 调用尚未封装的公开 action | `client.raw_request` | 否 |
 | 接公司内部 RPC/LSF | 自定义 transport | 否 |
 | 给项目增加 checker/准入规则 | 在 workflow report 上增加规则 | 否 |
-| 给 AI Agent 暴露能力 | `xverif_mcp` | 通常否 |
+| 给 AI Agent 暴露能力 | `kverif_mcp` | 通常否 |
 | 新增所有项目都需要的底层查询 | action/schema/Tcl backend | 是 |
 
 基本判断原则：
 
 1. 需求只属于一个项目时，优先写项目脚本。
-2. 多个项目反复需要同一组合逻辑时，再加入 `xverif_sdk.workflows`。
-3. 只有现有 action 无法取得必要事实时，才新增 xdebug/xcov action。
+2. 多个项目反复需要同一组合逻辑时，再加入 `kverif_sdk.workflows`。
+3. 只有现有 action 无法取得必要事实时，才新增 kdebug/kcov action。
 4. NPI 数据访问只能放在 Tcl backend；不要恢复 C++ NPI 或新增 Python NPI
    binding。
 
@@ -42,13 +42,13 @@ xverif 不是要求所有需求都修改工具核心。大多数项目需求应�
 ```mermaid
 flowchart LR
     Project["项目验证脚本"] --> Workflow["项目 checker / SDK workflow"]
-    Workflow --> Client["XdebugClient / XcovClient"]
+    Workflow --> Client["KdebugClient / KcovClient"]
     Client --> Transport["Cli / Stdio / Site Transport"]
-    Transport --> Protocol["xdebug.v1 / xcov.v1 JSON"]
-    Protocol --> Tool["xdebug / xcov"]
+    Transport --> Protocol["kdebug.v1 / kcov.v1 JSON"]
+    Protocol --> Tool["kdebug / kcov"]
     Tool --> Tcl["Verdi 2018 Tcl NPI backend"]
-    Project --> Stateless["xbit / xentry / xloc / xsva CLI JSON"]
-    Agent["AI Agent"] --> MCP["xverif-mcp"]
+    Project --> Stateless["kbit / kentry / kloc / ksva CLI JSON"]
+    Agent["AI Agent"] --> MCP["kverif-mcp"]
     MCP --> Protocol
 ```
 
@@ -60,38 +60,38 @@ flowchart LR
 | workflow | 可复用的多 action 编排和稳定汇总 | 项目专有策略 |
 | client | request 参数映射、session 生命周期、结构化错误 | 进程通信细节 |
 | transport | CLI/JSONL/RPC 通信、超时和进程清理 | action 业务语义 |
-| xdebug/xcov | action 路由、过滤、导出和公共协议 | 项目准入策略 |
+| kdebug/kcov | action 路由、过滤、导出和公共协议 | 项目准入策略 |
 | Tcl backend | 真实 FSDB/KDB/VDB 和 NPI 查询 | Python 业务编排 |
 
-项目代码只应依赖 `xverif_sdk.__init__` 导出的公共对象。不要导入：
+项目代码只应依赖 `kverif_sdk.__init__` 导出的公共对象。不要导入：
 
-- `xdebug/src/**`
-- `xdebug/tcl_engine/xdebug_engine.py` 的内部函数
-- `xcov/xcov/backend.py`
-- `xverif_mcp` 内部 session manager
+- `kdebug/src/**`
+- `kdebug/tcl_engine/kdebug_engine.py` 的内部函数
+- `kcov/kcov/backend.py`
+- `kverif_mcp` 内部 session manager
 - Tcl backend 的私有 procedure
 
 ## 3. 仓库中与二次开发有关的目录
 
 ```text
-xverif/
+kverif/
   tools/                         稳定命令入口
-  xverif_sdk/                    公共 Python SDK
-    clients.py                   xdebug/xcov client
+  kverif_sdk/                    公共 Python SDK
+    clients.py                   kdebug/kcov client
     transport.py                 CLI、stdio-loop、callback transport
     workflows.py                 三类公共 workflow
     examples/                    可直接运行的示例
     tests/                       不依赖 EDA 的 SDK 测试
-  xdebug/
+  kdebug/
     specs/actions/actions.yaml   action catalog 规格
     schemas/v1/actions/          action-specific JSON schema
     examples/                    request/response 示例
     tcl_engine/                  Verdi Tcl NPI backend 与路由
-  xcov/
-    xcov/schemas.py              coverage action schema
-    xcov/actions.py              coverage action 路由
-    tcl_engine/xcov_npi.tcl      coverage Tcl NPI backend
-  xverif_mcp/                    Agent/MCP 适配层
+  kcov/
+    kcov/schemas.py              coverage action schema
+    kcov/actions.py              coverage action 路由
+    tcl_engine/kcov_npi.tcl      coverage Tcl NPI backend
+  kverif_mcp/                    Agent/MCP 适配层
   doc/                           面向用户和开发者的长文档
 ```
 
@@ -102,10 +102,10 @@ xverif/
 本地不需要 Verdi、VCS 或 license：
 
 ```bash
-cd /path/to/xverif
-export XVERIF_HOME="$PWD"
+cd /path/to/kverif
+export KVERIF_HOME="$PWD"
 export PYTHONPATH="$PWD:${PYTHONPATH:-}"
-python -m pytest xverif_sdk/tests -q
+python -m pytest kverif_sdk/tests -q
 ```
 
 SDK 运行时只使用 Python 标准库，支持 Python 3.8+。`pytest` 只在运行测试时需要。
@@ -118,9 +118,9 @@ SDK 运行时只使用 Python 标准库，支持 Python 3.8+。`pytest` 只在�
 id -un
 # 期望输出: host
 
-export XVERIF_HOME=/home/host/xverif
-export PYTHONPATH=/home/host/xverif:${PYTHONPATH:-}
-export PYTHON=/home/host/xverif/.venv38/bin/python
+export KVERIF_HOME=/home/host/kverif
+export PYTHONPATH=/home/host/kverif:${PYTHONPATH:-}
+export PYTHON=/home/host/kverif/.venv38/bin/python
 
 export VERDI_HOME=/home/synopsys/verdi/Verdi_O-2018.09-SP2
 export VCS_HOME=/home/synopsys/vcs/O-2018.09-SP2
@@ -133,7 +133,7 @@ test -n "${SNPSLMD_LICENSE_FILE:-}" || echo "SNPSLMD_LICENSE_FILE is not set"
 ```
 
 必须导出 `PYTHON`。最外层虽然由 Python 3.8 启动，但 `StdioTransport` 会再启动
-`tools/xcov` 子进程；wrapper 通过 `PYTHON` 选择解释器。
+`tools/kcov` 子进程；wrapper 通过 `PYTHON` 选择解释器。
 
 ### 4.3 输入数据库要求
 
@@ -153,24 +153,24 @@ FSDB 本身不包含完整静态 elaboration 关系。只查值时输入 FSDB �
 ```bash
 mkdir -p /home/host/testdata/sdk_reports
 
-$PYTHON -m xverif_sdk.examples.waveform_analysis \
-  --tool /home/host/xverif/tools/xdebug \
+$PYTHON -m kverif_sdk.examples.waveform_analysis \
+  --tool /home/host/kverif/tools/kdebug \
   --fsdb /home/host/testdata/clkfreq.fsdb \
   --signal tb_clkfreq.clk \
   --start 0ns --end 100ns \
   --sample-time 25ns --sample-time 75ns \
   --output /home/host/testdata/sdk_reports/wave_window.json
 
-$PYTHON -m xverif_sdk.examples.module_connectivity \
-  --tool /home/host/xverif/tools/xdebug \
+$PYTHON -m kverif_sdk.examples.module_connectivity \
+  --tool /home/host/kverif/tools/kdebug \
   --daidir /home/host/testdata/xiangshan_kdb/simv.daidir \
   --signal tb_top.sim.clock \
   --signal tb_top.sim.reset \
   --max-depth 6 \
   --output /home/host/testdata/sdk_reports/module_connections.json
 
-$PYTHON -m xverif_sdk.examples.coverage_convergence \
-  --tool /home/host/xverif/tools/xcov \
+$PYTHON -m kverif_sdk.examples.coverage_convergence \
+  --tool /home/host/kverif/tools/kcov \
   --run base=fake --run next=fake --fake \
   --output /home/host/testdata/sdk_reports/coverage_convergence_fake.json
 ```
@@ -178,15 +178,15 @@ $PYTHON -m xverif_sdk.examples.coverage_convergence \
 ### 5.2 最小 Python 调用
 
 ```python
-from xverif_sdk import StdioTransport, XdebugClient, resolve_tool
+from kverif_sdk import StdioTransport, KdebugClient, resolve_tool
 
 with StdioTransport(
-    resolve_tool("xdebug"),
-    protocol="xdebug-stdio-loop",
-    api_version="xdebug.v1",
+    resolve_tool("kdebug"),
+    protocol="kdebug-stdio-loop",
+    api_version="kdebug.v1",
     request_timeout_sec=0,
 ) as transport:
-    client = XdebugClient(transport)
+    client = KdebugClient(transport)
     with client.session("quick_wave", fsdb="/data/run.fsdb"):
         response = client.value_batch_at(
             ["tb.dut.valid", "tb.dut.ready"],
@@ -205,9 +205,9 @@ with StdioTransport(
 每个请求启动一次工具，适合 action catalog、schema、小型 one-shot 查询或调试：
 
 ```python
-from xverif_sdk import CliTransport, XdebugClient, resolve_tool
+from kverif_sdk import CliTransport, KdebugClient, resolve_tool
 
-client = XdebugClient(CliTransport(resolve_tool("xdebug"), timeout_sec=30))
+client = KdebugClient(CliTransport(resolve_tool("kdebug"), timeout_sec=30))
 catalog = client.raw_request({"action": "actions", "args": {}})
 ```
 
@@ -220,9 +220,9 @@ catalog = client.raw_request({"action": "actions", "args": {}})
 
 ```python
 transport = StdioTransport(
-    "/home/host/xverif/tools/xdebug",
-    protocol="xdebug-stdio-loop",
-    api_version="xdebug.v1",
+    "/home/host/kverif/tools/kdebug",
+    protocol="kdebug-stdio-loop",
+    api_version="kdebug.v1",
     startup_timeout_sec=180,
     request_timeout_sec=0,
 )
@@ -248,7 +248,7 @@ transport = StdioTransport(
 用于项目单元测试和内部 handler：
 
 ```python
-from xverif_sdk import CallbackTransport, XdebugClient
+from kverif_sdk import CallbackTransport, KdebugClient
 
 def fake_tool(request):
     return {
@@ -258,7 +258,7 @@ def fake_tool(request):
         "data": {"changes": []},
     }
 
-client = XdebugClient(CallbackTransport(fake_tool))
+client = KdebugClient(CallbackTransport(fake_tool))
 ```
 
 `CallbackTransport.requests` 会保存请求的深拷贝，可用于断言 action、target、args 和
@@ -266,7 +266,7 @@ limits 是否正确。
 
 ## 7. Client API 参考
 
-### 7.1 `XdebugClient`
+### 7.1 `KdebugClient`
 
 | 方法 | 关键参数 | 用途 |
 | --- | --- | --- |
@@ -293,7 +293,7 @@ with client.session(
     ...  # active-driver 等联合 action
 ```
 
-### 7.2 `XcovClient`
+### 7.2 `KcovClient`
 
 | 方法 | 关键参数 | 用途 |
 | --- | --- | --- |
@@ -306,22 +306,22 @@ with client.session(
 
 ```python
 with StdioTransport(
-    resolve_tool("xcov"),
-    protocol="xcov-stdio-loop",
-    api_version="xcov.v1",
+    resolve_tool("kcov"),
+    protocol="kcov-stdio-loop",
+    api_version="kcov.v1",
     startup_timeout_sec=0,
     request_timeout_sec=0,
 ) as transport:
-    cov = XcovClient(transport)
+    cov = KcovClient(transport)
 ```
 
 ## 8. Workflow 输出契约
 
 | Workflow | Schema | 主要稳定字段 |
 | --- | --- | --- |
-| `analyze_wave_window` | `xverif.sdk.wave-window.v1` | `summary`、`signals`、`samples` |
-| `trace_module_connections` | `xverif.sdk.module-connections.v1` | `edges`、`module_scopes`、`traces` |
-| `analyze_coverage_convergence` | `xverif.sdk.coverage-convergence.v1` | `summary`、`runs` |
+| `analyze_wave_window` | `kverif.sdk.wave-window.v1` | `summary`、`signals`、`samples` |
+| `trace_module_connections` | `kverif.sdk.module-connections.v1` | `edges`、`module_scopes`、`traces` |
+| `analyze_coverage_convergence` | `kverif.sdk.coverage-convergence.v1` | `summary`、`runs` |
 
 兼容规则：
 
@@ -338,8 +338,8 @@ with StdioTransport(
   "schema": "company.project.wave-health.v1",
   "decision": "fail",
   "violations": [],
-  "xverif_report": {
-    "schema": "xverif.sdk.wave-window.v1"
+  "kverif_report": {
+    "schema": "kverif.sdk.wave-window.v1"
   }
 }
 ```
@@ -354,9 +354,9 @@ import argparse
 import json
 from pathlib import Path
 
-from xverif_sdk import (
+from kverif_sdk import (
     StdioTransport,
-    XdebugClient,
+    KdebugClient,
     analyze_wave_window,
     resolve_tool,
 )
@@ -372,12 +372,12 @@ def main() -> int:
     args = parser.parse_args()
 
     with StdioTransport(
-        resolve_tool("xdebug"),
-        protocol="xdebug-stdio-loop",
-        api_version="xdebug.v1",
+        resolve_tool("kdebug"),
+        protocol="kdebug-stdio-loop",
+        api_version="kdebug.v1",
         request_timeout_sec=0,
     ) as transport:
-        debug = XdebugClient(transport)
+        debug = KdebugClient(transport)
         with debug.session("project_wave_health", fsdb=args.fsdb):
             report = analyze_wave_window(
                 debug,
@@ -441,9 +441,9 @@ import argparse
 import json
 from pathlib import Path
 
-from xverif_sdk import (
+from kverif_sdk import (
     StdioTransport,
-    XdebugClient,
+    KdebugClient,
     resolve_tool,
     trace_module_connections,
 )
@@ -462,12 +462,12 @@ def main() -> int:
     args = parser.parse_args()
 
     with StdioTransport(
-        resolve_tool("xdebug"),
-        protocol="xdebug-stdio-loop",
-        api_version="xdebug.v1",
+        resolve_tool("kdebug"),
+        protocol="kdebug-stdio-loop",
+        api_version="kdebug.v1",
         request_timeout_sec=0,
     ) as transport:
-        debug = XdebugClient(transport)
+        debug = KdebugClient(transport)
         with debug.session("project_connectivity", daidir=args.daidir):
             report = trace_module_connections(
                 debug, args.signal, max_depth=8, include_source=True
@@ -528,10 +528,10 @@ import argparse
 import json
 from pathlib import Path
 
-from xverif_sdk import (
+from kverif_sdk import (
     CoverageRun,
     StdioTransport,
-    XcovClient,
+    KcovClient,
     analyze_coverage_convergence,
     resolve_tool,
 )
@@ -553,13 +553,13 @@ def main() -> int:
     args = parser.parse_args()
 
     with StdioTransport(
-        resolve_tool("xcov"),
-        protocol="xcov-stdio-loop",
-        api_version="xcov.v1",
+        resolve_tool("kcov"),
+        protocol="kcov-stdio-loop",
+        api_version="kcov.v1",
         startup_timeout_sec=0,
         request_timeout_sec=0,
     ) as transport:
-        cov = XcovClient(transport)
+        cov = KcovClient(transport)
         report = analyze_coverage_convergence(
             cov,
             args.run,
@@ -628,12 +628,12 @@ response = debug.raw_request({
 先查询 action 和 schema：
 
 ```bash
-/home/host/xverif/tools/xdebug actions --json
-/home/host/xverif/tools/xdebug schema \
+/home/host/kverif/tools/kdebug actions --json
+/home/host/kverif/tools/kdebug schema \
   --action signal.statistics --kind request --json
 
-/home/host/xverif/tools/xcov actions --json
-/home/host/xverif/tools/xcov schema \
+/home/host/kverif/tools/kcov actions --json
+/home/host/kverif/tools/kcov schema \
   --action cov.holes --kind request --json
 ```
 
@@ -641,16 +641,16 @@ response = debug.raw_request({
 
 ## 13. 调用其他 x 系列工具
 
-当前公共 SDK 重点封装 stateful 的 xdebug/xcov。其他工具可直接使用参数式 CLI 的
+当前公共 SDK 重点封装 stateful 的 kdebug/kcov。其他工具可直接使用参数式 CLI 的
 `--json` 输出：
 
 | 工具 | 二次开发用途 | 示例 |
 | --- | --- | --- |
-| `xbit` | 位切片、表达式和编码计算 | `xbit conv "8'shff" --json` |
-| `xentry` | packed entry 字段解码 | `xentry decode --config ... --input ... --json` |
-| `xloc` | 日志位置还原和源码上下文 | `xloc resolve ID --map ... --json` |
-| `xsva` | property 结构化解释 | `xsva explain --file ... --property ... --json` |
-| `xberif` | 项目上下文卡片 | `xberif --json status` |
+| `kbit` | 位切片、表达式和编码计算 | `kbit conv "8'shff" --json` |
+| `kentry` | packed entry 字段解码 | `kentry decode --config ... --input ... --json` |
+| `kloc` | 日志位置还原和源码上下文 | `kloc resolve ID --map ... --json` |
+| `ksva` | property 结构化解释 | `ksva explain --file ... --property ... --json` |
+| `kberif` | 项目上下文卡片 | `kberif --json status` |
 
 通用 Python 调用器：
 
@@ -675,14 +675,14 @@ def run_json_tool(argv):
 
 
 result = run_json_tool([
-    "/home/host/xverif/tools/xbit",
+    "/home/host/kverif/tools/kbit",
     "conv",
     "8'shff",
     "--json",
 ])
 ```
 
-不要解析默认 xout 文本；自动化脚本必须请求 JSON。
+不要解析默认 kout 文本；自动化脚本必须请求 JSON。
 
 ## 14. 接入内部 RPC、LSF 或任务平台
 
@@ -709,7 +709,7 @@ class InternalRpcTransport:
 
     def request(self, request, timeout_sec=None):
         return self.rpc.call(
-            service="xverif",
+            service="kverif",
             payload=request,
             queue=self.queue,
             timeout=timeout_sec,
@@ -738,11 +738,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 def analyze_one(run):
     with StdioTransport(
-        resolve_tool("xdebug"),
-        protocol="xdebug-stdio-loop",
-        api_version="xdebug.v1",
+        resolve_tool("kdebug"),
+        protocol="kdebug-stdio-loop",
+        api_version="kdebug.v1",
     ) as transport:
-        client = XdebugClient(transport)
+        client = KdebugClient(transport)
         with client.session(run.name, fsdb=run.fsdb):
             return analyze_wave_window(
                 client, run.signals, start=run.start, end=run.end
@@ -766,7 +766,7 @@ with ThreadPoolExecutor(max_workers=4) as pool:
 
 ### 15.3 超时策略
 
-- xcov 大 VDB 默认无限等待，`0` 表示不设置超时。
+- kcov 大 VDB 默认无限等待，`0` 表示不设置超时。
 - CI 需要故障保护时显式传正数。
 - 超时不是 coverage/model 失败，应区分环境、license 和工具错误。
 - session close 和进程清理仍应有有限超时。
@@ -784,7 +784,7 @@ SDK 异常：
 示例：
 
 ```python
-from xverif_sdk import (
+from kverif_sdk import (
     ProtocolError,
     ToolInvocationError,
     ToolResponseError,
@@ -815,7 +815,7 @@ except ToolInvocationError as exc:
 使用 `CallbackTransport` 构造确定性 response：
 
 ```python
-from xverif_sdk import CallbackTransport, XdebugClient, analyze_wave_window
+from kverif_sdk import CallbackTransport, KdebugClient, analyze_wave_window
 
 
 def fake(request):
@@ -830,7 +830,7 @@ def fake(request):
 
 transport = CallbackTransport(fake)
 report = analyze_wave_window(
-    XdebugClient(transport),
+    KdebugClient(transport),
     ["tb.clk"],
     start="0ns",
     end="10ns",
@@ -845,47 +845,47 @@ assert transport.requests[0]["args"]["signal"] == "tb.clk"
 | --- | --- | --- |
 | unit | callback/mock | 项目规则和参数映射 |
 | contract | schema/examples | action 契约一致性 |
-| fake integration | xcov fake backend | session/stdio/过滤/退出码 |
+| fake integration | kcov fake backend | session/stdio/过滤/退出码 |
 | real smoke | 小 FSDB/KDB/VDB | Verdi 版本、license、真实字段 |
 | stress | 大数据库和多 worker | 内存、吞吐、清理和稳定性 |
 
 仓库测试：
 
 ```bash
-cd /home/host/xverif
-make sdk-test PYTHON=/home/host/xverif/.venv38/bin/python
-PYTHONPATH=/home/host/xverif/xcov \
-  /home/host/xverif/.venv38/bin/python -m pytest xcov/tests -q
+cd /home/host/kverif
+make sdk-test PYTHON=/home/host/kverif/.venv38/bin/python
+PYTHONPATH=/home/host/kverif/kcov \
+  /home/host/kverif/.venv38/bin/python -m pytest kcov/tests -q
 ```
 
 真实 smoke 后检查孤儿进程：
 
 ```bash
-ps -u host -o pid=,comm=,args= | grep -E 'xdebug|xcov|verdi|novas' || true
+ps -u host -o pid=,comm=,args= | grep -E 'kdebug|kcov|verdi|novas' || true
 ```
 
 ## 18. 为工具核心新增 action
 
 只有现有公共 action 无法取得必要事实时才走本节。
 
-### 18.1 xdebug action
+### 18.1 kdebug action
 
-1. 在 `xdebug/specs/actions/actions.yaml` 定义 action、类别、状态和资源要求。
-2. 增加 `xdebug/schemas/v1/actions/<action>.request.schema.json`。
+1. 在 `kdebug/specs/actions/actions.yaml` 定义 action、类别、状态和资源要求。
+2. 增加 `kdebug/schemas/v1/actions/<action>.request.schema.json`。
 3. 增加对应 response schema。
-4. 增加 `xdebug/examples/requests` 和 `examples/responses` 示例。
+4. 增加 `kdebug/examples/requests` 和 `examples/responses` 示例。
 5. 在公开 router/dispatcher 增加路由。
-6. 真实 NPI 查询只写入 `xdebug/tcl_engine/xdebug_npi.tcl`。
+6. 真实 NPI 查询只写入 `kdebug/tcl_engine/kdebug_npi.tcl`。
 7. Python/C++ 仅做协议、参数、标准化、限制和导出。
 8. 跑 schema、contract、unit 和真实 Verdi 2018 smoke。
 9. 多项目需要时再给 SDK client 增加便利方法。
 
-### 18.2 xcov action
+### 18.2 kcov action
 
-1. 在 `xcov/xcov/schemas.py` 增加 action-specific schema。
+1. 在 `kcov/kcov/schemas.py` 增加 action-specific schema。
 2. 在 action catalog/router 中注册。
-3. 在 `xcov/xcov/actions.py` 或 backend 增加协议编排。
-4. 真实 coverage NPI 访问只写入 `xcov/tcl_engine/xcov_npi.tcl`。
+3. 在 `kcov/kcov/actions.py` 或 backend 增加协议编排。
+4. 真实 coverage NPI 访问只写入 `kcov/tcl_engine/kcov_npi.tcl`。
 5. 增加 fake 数据、过滤、limit、错误和真实 VDB 测试。
 
 ### 18.3 NPI 约束
@@ -903,7 +903,7 @@ ps -u host -o pid=,comm=,args= | grep -E 'xdebug|xcov|verdi|novas' || true
 ```mermaid
 flowchart LR
     Build["VCS compile/run"] --> DB["FSDB / daidir / VDB"]
-    DB --> Analyze["xverif project scripts"]
+    DB --> Analyze["kverif project scripts"]
     Analyze --> JSON["versioned JSON reports"]
     JSON --> Gate["CI gate"]
     JSON --> Archive["artifact archive"]
@@ -925,7 +925,7 @@ CI 约束：
 提交项目二次开发脚本前检查：
 
 - [ ] 只依赖公共 SDK/JSON API。
-- [ ] 没有解析 xout 或 stderr 文本。
+- [ ] 没有解析 kout 或 stderr 文本。
 - [ ] 输入使用绝对路径或明确的工作目录。
 - [ ] session 使用 context manager 清理。
 - [ ] timeout 的 `0` 语义已写清楚。
@@ -936,7 +936,7 @@ CI 约束：
 - [ ] 有 callback unit test。
 - [ ] 有 fake integration test。
 - [ ] 在目标 Verdi 版本上跑过真实 smoke。
-- [ ] 无孤儿 xdebug/xcov/verdi 进程。
+- [ ] 无孤儿 kdebug/kcov/verdi 进程。
 - [ ] 没有凭据、license 内容或客户数据进入 Git。
 
 为工具核心新增 action 时额外检查：
@@ -949,17 +949,17 @@ CI 约束：
 
 ## 21. 常见问题
 
-### `ModuleNotFoundError: xverif_sdk`
+### `ModuleNotFoundError: kverif_sdk`
 
 ```bash
-export XVERIF_HOME=/home/host/xverif
-export PYTHONPATH=/home/host/xverif:${PYTHONPATH:-}
+export KVERIF_HOME=/home/host/kverif
+export PYTHONPATH=/home/host/kverif:${PYTHONPATH:-}
 ```
 
-### `tools/xcov` 使用了 Python 3.6
+### `tools/kcov` 使用了 Python 3.6
 
 ```bash
-export PYTHON=/home/host/xverif/.venv38/bin/python
+export PYTHON=/home/host/kverif/.venv38/bin/python
 ```
 
 ### KDB 返回 `KDB_REQUIRED`
@@ -974,7 +974,7 @@ export PYTHON=/home/host/xverif/.venv38/bin/python
 - 确认 FSDB 实际 dump 了该信号。
 - slice 查询失败时先查 base signal。
 
-### xcov 长时间没有返回
+### kcov 长时间没有返回
 
 大 VDB 和 Verdi 2018 扫描可能很慢。默认无限等待是预期行为；同时检查 license、
 CPU、内存、VDB 路径和 Verdi 子进程，而不是立即把它判为 coverage 失败。
@@ -991,10 +991,10 @@ Python 脚本直接使用 SDK 更简单，也更容易单元测试。
 ## 22. 相关文档
 
 - [仓库总 README](../README.md)
-- [Python SDK 速查](../xverif_sdk/README.md)
-- [xdebug 使用说明](../xdebug/README.md)
-- [xdebug JSON API](../xdebug/docs/JSON_API.md)
-- [xdebug Agent 指南](../xdebug/docs/AGENT_GUIDE.md)
-- [xcov 使用说明](../xcov/README.md)
-- [xverif-mcp 使用说明](../xverif_mcp/README.md)
-- [受控 EDA runner](../xeda_runner/README.md)
+- [Python SDK 速查](../kverif_sdk/README.md)
+- [kdebug 使用说明](../kdebug/README.md)
+- [kdebug JSON API](../kdebug/docs/JSON_API.md)
+- [kdebug Agent 指南](../kdebug/docs/AGENT_GUIDE.md)
+- [kcov 使用说明](../kcov/README.md)
+- [kverif-mcp 使用说明](../kverif_mcp/README.md)
+- [受控 EDA runner](../keda_runner/README.md)

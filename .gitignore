@@ -1,6 +1,6 @@
 .agents/
 .codex/
-**/.xeda_runner/
+**/.keda_runner/
 
 # Legacy unowned test and regression assets
 test/
@@ -12,41 +12,41 @@ regression/
 **/testdata/
 **/regression/
 
-# Public xdebug verification assets
+# Public kdebug verification assets
 !regression/
 regression/*
-!regression/run_xdebug_regression.sh
+!regression/run_kdebug_regression.sh
 !regression/run_full_regression.sh
-!xdebug/tests/
-!xdebug/tests/**
-!xdebug/testdata/
-!xdebug/testdata/**
-!xbit/tests/
-!xbit/tests/**
-!xentry/tests/
-!xentry/tests/**
-!xberif/tests/
-!xberif/tests/**
-!xcov/tests/
-!xcov/tests/**
-!xsva/tests/
-!xsva/tests/**
-!xverif_mcp/tests/
-!xverif_mcp/tests/**
-!xverif_sdk/tests/
-!xverif_sdk/tests/**
-!xeda_runner/tests/
-!xeda_runner/tests/**
-xdebug/testdata/**/out/
-xdebug/testdata/**/csrc/
-xdebug/testdata/**/ucli.key
-xdebug/testdata/**/vc_hdrs.h
-xdebug/testdata/**/novas_dump.log
-xdebug/testdata/**/tr_db.log
-xdebug/testdata/design/uart/simv
-xdebug/testdata/design/uart/simv.daidir/
-xdebug/testdata/design/uart/csrc/
-xdebug/testdata/design/uart/ucli.key
+!kdebug/tests/
+!kdebug/tests/**
+!kdebug/testdata/
+!kdebug/testdata/**
+!kbit/tests/
+!kbit/tests/**
+!kentry/tests/
+!kentry/tests/**
+!kberif/tests/
+!kberif/tests/**
+!kcov/tests/
+!kcov/tests/**
+!ksva/tests/
+!ksva/tests/**
+!kverif_mcp/tests/
+!kverif_mcp/tests/**
+!kverif_sdk/tests/
+!kverif_sdk/tests/**
+!keda_runner/tests/
+!keda_runner/tests/**
+kdebug/testdata/**/out/
+kdebug/testdata/**/csrc/
+kdebug/testdata/**/ucli.key
+kdebug/testdata/**/vc_hdrs.h
+kdebug/testdata/**/novas_dump.log
+kdebug/testdata/**/tr_db.log
+kdebug/testdata/design/uart/simv
+kdebug/testdata/design/uart/simv.daidir/
+kdebug/testdata/design/uart/csrc/
+kdebug/testdata/design/uart/ucli.key
 
 # Local planning/reference documents
 *.pdf
@@ -64,10 +64,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-xdebug/build/
-xdebug/xdebug
-xdebug/libexec/
-xdebug/signal.rc
+kdebug/build/
+kdebug/kdebug
+kdebug/libexec/
+kdebug/signal.rc
 *_probeLog/
 *-engineLog/
 npiLog/
@@ -77,4 +77,4 @@ not_push_skill.md
 
 *.log
 *~
-xdebug_mcp/tools/test_config.json
+kdebug_mcp/tools/test_config.json

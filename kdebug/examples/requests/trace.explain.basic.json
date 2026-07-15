@@ -1,0 +1,11 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "trace.explain",
+  "target": {
+    "daidir": "simv.daidir"
+  },
+  "args": {
+    "signal": "top.u.ready",
+    "include_trace": false
+  }
+}

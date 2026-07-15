@@ -1,0 +1,140 @@
+#include "time_spec.h"
+
+#include <cerrno>
+#include <cctype>
+#include <cmath>
+#include <cstdlib>
+#include <strings.h>
+
+namespace kdebug_waveform {
+
+namespace {
+
+std::string trim(const std::string& s) {
+    size_t b = 0;
+    while (b < s.size() && std::isspace(static_cast<unsigned char>(s[b]))) ++b;
+    size_t e = s.size();
+    while (e > b && std::isspace(static_cast<unsigned char>(s[e - 1]))) --e;
+    return s.substr(b, e - b);
+}
+
+bool valid_unit(const std::string& unit) {
+    return unit == "ms" || unit == "us" || unit == "ns" || unit == "ps" || unit == "fs";
+}
+
+bool is_cursor_name_char(char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '-' || c == '.';
+}
+
+} // namespace
+
+bool parse_duration_spec(const std::string& text, DurationSpec& out, std::string& error) {
+    std::string s = trim(text);
+    if (s.empty()) {
+        error = "Invalid duration: empty";
+        return false;
+    }
+    char* end = nullptr;
+    errno = 0;
+    double value = strtod(s.c_str(), &end);
+    if (errno != 0 || end == s.c_str() || !std::isfinite(value)) {
+        error = "Invalid duration '" + text + "'";
+        return false;
+    }
+    std::string unit = trim(end ? end : "");
+    if (unit.empty()) unit = "ns";
+    auto parse_cycle_unit = [&](const std::string& prefix, bool posedge) -> bool {
+        if (unit.find(prefix + "(") != 0 || unit.size() <= prefix.size() + 2 ||
+            unit[unit.size() - 1] != ')') {
+            return false;
+        }
+        out.value = value;
+        out.unit = prefix;
+        out.cycle = true;
+        out.clock = unit.substr(prefix.size() + 1, unit.size() - prefix.size() - 2);
+        out.posedge = posedge;
+        if (out.clock.empty()) {
+            error = "Invalid duration '" + text + "': cycle offset requires a clock";
+            return true;
+        }
+        return true;
+    };
+    if (parse_cycle_unit("cycle", true)) {
+        return error.empty();
+    }
+    if (parse_cycle_unit("posedge", true)) {
+        return error.empty();
+    }
+    if (parse_cycle_unit("negedge", false)) {
+        return error.empty();
+    }
+    if (unit.find("cycle(") == 0 || unit.find("posedge(") == 0 || unit.find("negedge(") == 0) {
+        if (error.empty()) {
+            error = "Invalid duration '" + text + "': malformed cycle offset";
+        }
+        return false;
+    }
+    if (!valid_unit(unit)) {
+        error = "Invalid duration '" + text + "': unsupported unit, expected ms/us/ns/ps/fs";
+        return false;
+    }
+    out.value = value;
+    out.unit = unit;
+    out.cycle = false;
+    out.clock.clear();
+    out.posedge = true;
+    return true;
+}
+
+bool parse_time_spec_text(const std::string& text, ParsedTimeSpec& out, std::string& error) {
+    std::string s = trim(text);
+    if (s.empty()) {
+        error = "Invalid TimeSpec: empty";
+        return false;
+    }
+    out = ParsedTimeSpec();
+    out.source = s;
+    if (s[0] != '@') {
+        out.kind = TimeSpecKind::Absolute;
+        out.absolute_text = s;
+        return true;
+    }
+
+    out.kind = TimeSpecKind::Cursor;
+    size_t pos = 1;
+    if (pos >= s.size() || s[pos] == '+' || s[pos] == '-') {
+        out.use_active_cursor = true;
+    } else {
+        size_t start = pos;
+        while (pos < s.size()) {
+            if (s[pos] == '+') break;
+            if (s[pos] == '-' && pos + 1 < s.size() &&
+                (std::isdigit(static_cast<unsigned char>(s[pos + 1])) || s[pos + 1] == '.')) {
+                break;
+            }
+            if (!is_cursor_name_char(s[pos])) break;
+            ++pos;
+        }
+        out.cursor_name = s.substr(start, pos - start);
+        if (out.cursor_name.empty()) {
+            error = "Invalid TimeSpec '" + text + "': cursor name is empty";
+            return false;
+        }
+    }
+
+    if (pos < s.size()) {
+        char sign = s[pos];
+        if (sign != '+' && sign != '-') {
+            error = "Invalid TimeSpec '" + text + "': expected + or - before offset";
+            return false;
+        }
+        DurationSpec dur;
+        if (!parse_duration_spec(s.substr(pos + 1), dur, error)) return false;
+        if (sign == '-') dur.value = -dur.value;
+        out.has_offset = true;
+        out.offset = dur;
+    }
+    return true;
+}
+
+} // namespace kdebug_waveform

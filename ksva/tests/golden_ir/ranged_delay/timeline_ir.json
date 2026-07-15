@@ -1,0 +1,51 @@
+{
+  "schema_version": "ksva.timeline_ir.v1",
+  "property": "p_ranged",
+  "kind": "property",
+  "clock": {
+    "edge": "posedge",
+    "signal": "clk"
+  },
+  "disable_expr": "! rst_n",
+  "trigger": {
+    "cycle": 0,
+    "expr": "req",
+    "captures": []
+  },
+  "obligations": [
+    {
+      "id": "ob_0_0",
+      "kind": "eventually",
+      "expr": "ack",
+      "has_window": true,
+      "window": {
+        "start": 1,
+        "end": 4,
+        "unbounded": false
+      },
+      "depends_on_captures": [],
+      "requirement": "",
+      "failure_condition": "ack is never true from cycle +1 to +4"
+    }
+  ],
+  "match_paths": [
+    {
+      "id": "path_0",
+      "description": "Path 0: ack must become true at least once between cycle +",
+      "obligations": [
+        "eventually"
+      ]
+    }
+  ],
+  "failure_conditions": [
+    "ack is never true from cycle +1 to +4"
+  ],
+  "semantic_notes": [
+    {
+      "kind": "summary",
+      "expr": "##[1:4] ack",
+      "text": "ack must be true at cycle +1 to +4."
+    }
+  ],
+  "diagnostics": []
+}

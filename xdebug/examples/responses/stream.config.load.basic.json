@@ -1,1 +1,0 @@
-{"api_version":"xdebug.v1","ok":true,"action":"stream.config.load","summary":{"loaded":1,"mode":"replace"},"data":{"streams":["req_stream"],"issues":[]},"warnings":[]}

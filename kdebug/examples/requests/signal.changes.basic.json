@@ -1,0 +1,15 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "signal.changes",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "signal": "top.u.ready",
+    "time_range": {
+      "start": "100ns",
+      "end": "200ns"
+    },
+    "aggregate_only": true
+  }
+}

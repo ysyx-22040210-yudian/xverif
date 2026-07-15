@@ -1,8 +1,0 @@
-{
-  "api_version": "xdebug.v1",
-  "action": "schema",
-  "args": {
-    "action": "signal.statistics",
-    "kind": "request"
-  }
-}

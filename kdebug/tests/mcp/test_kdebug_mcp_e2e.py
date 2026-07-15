@@ -1,0 +1,667 @@
+from __future__ import annotations
+
+import importlib
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+import anyio
+import pytest
+from runner import CliRunner, NormalizeOptions, normalize_response
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+MCP_SRC = REPO_ROOT / "kverif_mcp" / "src"
+KDEBUG_ROOT = REPO_ROOT / "kdebug"
+sys.path = [
+    path
+    for path in sys.path
+    if Path(path or os.getcwd()).resolve() != KDEBUG_ROOT
+]
+if str(MCP_SRC) not in sys.path:
+    sys.path.insert(0, str(MCP_SRC))
+
+sys.modules.pop("mcp", None)
+pytest.importorskip("mcp")
+
+
+def _close_loaded_server() -> None:
+    server = sys.modules.get("kverif_mcp.server")
+    if server is None:
+        return
+    for adapter_name in ("debug", "cov"):
+        adapter = getattr(server, adapter_name, None)
+        sessions = getattr(adapter, "_sessions", None)
+        if sessions is not None:
+            sessions.close_all()
+
+
+def _load_server(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    *,
+    backend: str,
+    extra_env: dict[str, str] | None = None,
+):
+    _close_loaded_server()
+    monkeypatch.setenv("HOME", str(isolated_home))
+    monkeypatch.setenv("KVERIF_HOME", str(REPO_ROOT))
+    monkeypatch.setenv("KVERIF_MCP_BACKEND", backend)
+    monkeypatch.setenv("KVERIF_MCP_STARTUP_TIMEOUT_SEC", "30")
+    monkeypatch.setenv("KVERIF_MCP_REQUEST_TIMEOUT_SEC", "60")
+    pythonpath = str(MCP_SRC)
+    if os.environ.get("PYTHONPATH"):
+        pythonpath += os.pathsep + os.environ["PYTHONPATH"]
+    monkeypatch.setenv("PYTHONPATH", pythonpath)
+    for name in (
+        "KVERIF_MCP_FAKE_LSF",
+        "FAKE_BSUB_PENDING_DELAY_MS",
+        "FAKE_BSUB_STDOUT_NOISE_BEFORE_READY",
+        "FAKE_BSUB_STDERR_LINES",
+        "FAKE_BSUB_EXIT_BEFORE_READY",
+        "FAKE_BSUB_EXIT_AFTER_READY",
+        "FAKE_BSUB_KILL_CHILD_AFTER_MS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in (extra_env or {}).items():
+        monkeypatch.setenv(name, value)
+    if "kverif_mcp.server" in sys.modules:
+        return importlib.reload(sys.modules["kverif_mcp.server"])
+    return importlib.import_module("kverif_mcp.server")
+
+
+def _call(server, name: str, args: dict[str, Any] | None = None):
+    async def run():
+        return await server.mcp.call_tool(name, args or {})
+
+    return anyio.run(run)
+
+
+def _text(result) -> str:
+    content = result[0] if isinstance(result, tuple) else result
+    assert content
+    return content[0].text
+
+
+def _json(result) -> dict[str, Any]:
+    return json.loads(_text(result))
+
+
+def _list_tools(server) -> set[str]:
+    async def run():
+        return await server.mcp.list_tools()
+
+    return {tool.name for tool in anyio.run(run)}
+
+
+def _kill_native_sessions(isolated_home: Path) -> None:
+    subprocess.run(
+        [str(REPO_ROOT / "tools" / "kdebug"), "--json", "-"],
+        input=json.dumps(
+            {
+                "api_version": "kdebug.v1",
+                "action": "session.kill",
+                "args": {"id": "all"},
+            }
+        )
+        + "\n",
+        text=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=30,
+        check=False,
+        env={**os.environ, "HOME": str(isolated_home)},
+    )
+
+
+@pytest.fixture
+def mcp_resources(kdebug_root: Path) -> dict[str, str]:
+    return {
+        "daidir": str(
+            kdebug_root / "testdata" / "design" / "uart" / "simv.daidir"
+        ),
+        "fsdb": str(
+            kdebug_root
+            / "testdata"
+            / "waveform"
+            / "ai_complex_wave"
+            / "out"
+            / "waves.fsdb"
+        ),
+        "combined_daidir": str(
+            kdebug_root
+            / "testdata"
+            / "combined"
+            / "active_driver"
+            / "out"
+            / "simv.daidir"
+        ),
+        "combined_fsdb": str(
+            kdebug_root
+            / "testdata"
+            / "combined"
+            / "active_driver"
+            / "out"
+            / "waves.fsdb"
+        ),
+    }
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_direct
+def test_mcp_direct_tools_discovery_schema_and_one_shot_actions(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+) -> None:
+    server = _load_server(monkeypatch, isolated_home, backend="direct")
+    try:
+        names = _list_tools(server)
+        assert {
+            "kverif_debug_list_actions",
+            "kverif_debug_get_schema",
+            "kverif_debug_session_open",
+            "kverif_debug_query",
+            "kverif_debug_session_close",
+        } <= names
+
+        actions = _json(_call(server, "kverif_debug_list_actions"))
+        assert actions["ok"] is True
+        assert "value.at" in actions["data"]["implemented"]
+
+        schema = _json(
+            _call(
+                server,
+                "kverif_debug_get_schema",
+                {"action": "value.at", "kind": "request"},
+            )
+        )
+        assert schema["ok"] is True
+        assert schema["data"]["action"] == "value.at"
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_direct
+def test_mcp_direct_real_waveform_design_and_combined_sessions(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+) -> None:
+    server = _load_server(monkeypatch, isolated_home, backend="direct")
+    try:
+        wave_open = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {"name": "mcp_wave", "fsdb": mcp_resources["fsdb"]},
+            )
+        )
+        assert wave_open["ok"] is True
+        wave = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "mcp_wave",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                        "format": "hex",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert wave["ok"] is True
+        assert wave["data"]["value"]["known"] is True
+
+        ordinary_error = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "mcp_wave",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.no_such",
+                        "time": "10ns",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert ordinary_error["ok"] is False
+        assert ordinary_error["error"]["code"] == "SIGNAL_NOT_FOUND"
+        listed = _json(_call(server, "kverif_debug_session_list"))
+        assert any(row["alias"] == "mcp_wave" for row in listed["sessions"])
+
+        design_open = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {
+                    "name": "mcp_design",
+                    "daidir": mcp_resources["daidir"],
+                },
+            )
+        )
+        assert design_open["ok"] is True, design_open
+        design = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "mcp_design",
+                    "action": "trace.driver",
+                    "args": {"signal": "uart_16550.RXDin"},
+                    "output_format": "json",
+                },
+            )
+        )
+        assert design["ok"] is True
+        assert design["data"]["dependency_edges"]
+
+        combined_open = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {
+                    "name": "mcp_combined",
+                    "daidir": mcp_resources["combined_daidir"],
+                    "fsdb": mcp_resources["combined_fsdb"],
+                },
+            )
+        )
+        assert combined_open["ok"] is True
+        combined = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "mcp_combined",
+                    "action": "trace.active_driver",
+                    "args": {
+                        "signal": "active_driver_tb.u_dut.q",
+                        "requested_time": "20ns",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert combined["ok"] is True
+        assert combined["summary"]["driver_status"] == "resolved"
+
+        for name in ("mcp_combined", "mcp_design", "mcp_wave"):
+            closed = _json(
+                _call(server, "kverif_debug_session_close", {"name": name})
+            )
+            assert closed["ok"] is True
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_direct
+def test_mcp_direct_matches_cli_normalized_json_response(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+    cli_runner: CliRunner,
+) -> None:
+    server = _load_server(monkeypatch, isolated_home, backend="direct")
+    try:
+        opened = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {"name": "mcp_cli_equiv", "fsdb": mcp_resources["fsdb"]},
+            )
+        )
+        assert opened["ok"] is True
+
+        mcp_response = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "mcp_cli_equiv",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                        "format": "hex",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert mcp_response["ok"] is True
+
+        cli_response = cli_runner.run(
+            {
+                "api_version": "kdebug.v1",
+                "action": "value.at",
+                "target": {"session_id": "mcp_cli_equiv"},
+                "args": {
+                    "signal": "ai_complex_top.sig_a",
+                    "time": "75ns",
+                    "format": "hex",
+                },
+                "output": {"format": "json"},
+            },
+            output_format="json",
+            env={"HOME": str(isolated_home), "KVERIF_HOME": str(REPO_ROOT)},
+        )
+        assert cli_response.ok, cli_response.response
+
+        opts = NormalizeOptions(
+            volatile_keys={
+                "created_at",
+                "elapsed_ms",
+                "elapsed_us",
+                "ended_at",
+                "job_id",
+                "last_active",
+                "pid",
+                "ppid",
+                "request_id",
+                "server_host",
+                "socket_path",
+                "started_at",
+                "timestamp",
+                "updated_at",
+            }
+        )
+        assert normalize_response(mcp_response, opts) == normalize_response(
+            cli_response.response,
+            opts,
+        )
+
+        closed = _json(
+            _call(server, "kverif_debug_session_close", {"name": "mcp_cli_equiv"})
+        )
+        assert closed["ok"] is True
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_direct
+def test_mcp_batch_runs_real_session_workflow(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+    tmp_path: Path,
+) -> None:
+    server = _load_server(monkeypatch, isolated_home, backend="direct")
+    batch_file = tmp_path / "requests.ndjson"
+    output_file = tmp_path / "results.ndjson"
+    rows = [
+        {
+            "tool": "kverif_debug_session_open",
+            "args": {"name": "batch_wave", "fsdb": mcp_resources["fsdb"]},
+        },
+        {
+            "tool": "kverif_debug_query",
+            "args": {
+                "session": "batch_wave",
+                "action": "value.at",
+                "args": {"signal": "ai_complex_top.sig_a", "time": "75ns"},
+                "output_format": "json",
+            },
+        },
+        {
+            "tool": "kverif_debug_session_close",
+            "args": {"name": "batch_wave"},
+        },
+    ]
+    batch_file.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    try:
+        result = _json(
+            _call(
+                server,
+                "kverif_batch",
+                {
+                    "batch_file": str(batch_file),
+                    "output_file": str(output_file),
+                },
+            )
+        )
+        assert result == {
+            "ok": True,
+            "total": 3,
+            "ok_count": 3,
+            "failed_count": 0,
+            "output_file": str(output_file),
+        }
+        output_rows = [
+            json.loads(line)
+            for line in output_file.read_text(encoding="utf-8").splitlines()
+        ]
+        assert [row["ok"] for row in output_rows] == [True, True, True]
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_fake_lsf
+def test_mcp_fake_lsf_launches_real_kdebug_stdio_loop(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+) -> None:
+    server = _load_server(
+        monkeypatch,
+        isolated_home,
+        backend="lsf",
+        extra_env={
+            "KVERIF_MCP_FAKE_LSF": "1",
+            "FAKE_BSUB_PENDING_DELAY_MS": "100",
+            "FAKE_BSUB_STDOUT_NOISE_BEFORE_READY": "1",
+            "FAKE_BSUB_STDERR_LINES": "50",
+        },
+    )
+    try:
+        opened = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {"name": "fake_lsf_wave", "fsdb": mcp_resources["fsdb"]},
+            )
+        )
+        assert opened["ok"] is True
+        assert opened["session"]["mode"] == "lsf"
+        assert opened["session"]["job_id"] == "123"
+
+        queried = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "fake_lsf_wave",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert queried["ok"] is True
+
+        closed = _json(
+            _call(
+                server,
+                "kverif_debug_session_close",
+                {"name": "fake_lsf_wave"},
+            )
+        )
+        assert closed["ok"] is True
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_fake_lsf
+def test_mcp_fake_lsf_reports_exit_before_ready(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+) -> None:
+    server = _load_server(
+        monkeypatch,
+        isolated_home,
+        backend="lsf",
+        extra_env={
+            "KVERIF_MCP_FAKE_LSF": "1",
+            "FAKE_BSUB_EXIT_BEFORE_READY": "1",
+        },
+    )
+    try:
+        opened = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {"name": "fake_lsf_no_ready", "fsdb": mcp_resources["fsdb"]},
+            )
+        )
+        assert opened["ok"] is False
+        assert opened["error"]["code"] == "SESSION_OPEN_FAILED"
+        listed = _json(_call(server, "kverif_debug_session_list"))
+        assert listed["sessions"] == []
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_fake_lsf
+def test_mcp_fake_lsf_child_crash_evicts_session(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+) -> None:
+    server = _load_server(
+        monkeypatch,
+        isolated_home,
+        backend="lsf",
+        extra_env={
+            "KVERIF_MCP_FAKE_LSF": "1",
+            "FAKE_BSUB_KILL_CHILD_AFTER_MS": "1000",
+        },
+    )
+    try:
+        opened = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {"name": "fake_lsf_crash", "fsdb": mcp_resources["fsdb"]},
+            )
+        )
+        assert opened["ok"] is True
+        time.sleep(1.2)
+        queried = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "fake_lsf_crash",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert queried["ok"] is False
+        assert queried["error"]["code"] == "SESSION_LOST"
+        listed = _json(_call(server, "kverif_debug_session_list"))
+        assert listed["sessions"] == []
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)
+
+
+@pytest.mark.mcp
+@pytest.mark.mcp_real_lsf
+@pytest.mark.optional_lsf
+@pytest.mark.nightly
+@pytest.mark.slow
+def test_mcp_real_lsf_optional_waveform_smoke(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_home: Path,
+    mcp_resources: dict[str, str],
+) -> None:
+    if os.environ.get("KDEBUG_ENABLE_REAL_LSF") != "1":
+        pytest.skip("real LSF is optional; set KDEBUG_ENABLE_REAL_LSF=1")
+
+    server = _load_server(
+        monkeypatch,
+        isolated_home,
+        backend="lsf",
+        extra_env={
+            "KDEBUG_ENABLE_REAL_LSF": "1",
+        },
+    )
+    try:
+        opened = _json(
+            _call(
+                server,
+                "kverif_debug_session_open",
+                {
+                    "name": "real_lsf_wave",
+                    "fsdb": mcp_resources["fsdb"],
+                },
+            )
+        )
+        assert opened["ok"] is True, opened
+        assert opened["session"]["mode"] == "lsf"
+        assert opened["session"].get("job_id") or opened["session"].get("job_name")
+
+        queried = _json(
+            _call(
+                server,
+                "kverif_debug_query",
+                {
+                    "session": "real_lsf_wave",
+                    "action": "value.at",
+                    "args": {
+                        "signal": "ai_complex_top.sig_a",
+                        "time": "75ns",
+                    },
+                    "output_format": "json",
+                },
+            )
+        )
+        assert queried["ok"] is True
+        assert queried["data"]["value"]["known"] is True
+
+        closed = _json(
+            _call(
+                server,
+                "kverif_debug_session_close",
+                {"name": "real_lsf_wave"},
+            )
+        )
+        assert closed["ok"] is True
+        assert closed["closed"]["state"] in {"closed", "dead"}
+    finally:
+        _close_loaded_server()
+        _kill_native_sessions(isolated_home)

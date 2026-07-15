@@ -1,0 +1,56 @@
+{
+  "api_version": "kdebug.v1",
+  "ok": true,
+  "action": "signal.statistics",
+  "summary": {
+    "sampling_mode": "clock",
+    "sample_count": 10,
+    "transition_count": 2,
+    "high_cycles": 0,
+    "low_cycles": 0
+  },
+  "data": {
+    "signal": "top.u.count",
+    "clock": "top.clk",
+    "sampling": "posedge",
+    "sampling_mode": "clock",
+    "begin": "100ns",
+    "end": "200ns",
+    "sample_count": 10,
+    "known_count": 10,
+    "unknown_count": 0,
+    "transition_count": 2,
+    "truncated": false,
+    "first": {
+      "value": "'b0011",
+      "known": true,
+      "width": 4
+    },
+    "final": {
+      "value": "'b1001",
+      "known": true,
+      "width": 4
+    },
+    "min": {
+      "value": "'b0011",
+      "known": true,
+      "width": 4
+    },
+    "max": {
+      "value": "'b1001",
+      "known": true,
+      "width": 4
+    },
+    "high_cycles": 0,
+    "low_cycles": 0,
+    "high_ratio": 0.0,
+    "activity": {
+      "high_burst_count": 0,
+      "first_high_time": null,
+      "last_high_time": null,
+      "last_fall_time": null,
+      "max_high_cycles": 0
+    }
+  },
+  "warnings": []
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "ksva.timeline_ir.v1",
+  "property": "p_throughout",
+  "kind": "property",
+  "clock": {
+    "edge": "unknown",
+    "signal": ""
+  },
+  "disable_expr": "",
+  "trigger": {
+    "cycle": 0,
+    "expr": "req",
+    "captures": []
+  },
+  "obligations": [],
+  "match_paths": [
+    {
+      "id": "path_0",
+      "description": "Path 0: (empty)",
+      "obligations": []
+    }
+  ],
+  "failure_conditions": [],
+  "semantic_notes": [
+    {
+      "kind": "throughout_sequence",
+      "expr": "valid",
+      "text": "Sequence: ack must be true; done must be true 1 clk after ack."
+    },
+    {
+      "kind": "throughout",
+      "expr": "valid",
+      "text": "Relation: valid must hold throughout the entire matched interval of the sequence."
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "KSVA-W006",
+      "severity": "warning",
+      "message": "throughout uses advanced sequence semantics; see semantic notes",
+      "span": {
+        "file": "",
+        "begin_line": 0,
+        "begin_col": 0,
+        "end_line": 0,
+        "end_col": 0
+      }
+    }
+  ]
+}

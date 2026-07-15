@@ -1,0 +1,32 @@
+{
+  "schema_version": "ksva.timeline_ir.v1",
+  "property": "p_repeat_goto",
+  "kind": "property",
+  "clock": {
+    "edge": "unknown",
+    "signal": ""
+  },
+  "disable_expr": "",
+  "trigger": {
+    "cycle": 0,
+    "expr": "req",
+    "captures": []
+  },
+  "obligations": [],
+  "match_paths": [
+    {
+      "id": "path_0",
+      "description": "Path 0: (empty)",
+      "obligations": []
+    }
+  ],
+  "failure_conditions": [],
+  "semantic_notes": [
+    {
+      "kind": "repeat_goto",
+      "expr": "ack[->2]",
+      "text": "Wait for the 2nd occurrence of ack; the match ends on that clk."
+    }
+  ],
+  "diagnostics": []
+}

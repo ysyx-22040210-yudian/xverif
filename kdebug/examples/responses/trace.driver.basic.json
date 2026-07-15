@@ -1,0 +1,33 @@
+{
+  "api_version": "kdebug.v1",
+  "ok": true,
+  "action": "trace.driver",
+  "summary": {
+    "signal": "top.u.ready",
+    "mode": "driver",
+    "driver_count": 1,
+    "confidence": "high",
+    "truncated": false
+  },
+  "data": {
+    "drivers": [
+      {
+        "signal": "top.u.ready",
+        "kind": "continuous_assign",
+        "rhs_signals": [
+          "top.u.valid",
+          "top.u.full"
+        ],
+        "condition_signals": [
+          "top.u.full"
+        ],
+        "file": "rtl/foo.sv",
+        "line": 123,
+        "confidence": "high"
+      }
+    ]
+  },
+  "meta": {
+    "truncated": false
+  }
+}

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$script_dir/.." && pwd)"
+export KVERIF_HOME="${KVERIF_HOME:-$root}"
+export PYTHONPATH="$root/kverif_mcp/src:$root:${PYTHONPATH:-}"
+
+python_bin="${PYTHON:-}"
+if [[ -z "$python_bin" ]]; then
+  if [[ -x /home/yian/miniconda3/bin/python ]]; then
+    python_bin=/home/yian/miniconda3/bin/python
+  else
+    python_bin=python3
+  fi
+fi
+
+"$python_bin" -c 'from kverif_loop.wrapper import client_main; raise SystemExit(client_main())' "$@"

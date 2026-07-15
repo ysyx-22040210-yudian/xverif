@@ -1,0 +1,13 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "detect_anomaly",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "signals": [
+      "top.u.valid",
+      "top.u.ready"
+    ]
+  }
+}

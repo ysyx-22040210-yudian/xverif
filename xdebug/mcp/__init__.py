@@ -1,2 +1,0 @@
-"""MCP wrapper for xdebug."""
-

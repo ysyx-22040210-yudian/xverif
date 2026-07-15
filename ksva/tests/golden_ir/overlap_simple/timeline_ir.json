@@ -1,0 +1,47 @@
+{
+  "schema_version": "ksva.timeline_ir.v1",
+  "property": "p_overlap",
+  "kind": "property",
+  "clock": {
+    "edge": "unknown",
+    "signal": ""
+  },
+  "disable_expr": "",
+  "trigger": {
+    "cycle": 0,
+    "expr": "req",
+    "captures": []
+  },
+  "obligations": [
+    {
+      "id": "ob_0_0",
+      "kind": "point",
+      "expr": "ack",
+      "has_window": false,
+      "window": null,
+      "depends_on_captures": [],
+      "requirement": "",
+      "failure_condition": "ack is false at cycle +0"
+    }
+  ],
+  "match_paths": [
+    {
+      "id": "path_0",
+      "description": "Path 0: ack must be true at cycle +0",
+      "obligations": [
+        "point"
+      ]
+    }
+  ],
+  "failure_conditions": [
+    "ack is false at cycle +0"
+  ],
+  "semantic_notes": [
+    {
+      "kind": "summary",
+      "expr": "ack",
+      "text": "ack must be true at cycle +0."
+    }
+  ],
+  "diagnostics": []
+}

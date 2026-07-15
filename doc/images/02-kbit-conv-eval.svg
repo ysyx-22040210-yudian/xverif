@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">kbit usage screenshot guide</title>
+  <desc id="desc">Terminal style screenshot showing kbit conversion and expression evaluation.</desc>
+  <rect width="1200" height="675" fill="#f7fafc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">kbit: deterministic bit math</text>
+  <text x="72" y="98" fill="#475569" font-family="Arial,Helvetica,sans-serif" font-size="18">Use this screenshot to show literal conversion, JSON output, and expression checking.</text>
+  <rect x="70" y="135" width="1060" height="420" rx="16" fill="#0b1220"/>
+  <text x="100" y="180" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">$ kbit conv "8'shff"</text>
+  <text x="130" y="218" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">value: -1   unsigned: 255   width: 8   signed: true</text>
+  <text x="100" y="274" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">$ kbit conv "8'shff" --json</text>
+  <text x="130" y="312" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">{"ok":true,"value":"0xff","width":8,"signed_value":-1}</text>
+  <text x="100" y="368" fill="#93c5fd" font-family="Consolas,monospace" font-size="22">$ kbit eval "data[15:8] == 8'hbe" --var data=32'hdead_beef</text>
+  <text x="130" y="406" fill="#e5e7eb" font-family="Consolas,monospace" font-size="20">result: true   lhs: 8'hbe   rhs: 8'hbe</text>
+  <rect x="100" y="462" width="1000" height="58" rx="10" fill="#1e3a8a"/>
+  <text x="130" y="498" fill="#dbeafe" font-family="Arial,Helvetica,sans-serif" font-size="20">Highlight: width, signedness, slices, masks, and expected values are computed by the tool, not by guesswork.</text>
+</svg>

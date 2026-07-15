@@ -1,0 +1,12 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "apb.cursor",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "name": "if0",
+    "op": "begin",
+    "include_accesses": false
+  }
+}

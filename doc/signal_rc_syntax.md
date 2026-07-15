@@ -195,7 +195,7 @@ addExprSig -b 1 -n UUU ddr0_wr ("/top/rxreqflit[68:62]"=='h1c || "/top/rxreqflit
 
 注意事项：
 
-- 仓库里的 `xdebug/signal.rc` 已有 `addExprSig -b 1 -n UUU ...` 示例，可以作为实际写法参考。
+- 仓库里的 `kdebug/signal.rc` 已有 `addExprSig -b 1 -n UUU ...` 示例，可以作为实际写法参考。
 - 表达式中的信号名建议保留双引号；比较值常见写法如 `'h1c`、`'b1`。
 
 ## 设置 user marker：userMarker
@@ -226,7 +226,7 @@ userMarker 2500.0 first_error ID_YELLOW5 l_dot
 
 注意事项：
 
-- PDF 示例注释中列出的是 `userMarker time_pos marker_name`；仓库现有 `xdebug/signal.rc` 注释写法包含 `color linestyle`，因此这里按更完整格式整理。
+- PDF 示例注释中列出的是 `userMarker time_pos marker_name`；仓库现有 `kdebug/signal.rc` 注释写法包含 `color linestyle`，因此这里按更完整格式整理。
 - 配合 `windowTimeUnit`、`zoom`、`cursor` 使用，可以让打开波形后直接落到目标窗口。
 
 ## 设置分组：addGroup / addSubGroup

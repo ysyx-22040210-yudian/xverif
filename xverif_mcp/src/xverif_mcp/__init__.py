@@ -1,1 +1,0 @@
-"""xverif MCP package."""

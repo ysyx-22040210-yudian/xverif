@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "instance.map",
+  "target": {
+    "daidir": "simv.daidir"
+  },
+  "args": {
+    "instance": "top.u"
+  }
+}

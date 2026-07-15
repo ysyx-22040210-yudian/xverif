@@ -1,0 +1,11 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "expr.eval_at",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "expr": "valid && !ready",
+    "time": "100ns"
+  }
+}

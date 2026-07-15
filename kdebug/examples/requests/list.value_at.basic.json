@@ -1,0 +1,12 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "list.value_at",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "name": "if0",
+    "time": "100ns",
+    "format": "hex"
+  }
+}

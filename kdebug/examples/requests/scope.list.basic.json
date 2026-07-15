@@ -1,0 +1,10 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "scope.list",
+  "target": {
+    "session_id": "case_a"
+  },
+  "args": {
+    "path": ""
+  }
+}

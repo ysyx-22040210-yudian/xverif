@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">kloc usage screenshot guide</title>
+  <desc id="desc">Screenshot showing compressed UVM log location and resolved source context.</desc>
+  <rect width="1200" height="675" fill="#f8fafc"/>
+  <text x="70" y="66" fill="#14213d" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700">kloc: compact UVM log locations</text>
+  <rect x="70" y="115" width="1060" height="210" rx="14" fill="#111827"/>
+  <text x="100" y="160" fill="#fca5a5" font-family="Consolas,monospace" font-size="20">UVM_ERROR @ 120ns L_00000001 scoreboard mismatch: expected=0xbe actual=0xef</text>
+  <text x="100" y="205" fill="#fcd34d" font-family="Consolas,monospace" font-size="20">UVM_INFO  @ 121ns L_00000002 retry transaction issued</text>
+  <text x="100" y="250" fill="#93c5fd" font-family="Consolas,monospace" font-size="20">$ kloc resolve L_00000001 --map out/sim.log.kloc.jsonl</text>
+  <rect x="70" y="365" width="1060" height="210" rx="14" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+  <text x="100" y="410" fill="#0f172a" font-family="Consolas,monospace" font-size="20">file: env/scoreboard.sv</text>
+  <text x="100" y="450" fill="#0f172a" font-family="Consolas,monospace" font-size="20">line: 123</text>
+  <text x="100" y="490" fill="#0f172a" font-family="Consolas,monospace" font-size="20">context: if (actual_data != expected_data) `uvm_error(...)</text>
+  <text x="100" y="540" fill="#475569" font-family="Arial,Helvetica,sans-serif" font-size="18">Highlight: logs stay short, source context is restored only when needed.</text>
+</svg>
