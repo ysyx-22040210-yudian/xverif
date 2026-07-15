@@ -4,6 +4,10 @@
 `xdebug`、`xcov`，也不直接调用 NPI；它把工具现有的 JSON/stdio-loop
 协议封装成可组合、可测试的 Python API。
 
+从零建立项目脚本、开发三类 checker、接入内部 RPC/LSF、设计 CI 退出码以及为
+工具核心新增 action 的完整流程，见
+[`../doc/secondary_development_guide.md`](../doc/secondary_development_guide.md)。
+
 典型用途：
 
 - 基于 FSDB 开发项目自己的波形分析、异常窗口提取或协议检查脚本。

@@ -21,6 +21,7 @@
 - [xsva: SVA 结构化解释](#xsva-sva-结构化解释)
 - [xcov: coverage 查询](#xcov-coverage-查询)
 - [xverif-sdk: 二次开发接口](#xverif-sdk-二次开发接口)
+- [二次开发使用指导手册](doc/secondary_development_guide.md)
 - [xverif-mcp: AI Agent 统一入口](#xverif-mcp-ai-agent-统一入口)
 - [xeda-runner: 受控 EDA 命令执行](#xeda-runner-受控-eda-命令执行)
 - [典型使用流程](#典型使用流程)
@@ -1993,6 +1994,7 @@ xdebug actions --json
 - [`xsva/README.md`](xsva/README.md): SVA lowering 和解释
 - [`xcov/README.md`](xcov/README.md): coverage 查询
 - [`xverif_sdk/README.md`](xverif_sdk/README.md): Python 二次开发 SDK、workflow 和示例
+- [`doc/secondary_development_guide.md`](doc/secondary_development_guide.md): 从项目脚本、内部平台接入到新增 action 的完整二次开发手册
 - [`xverif_mcp/README.md`](xverif_mcp/README.md): MCP server 配置和工具说明
 - [`xeda_runner/README.md`](xeda_runner/README.md): EDA runner
 - [`skill/SKILL.md`](skill/SKILL.md): 面向 Agent 的使用入口
