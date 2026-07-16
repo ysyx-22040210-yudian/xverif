@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Process-level JSON helpers for the Shell/Perl CLI examples."""
+"""Process-level JSON helpers for CLI examples that cannot parse JSON natively."""
 
 from __future__ import print_function
 
@@ -165,6 +165,54 @@ def command_summary_value(args):
     return 0
 
 
+def command_json_value(args):
+    value = load_object(args.file)
+    for part in args.path.split("."):
+        if not isinstance(value, dict) or part not in value:
+            print("JSON path not found: {0}".format(args.path), file=sys.stderr)
+            return 1
+        value = value[part]
+    if isinstance(value, bool):
+        print("true" if value else "false")
+    elif value is None:
+        print("null")
+    elif isinstance(value, (dict, list)):
+        print(json.dumps(value, separators=(",", ":"), sort_keys=True))
+    else:
+        print(value)
+    return 0
+
+
+def command_signal_health_report(args):
+    report = {
+        "schema": "kverif.example.signal-health.v1",
+        "language": args.language,
+        "gate_pass": args.conclusion == "HEALTHY",
+        "conclusion": {
+            "status": args.conclusion,
+            "reason": args.reason,
+        },
+        "evidence": {
+            "signal": args.signal,
+            "change_count": args.change_count,
+            "unknown_count": args.unknown_count,
+            "truncated": args.truncated == "true",
+        },
+        "thresholds": {
+            "min_changes": args.min_changes,
+            "max_unknown": args.max_unknown,
+            "require_complete": args.require_complete == "true",
+        },
+        "artifacts": {
+            "tool_response": args.response,
+        },
+    }
+    with open(args.output, "w") as handle:
+        json.dump(report, handle, separators=(",", ":"), sort_keys=True)
+        handle.write("\n")
+    return 0
+
+
 def command_coverage_row(args):
     delta = None if args.delta == "null" else float(args.delta)
     value = {
@@ -180,6 +228,15 @@ def command_coverage_row(args):
         "holes_response": args.holes_response,
     }
     print(json.dumps(value, separators=(",", ":"), sort_keys=True))
+    return 0
+
+
+def command_coverage_delta(args):
+    delta = args.current - args.previous
+    print("{0:.15g}\t{1}".format(
+        delta,
+        "true" if abs(delta) <= args.epsilon else "false",
+    ))
     return 0
 
 
@@ -299,6 +356,30 @@ def build_parser():
     child.add_argument("--default", default="")
     child.set_defaults(func=command_summary_value)
 
+    child = subparsers.add_parser("json-value")
+    child.add_argument("--file", required=True)
+    child.add_argument("--path", required=True)
+    child.set_defaults(func=command_json_value)
+
+    child = subparsers.add_parser("signal-health-report")
+    child.add_argument("--output", required=True)
+    child.add_argument("--language", choices=("sh", "csh", "perl"), required=True)
+    child.add_argument("--signal", required=True)
+    child.add_argument("--response", required=True)
+    child.add_argument("--change-count", type=int, required=True)
+    child.add_argument("--unknown-count", type=int, required=True)
+    child.add_argument("--truncated", choices=("true", "false"), required=True)
+    child.add_argument("--min-changes", type=int, required=True)
+    child.add_argument("--max-unknown", type=int, required=True)
+    child.add_argument("--require-complete", choices=("true", "false"), required=True)
+    child.add_argument(
+        "--conclusion",
+        choices=("HEALTHY", "INACTIVE", "UNKNOWN_VALUES", "INCOMPLETE"),
+        required=True,
+    )
+    child.add_argument("--reason", required=True)
+    child.set_defaults(func=command_signal_health_report)
+
     child = subparsers.add_parser("coverage-row")
     child.add_argument("--label", required=True)
     child.add_argument("--vdb", required=True)
@@ -311,6 +392,12 @@ def build_parser():
     child.add_argument("--summary-response", required=True)
     child.add_argument("--holes-response", required=True)
     child.set_defaults(func=command_coverage_row)
+
+    child = subparsers.add_parser("coverage-delta")
+    child.add_argument("--current", type=float, required=True)
+    child.add_argument("--previous", type=float, required=True)
+    child.add_argument("--epsilon", type=float, required=True)
+    child.set_defaults(func=command_coverage_delta)
 
     child = subparsers.add_parser("coverage-report")
     child.add_argument("--metrics", required=True)

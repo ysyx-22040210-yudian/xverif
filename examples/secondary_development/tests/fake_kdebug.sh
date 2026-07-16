@@ -3,7 +3,10 @@ set -euo pipefail
 
 args=" $* "
 if [[ "$args" == *" signal.scan "* ]]; then
-  printf '%s\n' '{"api_version":"kdebug.v1","action":"signal.scan","ok":true,"summary":{"change_count":4,"unknown_count":0,"truncated":false},"data":{"changes":[]}}'
+  change_count="${FAKE_KDEBUG_CHANGE_COUNT:-4}"
+  unknown_count="${FAKE_KDEBUG_UNKNOWN_COUNT:-0}"
+  truncated="${FAKE_KDEBUG_TRUNCATED:-false}"
+  printf '%s\n' "{\"api_version\":\"kdebug.v1\",\"action\":\"signal.scan\",\"ok\":true,\"summary\":{\"change_count\":$change_count,\"unknown_count\":$unknown_count,\"truncated\":$truncated},\"data\":{\"changes\":[]}}"
 elif [[ "$args" == *" trace-driver "* ]]; then
   printf '%s\n' '{"api_version":"kdebug.v1","action":"trace.driver","ok":true,"summary":{"edge_count":2,"status":"ok"},"data":{"dependency_edges":[]}}'
 elif [[ "$args" == *" trace.load "* ]]; then

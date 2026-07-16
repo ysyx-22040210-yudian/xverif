@@ -8,24 +8,16 @@ Usage: coverage_convergence.sh --run LABEL=VDB [--run LABEL=VDB ...]
                                [--hole-limit N] [--plateau-epsilon PCT]
                                [--fail-under PCT] [--max-final-holes N]
                                [--max-regression PCT] [--require-growth]
-                               [--fake] --out DIR
+                               [--fake] [--kcov-bin CMD]
+                               [--json-python CMD] [--json-helper FILE]
+                               --out DIR
 
 Environment:
-  KCOV_BIN  Absolute kcov command. Defaults to <repo>/tools/kcov.
+  KCOV_BIN, KVERIF_HOME, KVERIF_JSON_PYTHON, KVERIF_JSON_HELPER, PYTHON
 EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/../../.." && pwd)"
-kcov_bin="${KCOV_BIN:-$repo_root/tools/kcov}"
-json_helper="$repo_root/examples/secondary_development/json_response.py"
-if [[ -n "${KVERIF_JSON_PYTHON:-}" ]]; then
-  json_python="$KVERIF_JSON_PYTHON"
-elif command -v python3 >/dev/null 2>&1; then
-  json_python=python3
-else
-  json_python=python
-fi
 out_dir=""
 metrics="line,toggle,branch"
 hole_limit=50
@@ -35,6 +27,9 @@ max_final_holes=""
 max_regression=""
 require_growth=0
 fake=0
+kcov_override=""
+json_python_override=""
+json_helper_override=""
 runs=()
 
 while [[ $# -gt 0 ]]; do
@@ -48,6 +43,9 @@ while [[ $# -gt 0 ]]; do
     --max-regression) max_regression="$2"; shift 2 ;;
     --require-growth) require_growth=1; shift ;;
     --fake) fake=1; shift ;;
+    --kcov-bin) kcov_override="$2"; shift 2 ;;
+    --json-python) json_python_override="$2"; shift 2 ;;
+    --json-helper) json_helper_override="$2"; shift 2 ;;
     --out) out_dir="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -56,8 +54,42 @@ done
 
 [[ -n "$out_dir" ]] || { echo "ERROR: --out is required" >&2; exit 2; }
 [[ ${#runs[@]} -gt 0 ]] || { echo "ERROR: at least one --run is required" >&2; exit 2; }
-[[ -x "$kcov_bin" ]] || { echo "ERROR: kcov is not executable: $kcov_bin" >&2; exit 2; }
-command -v "$json_python" >/dev/null 2>&1 || { echo "ERROR: Python with the standard json module is required" >&2; exit 2; }
+
+resolve_tool() {
+  local explicit="$1" env_value="$2" tool_name="$3"
+  if [[ -n "$explicit" ]]; then printf '%s\n' "$explicit"
+  elif [[ -n "$env_value" ]]; then printf '%s\n' "$env_value"
+  elif [[ -n "${KVERIF_HOME:-}" && -x "$KVERIF_HOME/tools/$tool_name" ]]; then printf '%s\n' "$KVERIF_HOME/tools/$tool_name"
+  elif [[ -x "$script_dir/../../../tools/$tool_name" ]]; then printf '%s\n' "$script_dir/../../../tools/$tool_name"
+  else command -v "$tool_name" 2>/dev/null || return 1
+  fi
+}
+resolve_python() {
+  if [[ -n "$json_python_override" ]]; then printf '%s\n' "$json_python_override"
+  elif [[ -n "${KVERIF_JSON_PYTHON:-}" ]]; then printf '%s\n' "$KVERIF_JSON_PYTHON"
+  elif [[ -n "${PYTHON:-}" ]]; then printf '%s\n' "$PYTHON"
+  elif command -v python3 >/dev/null 2>&1; then command -v python3
+  else command -v python 2>/dev/null || return 1
+  fi
+}
+kcov_bin="$(resolve_tool "$kcov_override" "${KCOV_BIN:-}" kcov)" || {
+  echo "ERROR: cannot find kcov; use --kcov-bin, KCOV_BIN, KVERIF_HOME, or PATH" >&2; exit 2;
+}
+json_python="$(resolve_python)" || {
+  echo "ERROR: cannot find Python 3; use --json-python, KVERIF_JSON_PYTHON, or PYTHON" >&2; exit 2;
+}
+if [[ -n "$json_helper_override" ]]; then json_helper="$json_helper_override"
+elif [[ -n "${KVERIF_JSON_HELPER:-}" ]]; then json_helper="$KVERIF_JSON_HELPER"
+elif [[ -f "$script_dir/../json_response.py" ]]; then json_helper="$script_dir/../json_response.py"
+elif [[ -n "${KVERIF_HOME:-}" && -f "$KVERIF_HOME/examples/secondary_development/json_response.py" ]]; then json_helper="$KVERIF_HOME/examples/secondary_development/json_response.py"
+else json_helper="$script_dir/../json_response.py"
+fi
+if ! command -v "$kcov_bin" >/dev/null 2>&1 && [[ ! -x "$kcov_bin" ]]; then
+  echo "ERROR: kcov is not executable: $kcov_bin" >&2; exit 2
+fi
+if ! "$json_python" -c 'import json, sys; raise SystemExit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
+  echo "ERROR: JSON helper requires a runnable Python 3 command: $json_python" >&2; exit 2
+fi
 [[ -f "$json_helper" ]] || { echo "ERROR: JSON helper is missing: $json_helper" >&2; exit 2; }
 
 mkdir -p "$out_dir"
@@ -104,8 +136,10 @@ for spec in "${runs[@]}"; do
   delta_json=null
   plateau=false
   if [[ -n "$previous_pct" ]]; then
-    delta_json="$(perl -e 'printf "%.15g", $ARGV[0] - $ARGV[1]' "$pct" "$previous_pct")"
-    plateau="$(perl -e 'print(abs($ARGV[0]) <= $ARGV[1] ? "true" : "false")' "$delta_json" "$plateau_epsilon")"
+    IFS=$'\t' read -r delta_json plateau <<<"$(
+      "$json_python" "$json_helper" coverage-delta \
+        --current "$pct" --previous "$previous_pct" --epsilon "$plateau_epsilon"
+    )"
   fi
 
   "$json_python" "$json_helper" coverage-row \

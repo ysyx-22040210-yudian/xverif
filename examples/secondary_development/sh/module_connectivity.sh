@@ -6,24 +6,16 @@ usage() {
 Usage: module_connectivity.sh --daidir DIR --signal NAME [--signal NAME ...]
                               [--max-depth N] [--max-items N]
                               [--no-loads] [--require-edge]
-                              [--require-complete] --out DIR
+                              [--require-complete] [--kdebug-bin CMD]
+                              [--json-python CMD] [--json-helper FILE]
+                              --out DIR
 
 Environment:
-  KDEBUG_BIN  Absolute kdebug command. Defaults to <repo>/tools/kdebug.
+  KDEBUG_BIN, KVERIF_HOME, KVERIF_JSON_PYTHON, KVERIF_JSON_HELPER, PYTHON
 EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/../../.." && pwd)"
-kdebug_bin="${KDEBUG_BIN:-$repo_root/tools/kdebug}"
-json_helper="$repo_root/examples/secondary_development/json_response.py"
-if [[ -n "${KVERIF_JSON_PYTHON:-}" ]]; then
-  json_python="$KVERIF_JSON_PYTHON"
-elif command -v python3 >/dev/null 2>&1; then
-  json_python=python3
-else
-  json_python=python
-fi
 daidir=""
 out_dir=""
 max_depth=6
@@ -31,6 +23,9 @@ max_items=200
 include_loads=1
 require_edge=0
 require_complete=0
+kdebug_override=""
+json_python_override=""
+json_helper_override=""
 signals=()
 
 while [[ $# -gt 0 ]]; do
@@ -42,6 +37,9 @@ while [[ $# -gt 0 ]]; do
     --no-loads) include_loads=0; shift ;;
     --require-edge) require_edge=1; shift ;;
     --require-complete) require_complete=1; shift ;;
+    --kdebug-bin) kdebug_override="$2"; shift 2 ;;
+    --json-python) json_python_override="$2"; shift 2 ;;
+    --json-helper) json_helper_override="$2"; shift 2 ;;
     --out) out_dir="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -53,8 +51,42 @@ done
   exit 2
 }
 [[ ${#signals[@]} -gt 0 ]] || { echo "ERROR: at least one --signal is required" >&2; exit 2; }
-[[ -x "$kdebug_bin" ]] || { echo "ERROR: kdebug is not executable: $kdebug_bin" >&2; exit 2; }
-command -v "$json_python" >/dev/null 2>&1 || { echo "ERROR: Python with the standard json module is required" >&2; exit 2; }
+
+resolve_tool() {
+  local explicit="$1" env_value="$2" tool_name="$3"
+  if [[ -n "$explicit" ]]; then printf '%s\n' "$explicit"
+  elif [[ -n "$env_value" ]]; then printf '%s\n' "$env_value"
+  elif [[ -n "${KVERIF_HOME:-}" && -x "$KVERIF_HOME/tools/$tool_name" ]]; then printf '%s\n' "$KVERIF_HOME/tools/$tool_name"
+  elif [[ -x "$script_dir/../../../tools/$tool_name" ]]; then printf '%s\n' "$script_dir/../../../tools/$tool_name"
+  else command -v "$tool_name" 2>/dev/null || return 1
+  fi
+}
+resolve_python() {
+  if [[ -n "$json_python_override" ]]; then printf '%s\n' "$json_python_override"
+  elif [[ -n "${KVERIF_JSON_PYTHON:-}" ]]; then printf '%s\n' "$KVERIF_JSON_PYTHON"
+  elif [[ -n "${PYTHON:-}" ]]; then printf '%s\n' "$PYTHON"
+  elif command -v python3 >/dev/null 2>&1; then command -v python3
+  else command -v python 2>/dev/null || return 1
+  fi
+}
+kdebug_bin="$(resolve_tool "$kdebug_override" "${KDEBUG_BIN:-}" kdebug)" || {
+  echo "ERROR: cannot find kdebug; use --kdebug-bin, KDEBUG_BIN, KVERIF_HOME, or PATH" >&2; exit 2;
+}
+json_python="$(resolve_python)" || {
+  echo "ERROR: cannot find Python 3; use --json-python, KVERIF_JSON_PYTHON, or PYTHON" >&2; exit 2;
+}
+if [[ -n "$json_helper_override" ]]; then json_helper="$json_helper_override"
+elif [[ -n "${KVERIF_JSON_HELPER:-}" ]]; then json_helper="$KVERIF_JSON_HELPER"
+elif [[ -f "$script_dir/../json_response.py" ]]; then json_helper="$script_dir/../json_response.py"
+elif [[ -n "${KVERIF_HOME:-}" && -f "$KVERIF_HOME/examples/secondary_development/json_response.py" ]]; then json_helper="$KVERIF_HOME/examples/secondary_development/json_response.py"
+else json_helper="$script_dir/../json_response.py"
+fi
+if ! command -v "$kdebug_bin" >/dev/null 2>&1 && [[ ! -x "$kdebug_bin" ]]; then
+  echo "ERROR: kdebug is not executable: $kdebug_bin" >&2; exit 2
+fi
+if ! "$json_python" -c 'import json, sys; raise SystemExit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
+  echo "ERROR: JSON helper requires a runnable Python 3 command: $json_python" >&2; exit 2
+fi
 [[ -f "$json_helper" ]] || { echo "ERROR: JSON helper is missing: $json_helper" >&2; exit 2; }
 
 mkdir -p "$out_dir"

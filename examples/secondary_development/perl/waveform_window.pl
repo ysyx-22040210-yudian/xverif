@@ -11,6 +11,7 @@ my @signals;
 my @times;
 my $max_rows = 200;
 my $help = 0;
+my $kdebug_override;
 
 GetOptions(
     'fsdb=s'     => \$fsdb,
@@ -21,6 +22,7 @@ GetOptions(
     'stop=s'     => \$end,
     'time=s@'    => \@times,
     'max-rows=i' => \$max_rows,
+    'kdebug-bin=s' => \$kdebug_override,
     'out=s'      => \$out_dir,
     'help|h'     => \$help,
 ) or usage(2);
@@ -28,28 +30,60 @@ usage(0) if $help;
 usage(2) unless defined $fsdb && defined $begin && defined $end
     && defined $out_dir && @signals;
 
-my $default_tool = File::Spec->rel2abs(
-    File::Spec->catfile($RealBin, '..', '..', '..', 'tools', 'kdebug')
-);
-my $kdebug = $ENV{KDEBUG_BIN} || $default_tool;
--x $kdebug or die "kdebug is not executable: $kdebug\n";
-make_path($out_dir);
-
-my $session = 'perl_wave_' . ($ENV{USER} || 'user') . '_' . $$;
-my $opened = 0;
-
 sub usage {
     my ($rc) = @_;
     print STDERR <<'USAGE';
 Usage: waveform_window.pl --fsdb FILE --signal NAME [--signal NAME ...]
                           --begin TIME --end TIME [--time TIME ...]
-                          [--max-rows N] --out DIR
+                          [--max-rows N] [--kdebug-bin CMD] --out DIR
 
 Environment:
-  KDEBUG_BIN  Absolute kdebug command. Defaults to <repo>/tools/kdebug.
+  KDEBUG_BIN, KVERIF_HOME
+
+Resolution: explicit option, environment, KVERIF_HOME/tools, repository, PATH.
 USAGE
     exit $rc;
 }
+
+sub find_executable {
+    my ($command) = @_;
+    return unless defined $command && length $command;
+    return File::Spec->rel2abs($command) if -f $command && -x $command;
+    for my $directory (File::Spec->path()) {
+        my $candidate = File::Spec->catfile($directory, $command);
+        return File::Spec->rel2abs($candidate) if -f $candidate && -x $candidate;
+    }
+    return;
+}
+
+sub configured_command {
+    my ($value) = @_;
+    my $resolved = find_executable($value);
+    defined $resolved or die "kdebug is not executable: $value\n";
+    return $resolved;
+}
+
+my $repo_tool = File::Spec->rel2abs(
+    File::Spec->catfile($RealBin, '..', '..', '..', 'tools', 'kdebug')
+);
+my $kdebug;
+if (defined $kdebug_override && length $kdebug_override) {
+    $kdebug = configured_command($kdebug_override);
+} elsif (defined $ENV{KDEBUG_BIN} && length $ENV{KDEBUG_BIN}) {
+    $kdebug = configured_command($ENV{KDEBUG_BIN});
+} elsif (defined $ENV{KVERIF_HOME}
+         && -x File::Spec->catfile($ENV{KVERIF_HOME}, 'tools', 'kdebug')) {
+    $kdebug = File::Spec->catfile($ENV{KVERIF_HOME}, 'tools', 'kdebug');
+} elsif (-x $repo_tool) {
+    $kdebug = $repo_tool;
+} else {
+    $kdebug = find_executable('kdebug');
+}
+defined $kdebug or die "cannot find kdebug; use --kdebug-bin, KDEBUG_BIN, KVERIF_HOME, or PATH\n";
+make_path($out_dir);
+
+my $session = 'perl_wave_' . ($ENV{USER} || 'user') . '_' . $$;
+my $opened = 0;
 
 sub run_json {
     my ($output, @command) = @_;

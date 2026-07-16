@@ -51,7 +51,7 @@ flowchart LR
 | 项目脚本 | 项目规则、阈值、报告路径、重试和退出码 | NPI 数据访问 |
 | kverif CLI | 参数校验、JSON 契约、session、过滤、导出 | 项目专有准入策略 |
 | Tcl backend | 真实 FSDB/KDB/VDB 查询 | 项目流程编排 |
-| MCP | AI Agent 工具适配 | 普通 Shell/Perl 脚本的必要依赖 |
+| MCP | AI Agent 工具适配 | 普通外部脚本的必要依赖 |
 
 ## 3. 相关目录
 
@@ -60,7 +60,9 @@ kverif/
   tools/                              稳定命令入口
   examples/secondary_development/
     sh/                               Bash 直接调用示例
+    csh/                              csh/tcsh 直接调用示例
     perl/                             Perl 直接调用示例
+    py/                               Python subprocess 直接调用示例
     tests/                            无 EDA 的 CLI 合约测试
   kdebug/
     specs/actions/actions.yaml        action catalog
@@ -105,6 +107,70 @@ test -n "${SNPSLMD_LICENSE_FILE:-}" || echo "SNPSLMD_LICENSE_FILE is not set"
 KDEBUG=/home/host/kverif/tools/kdebug
 KCOV=/home/host/kverif/tools/kcov
 KBIT=/home/host/kverif/tools/kbit
+```
+
+### 4.1 跨设备部署边界
+
+二次开发示例的控制层可复制到仓库外运行。复制时保留完整目录结构：
+
+```text
+secondary_development/
+  sh/ csh/ perl/ py/
+  json_response.py
+```
+
+不要只复制 `sh/regression_triage.sh`，因为它需要同目录的三个子流程；也不要只复制
+Bash/csh/Perl 脚本而遗漏 `json_response.py`。这些脚本按自身文件位置找依赖，不按
+当前工作目录找依赖，因此可以从项目目录、LSF scratch 目录或 CI workspace 启动。
+
+控制脚本可移植不等于 EDA backend 可省略。真实执行矩阵如下：
+
+| 查询 | 目标设备必须具备 |
+| --- | --- |
+| FSDB 波形 | 可执行 `kdebug`、兼容 Verdi、真实 FSDB、license |
+| KDB 连线 | 可执行 `kdebug`、与本次构建匹配的 `simv.daidir`、兼容 Verdi/VCS、license |
+| VDB coverage | 可执行 `kcov`、真实 VDB、兼容 coverage 环境、license |
+| 假 CLI 合约 | Bash、Python 3、Perl；csh 用例在安装 csh/tcsh 时执行，不需要 EDA/license |
+
+### 4.2 命令和 helper 发现顺序
+
+所有示例采用一致的覆盖规则：
+
+| 入口 | 从高到低的优先级 |
+| --- | --- |
+| `kdebug` | `--kdebug-bin`、`KDEBUG_BIN`、`$KVERIF_HOME/tools/kdebug`、仓库相对路径、`PATH` |
+| `kcov` | `--kcov-bin`、`KCOV_BIN`、`$KVERIF_HOME/tools/kcov`、仓库相对路径、`PATH` |
+| helper Python | `--json-python`、`KVERIF_JSON_PYTHON`、`PYTHON`、PATH 中的 `python3/python` |
+| JSON helper | `--json-helper`、`KVERIF_JSON_HELPER`、脚本旁的 `../json_response.py`、`KVERIF_HOME` 下的副本 |
+
+显式选项或对应环境变量一旦给出，就视为用户配置；路径不可执行时直接报错，不会静默
+换成另一个工具。`KVERIF_HOME` 和仓库相对候选不存在时才继续查 `PATH`。
+
+PATH-only 搬迁示例：
+
+```bash
+cp -R /opt/kverif/examples/secondary_development \
+  "/work/shared verification/kverif examples"
+export PATH="/opt/kverif/tools:$PATH"
+
+cd /work/project-a
+bash "/work/shared verification/kverif examples/sh/module_connectivity.sh" \
+  --daidir /data/build/simv.daidir \
+  --signal tb_top.dut.req_valid --require-edge --require-complete \
+  --out "/work/project-a/reports/connectivity result"
+```
+
+完全显式的 CI 调用：
+
+```bash
+bash "/work/shared verification/kverif examples/sh/regression_triage.sh" \
+  --kdebug-bin /opt/kverif/tools/kdebug \
+  --kcov-bin /opt/kverif/tools/kcov \
+  --json-python /usr/bin/python3 \
+  --json-helper "/work/shared verification/kverif examples/json_response.py" \
+  --fsdb /data/run/waves.fsdb --daidir /data/run/simv.daidir \
+  --vdb /data/run/simv.vdb --signal tb_top.dut.valid \
+  --begin 0ns --end 1us --out /data/run/triage
 ```
 
 ## 5. 三种调用方式
@@ -203,7 +269,7 @@ trap cleanup EXIT INT TERM
 
 长期服务或高频请求也可直接驱动 `--stdio-loop` JSONL 进程。其 stdout 每行都是
 协议消息，首行是 `type:"ready"`，随后请求与响应按 `request_id`/`id` 关联。
-Shell/Perl 若不需要长期单进程，优先使用命名 session，生命周期更容易处理。
+Bash/csh/Perl/Python 若不需要长期单进程，优先使用命名 session，生命周期更容易处理。
 
 ## 6. 输出与错误处理
 
@@ -269,19 +335,23 @@ cmd+=(--time 100ns --format hex)
 "${cmd[@]}" > /data/run/value-batch.json
 ```
 
-仓库提供三个完整 Bash 示例：
+仓库提供五个完整 Bash 示例：
 
 ```text
 examples/secondary_development/sh/waveform_window.sh
 examples/secondary_development/sh/module_connectivity.sh
 examples/secondary_development/sh/coverage_convergence.sh
+examples/secondary_development/sh/regression_triage.sh
+examples/secondary_development/sh/signal_health.sh
 ```
 
 它们只使用命令、参数、JSON 和退出码，不导入项目代码。仓库附带的
 `json_response.py` 仅以独立进程调用 Python 标准库校验结果，不是可导入 SDK，
 也不要求 VM 安装 `jq` 或 CPAN 模块。
 
-## 8. Perl 调用模式
+## 8. 跨语言调用和结论生成
+
+### 8.1 Perl list-form 调用
 
 Perl 使用 list form 启动命令，避免经过 shell 二次解释：
 
@@ -319,9 +389,72 @@ perl /home/host/kverif/examples/secondary_development/perl/waveform_window.pl \
   --out /data/run/wave-perl
 ```
 
-该示例只使用 Perl 核心模块，不需要安装 CPAN 包。kdebug/kcov 的直接 CLI 会在
-response `ok=false` 时返回非零退出码，因此没有 JSON 模块的 Perl 环境也可以可靠
-控制流程并归档原始 JSON；需要读取业务字段时，再使用站点已有 JSON parser。
+该示例只使用 Perl 核心模块，不需要安装 CPAN 包。需要读取业务字段时，
+`signal_health.pl` 会启动仓库内独立的标准库 JSON helper，读取三个 summary 字段，
+随后由 Perl 自身比较阈值并生成结论：
+
+```bash
+KDEBUG_BIN=/home/host/kverif/tools/kdebug \
+KVERIF_JSON_PYTHON=/usr/bin/python3 \
+perl /home/host/kverif/examples/secondary_development/perl/signal_health.pl \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/perl
+```
+
+### 8.2 csh/tcsh 调用
+
+csh 没有可靠的内建 JSON parser，因此脚本不要使用 `grep` 猜字段。示例把完整
+response 保存到文件，通过独立 helper 读取 `change_count`、`unknown_count` 和
+`truncated`，再由 csh 的 `if/else` 规则得出项目结论：
+
+```csh
+setenv KDEBUG_BIN /home/host/kverif/tools/kdebug
+setenv KVERIF_JSON_PYTHON /usr/bin/python3
+
+csh /home/host/kverif/examples/secondary_development/csh/signal_health.csh \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/csh
+```
+
+### 8.3 Python subprocess 调用
+
+Python 示例只使用标准库。`subprocess.run()` 启动 `tools/kdebug`，`json.load()`
+读取 response，然后脚本自己的 `classify()` 函数产生结论；它没有导入任何 kverif
+内部模块：
+
+```bash
+KDEBUG_BIN=/home/host/kverif/tools/kdebug \
+/usr/bin/python3 /home/host/kverif/examples/secondary_development/py/signal_health.py \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/python
+```
+
+### 8.4 四语言统一结论合同
+
+Bash、csh、Perl 和 Python 的 `signal_health` 示例共享同一参数和报告合同：
+
+| 参数 | 默认值 | 作用 |
+| --- | --- | --- |
+| `--fsdb FILE` | 无 | kdebug 的真实 FSDB 输入 |
+| `--signal NAME` | 无 | 需要评价的完整信号层次名 |
+| `--begin/--start TIME` | 无 | `signal.scan` 起点 |
+| `--end/--stop TIME` | 无 | `signal.scan` 终点 |
+| `--max-rows N` | `200` | 工具最大返回行数 |
+| `--min-changes N` | `1` | 最少变化次数 |
+| `--max-unknown N` | `0` | 最大 X/Z 次数 |
+| `--require-complete` | 关闭 | 开启后禁止截断 response |
+| `--kdebug-bin CMD` | 自动发现 | 显式指定 kdebug，可用路径或 PATH 中的命令名 |
+| `--json-python CMD` | 自动发现 | Bash/csh/Perl：显式指定运行 JSON helper 的 Python 3 |
+| `--json-helper FILE` | 脚本相对路径 | Bash/csh/Perl：显式指定独立 JSON helper 文件；Python 示例不接受这两个选项 |
+| `--out DIR` | 无 | 原始 response 和派生报告目录 |
+
+处理优先级是 `INCOMPLETE`、`UNKNOWN_VALUES`、`INACTIVE`、`HEALTHY`。每个脚本
+保存原始 `tool-response.json`，并生成 `kverif.example.signal-health.v1`
+`conclusion.json`。成功结论返回 `0`，工具/JSON 失败返回 `1`，参数错误返回 `2`，
+查询成功但派生门禁不通过返回 `3`。
 
 ## 9. 四类可复用二次开发工作流
 
@@ -362,6 +495,8 @@ flowchart LR
 | `--min-changes N` | 否 | 每个信号最少变化次数，低于该值时门禁失败，默认 `0` |
 | `--max-unknown N` | 否 | 每个信号允许的最大 X/Z 次数；不传则不检查 |
 | `--require-complete` | 否 | 发现 scan 截断时门禁失败 |
+| `--kdebug-bin CMD` | 否 | 覆盖 kdebug 自动发现结果 |
+| `--json-python CMD`、`--json-helper FILE` | 否 | 覆盖 JSON helper 运行入口和文件 |
 | `--out DIR` | 是 | 原始 response、日志和聚合报告目录 |
 
 复杂调用示例：
@@ -410,6 +545,8 @@ bash /home/host/kverif/examples/secondary_development/sh/waveform_window.sh \
 | `--no-loads` | 否 | 跳过 fanout/load 查询，缩短只查 driver 的任务 |
 | `--require-edge` | 否 | 任一信号没有 driver edge 时门禁失败 |
 | `--require-complete` | 否 | 任一依赖图被截断时门禁失败 |
+| `--kdebug-bin CMD` | 否 | 覆盖 kdebug 自动发现结果 |
+| `--json-python CMD`、`--json-helper FILE` | 否 | 覆盖 JSON helper 运行入口和文件 |
 | `--out DIR` | 是 | 查询 response 和聚合报告目录 |
 
 复杂调用示例：
@@ -443,13 +580,15 @@ bash /home/host/kverif/examples/secondary_development/sh/module_connectivity.sh 
 | --- | --- | --- |
 | `--run LABEL=VDB` | 是，可重复 | 一轮 coverage 结果；顺序就是趋势时间顺序，label 应唯一 |
 | `--metrics LIST` | 否 | 逗号分隔 metric，默认 `line,toggle,branch` |
-| `--hole-limit N` | 否 | 每轮归档的 hole 最大数量，默认 `100` |
+| `--hole-limit N` | 否 | 每轮归档的 hole 最大数量，默认 `50` |
 | `--plateau-epsilon PCT` | 否 | 相邻轮绝对增量不大于该百分点时标记 plateau，默认 `0.01` |
 | `--fail-under PCT` | 否 | 最终加权覆盖率最低阈值 |
 | `--max-final-holes N` | 否 | 最后一轮最大允许 hole 数 |
 | `--max-regression PCT` | 否 | 任一相邻轮允许的最大负向回退百分点 |
 | `--require-growth` | 否 | 有多轮数据时，要求至少一轮产生正增量 |
 | `--fake` | 否 | 使用 kcov 内置数据做无 EDA 合约测试 |
+| `--kcov-bin CMD` | 否 | 覆盖 kcov 自动发现结果 |
+| `--json-python CMD`、`--json-helper FILE` | 否 | 覆盖 JSON helper 运行入口和文件 |
 | `--out DIR` | 是 | 每轮 response、NDJSON 和收敛报告目录 |
 
 复杂调用示例：
@@ -505,6 +644,8 @@ bash /home/host/kverif/examples/secondary_development/sh/coverage_convergence.sh
 | `--max-final-holes N` | 否 | 最大最终 hole 数 |
 | `--min-changes N` | 否 | 波形最少变化次数，默认 `1` |
 | `--active-signal NAME`、`--active-time TIME` | 否，成对使用 | 增加 active-driver 动态因果证据 |
+| `--kdebug-bin CMD`、`--kcov-bin CMD` | 否 | 覆盖两个工具的自动发现结果，并传给子流程 |
+| `--json-python CMD`、`--json-helper FILE` | 否 | 覆盖 helper 配置，并传给子流程 |
 | `--out DIR` | 是 | 三个子报告和统一报告目录 |
 
 ```bash
@@ -830,7 +971,7 @@ VDB=/data/regress/nightly/simv.vdb
 "$KCOV" --json cov-summary --vdb "$VDB" --metrics line,toggle,branch
 ```
 
-原始 JSON/JSONL transport 参数为 `--request FILE`、位置参数 `FILE` 或 stdin `-`；`--stdio-loop` 启动长驻 JSONL 进程，`--once` 保留单请求 transport 兼容入口。普通 Shell/Perl 二次开发优先使用上面的参数式命令和命名 session。
+原始 JSON/JSONL transport 参数为 `--request FILE`、位置参数 `FILE` 或 stdin `-`；`--stdio-loop` 启动长驻 JSONL 进程，`--once` 保留单请求 transport 兼容入口。普通外部脚本二次开发优先使用上面的参数式命令和命名 session。
 
 ### 10.4 kbit：确定性位运算和条件检查
 
@@ -1166,7 +1307,7 @@ trap - EXIT INT TERM
 
 ### 10.11 kverif-mcp 和 kverif-lsf-doctor：可选 Agent 入口
 
-普通 Shell/Perl 二次开发不需要 MCP，但仓库还提供两个可执行命令用于 Agent 客户端和部署诊断。
+普通 Bash/csh/Perl/Python 二次开发不需要 MCP，但仓库还提供两个可执行命令用于 Agent 客户端和部署诊断。
 
 `kverif-mcp` 没有业务子命令，启动后通过 stdin/stdout 运行 MCP transport。主要配置来自环境变量：
 
@@ -1283,9 +1424,12 @@ make secondary-examples-test
 
 该测试使用假 `kdebug/kcov` 可执行命令，验证：
 
-- Bash 参数边界和 session 清理。
-- Perl list-form 进程调用和 JSON 解析。
+- Bash/csh/Perl/Python 参数边界、工具进程调用和 JSON 字段处理。
+- 四种语言的 `HEALTHY` 成功结论和 `INACTIVE/UNKNOWN_VALUES/INCOMPLETE` 失败结论。
+- Perl list-form 进程调用、Python subprocess 和 session 清理。
 - coverage 多轮汇总与 gate 退出码。
+- coverage 增量计算不依赖额外 Perl 进程。
+- 把整个示例树复制到仓库外、路径含空格的目录，从另一个工作目录仅通过 `PATH` 查找工具。
 - 示例没有导入任何 kverif 语言包。
 
 ### 13.2 Fake coverage

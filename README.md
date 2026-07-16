@@ -34,7 +34,7 @@
 ```mermaid
 flowchart LR
     User["验证工程师"] --> CLI["kverif CLI tools"]
-    Developer["Shell / Perl / CI 二次开发脚本"] --> CLI
+    Developer["Bash / csh / Perl / Python / CI 二次开发脚本"] --> CLI
     Agent["AI Agent / MCP Client"] --> MCP["kverif-mcp"]
 
     MCP --> KDEBUG["kdebug"]
@@ -99,7 +99,7 @@ kverif/
   kloc/                  # UVM log location 压缩和恢复
   kberif/                # 项目 context summary cards/detail 生成与查询
   ksva/                  # SystemVerilog Assertion lowering 和解释
-  examples/secondary_development/ # Shell/Perl 直接调用 CLI 的二次开发示例
+  examples/secondary_development/ # Bash/csh/Perl/Python 调用 CLI 并生成结论的示例
   kverif_mcp/            # 统一 MCP server
   keda_runner/           # allowlist EDA command runner
   mk/                    # 仓库共享 Makefile 片段和编译参数
@@ -125,7 +125,7 @@ kverif/
 | `kloc/` | UVM log 路径压缩、短 ID 解析和源码上下文恢复 | 是 |
 | `kberif/` | 项目背景卡片生成、brief/query、Agent 上下文管理 | 按需 |
 | `ksva/` | SVA property/assertion 列表、lowering、解释和 timeline IR | 按需 |
-| `examples/secondary_development/` | Bash/Perl 直接调用工具命令和参数的二次开发示例及 CLI 合约测试 | 二次开发者常用 |
+| `examples/secondary_development/` | Bash/csh/Perl/Python 调用工具、处理 JSON 并生成项目结论的示例及合约测试 | 二次开发者常用 |
 | `kverif_mcp/` | MCP server，把各工具暴露给 AI Agent 或支持 MCP 的客户端 | Agent 场景常用 |
 | `keda_runner/` | allowlist 方式执行 EDA 命令，限制 Agent 只能跑可审计动作 | Agent/自动化场景常用 |
 | `mk/` | 多个工具共享的 Makefile 片段、编译 flag 和公共规则 | 开发者常用 |
@@ -1581,7 +1581,7 @@ export KVERIF_KCOV_REQUEST_TIMEOUT_SEC=900
 
 ## CLI 二次开发接口
 
-kverif 不要求二次开发者安装或导入语言 SDK。Shell、Perl、Python、Go、CI 和
+kverif 不要求二次开发者安装或导入语言 SDK。Bash、csh、Perl、Python、Go、CI 和
 内部平台统一通过 `tools/` 下的命令、命令参数、JSON response 和退出码集成。
 独立开发手册的第 9 章给出四个可复用复杂工作流，第 10 章逐工具列出公开参数、
 功能、输入输出和每个子命令的绝对路径调用例子：
@@ -1597,6 +1597,64 @@ kverif 不要求二次开发者安装或导入语言 SDK。Shell、Perl、Python
 
 调用脚本不应导入 kdebug、kcov、MCP 或 Tcl backend 的内部模块。真实 NPI 查询仍
 由工具内部 Tcl backend 完成，调用方只消费稳定 CLI。
+
+### 跨设备运行
+
+二次开发示例支持整体复制到仓库外，并从任意工作目录运行。工具按以下顺序发现：
+显式 `--kdebug-bin/--kcov-bin`、对应环境变量、`KVERIF_HOME/tools`、仓库相对路径、
+最后是 `PATH`；JSON helper 可用 `--json-helper` 或 `KVERIF_JSON_HELPER` 覆盖，默认
+从脚本旁定位。`--json-python`、`KVERIF_JSON_PYTHON` 和 `PYTHON` 用于选择 Python 3。
+
+```bash
+cp -R /opt/kverif/examples/secondary_development "/work/team flow/kverif examples"
+export PATH="/opt/kverif/tools:$PATH"
+
+cd /work/project-a
+bash "/work/team flow/kverif examples/sh/signal_health.sh" \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --out "/work/project-a/reports/signal health"
+```
+
+脚本编排和 JSON 处理可移植，但真实 FSDB/KDB/VDB 查询仍要求目标设备安装可执行的
+kverif 工具、兼容 EDA 环境、相应数据库和 license。`make secondary-examples-test`
+会验证仓库外搬迁、含空格路径、PATH-only 工具发现；安装了 csh/tcsh 时同时验证
+四语言输出合同。
+
+### 四语言“调用、解析、结论”示例
+
+仓库为 Bash、csh、Perl、Python 提供同一信号健康工作流。它们都调用
+`kdebug signal.scan`，读取 `change_count/unknown_count/truncated`，再生成新的
+`HEALTHY/INACTIVE/UNKNOWN_VALUES/INCOMPLETE` 结论：
+
+```bash
+export KVERIF_HOME=/home/host/kverif
+export KDEBUG_BIN=$KVERIF_HOME/tools/kdebug
+export KVERIF_JSON_PYTHON=/usr/bin/python3
+
+bash $KVERIF_HOME/examples/secondary_development/sh/signal_health.sh \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/sh
+
+csh $KVERIF_HOME/examples/secondary_development/csh/signal_health.csh \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/csh
+
+perl $KVERIF_HOME/examples/secondary_development/perl/signal_health.pl \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/perl
+
+/usr/bin/python3 $KVERIF_HOME/examples/secondary_development/py/signal_health.py \
+  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
+  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --out /data/run/conclusions/python
+```
+
+四个脚本都保留 `tool-response.json`，并输出统一的 `conclusion.json` 和门禁退出码。
+Python 版本直接使用标准库 `subprocess/json`；其他版本通过独立 JSON helper 取字段，
+但阈值判断和结论生成均在对应语言脚本中完成。
 
 ### Bash 示例
 
@@ -1617,8 +1675,7 @@ bash $KVERIF_HOME/examples/secondary_development/sh/waveform_window.sh \
 # 2. XiangShan KDB driver/graph
 bash $KVERIF_HOME/examples/secondary_development/sh/module_connectivity.sh \
   --daidir /home/host/testdata/xiangshan_kdb/simv.daidir \
-  --signal tb_top.sim.clock \
-  --signal tb_top.sim.reset \
+  --signal tb_top.reset \
   --max-depth 6 --max-items 500 --require-edge --require-complete \
   --out /home/host/testdata/cli_reports/connectivity
 
@@ -1656,9 +1713,9 @@ perl /home/host/kverif/examples/secondary_development/perl/waveform_window.pl \
   --out /home/host/testdata/cli_reports/wave-perl
 ```
 
-Perl 示例只使用系统核心模块，并依据工具退出码判断成功；Bash coverage 示例通过
-一个独立的 Python 标准库进程汇总 JSON。两者都不导入任何 kverif 包，不使用
-`grep` 猜字段，也不要求 VM 安装 `jq` 或 CPAN 模块。四个工作流都会保留原始
+Perl 示例只使用系统核心模块；Python 示例只使用标准库；Bash/csh/Perl 通过
+一个独立的 Python 标准库进程读取 JSON。四种语言都不导入任何 kverif 包，不使用
+`grep` 猜 JSON 字段，也不要求 VM 安装 `jq` 或 CPAN 模块。所有工作流都会保留原始
 response，项目脚本可以在
 其上增加自己的 checker 和报告。
 
@@ -1673,7 +1730,8 @@ cd /home/host/kverif
 make secondary-examples-test
 ```
 
-该测试使用假 CLI 验证 Bash/Perl 参数传递、JSON 解析、session 清理和 coverage
+该测试使用假 CLI 验证 Bash/csh/Perl/Python 参数传递、JSON 解析、派生结论、
+session 清理和 coverage
 gate，不需要 Verdi、VCS 或 license。详细接口、错误处理、并发约束和绝对路径命令见
 [`doc/secondary_development_guide.md`](doc/secondary_development_guide.md)。
 
@@ -1957,8 +2015,9 @@ kdebug actions --json
 - [`kberif/README.md`](kberif/README.md): 项目上下文卡片
 - [`ksva/README.md`](ksva/README.md): SVA lowering 和解释
 - [`kcov/README.md`](kcov/README.md): coverage 查询
-- [`examples/secondary_development/README.md`](examples/secondary_development/README.md): Bash/Perl 直接调用工具命令和参数的完整示例
-- [`doc/secondary_development_guide.md`](doc/secondary_development_guide.md): CLI 参数、JSON、Shell/Perl、内部平台接入和新增 action 的完整二次开发手册
+- [`examples/secondary_development/README.md`](examples/secondary_development/README.md): Bash/csh/Perl/Python 调用工具、处理输出并生成结论的完整示例
+- [`doc/secondary_development_guide.md`](doc/secondary_development_guide.md): CLI 参数、JSON、跨语言脚本、内部平台接入和新增 action 的完整二次开发手册
+- [`doc/benchmark_fault_injection_audit.md`](doc/benchmark_fault_injection_audit.md): XiangShan benchmark 16 个 case 的实际注错前后代码及公开标签偏差审计
 - [`kverif_mcp/README.md`](kverif_mcp/README.md): MCP server 配置和工具说明
 - [`keda_runner/README.md`](keda_runner/README.md): EDA runner
 - [`skill/SKILL.md`](skill/SKILL.md): 面向 Agent 的使用入口
