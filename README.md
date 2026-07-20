@@ -27,6 +27,7 @@
 - [典型使用流程](#典型使用流程)
 - [测试与验证](#测试与验证)
 - [常见问题](#常见问题)
+- [Benchmark 模型修复分析](doc/benchmark_model_case_analysis.md)
 - [文档入口](#文档入口)
 
 ## 一图看懂
@@ -2018,6 +2019,7 @@ kdebug actions --json
 - [`examples/secondary_development/README.md`](examples/secondary_development/README.md): Bash/csh/Perl/Python 调用工具、处理输出并生成结论的完整示例
 - [`doc/secondary_development_guide.md`](doc/secondary_development_guide.md): CLI 参数、JSON、跨语言脚本、内部平台接入和新增 action 的完整二次开发手册
 - [`doc/benchmark_fault_injection_audit.md`](doc/benchmark_fault_injection_audit.md): XiangShan benchmark 16 个 case 的实际注错前后代码及公开标签偏差审计
+- [`doc/benchmark_model_case_analysis.md`](doc/benchmark_model_case_analysis.md): GPT、Qwen、GLM 在 16 个 XiangShan case 中的外显诊断、补丁轨迹、终态和误判原因
 - [`kverif_mcp/README.md`](kverif_mcp/README.md): MCP server 配置和工具说明
 - [`keda_runner/README.md`](keda_runner/README.md): EDA runner
 - [`skill/SKILL.md`](skill/SKILL.md): 面向 Agent 的使用入口
