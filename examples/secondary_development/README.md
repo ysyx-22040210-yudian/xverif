@@ -22,8 +22,82 @@ secondary_development/
   perl/signal_health.pl        Perl 调 kdebug、处理字段并生成信号健康结论
   perl/waveform_window.pl      Perl 直接调用 kdebug 的完整示例
   py/signal_health.py          Python subprocess/json 标准库完整闭环
+  fixtures/fsdb_handshake/    可复现 RTL、testbench、真实 FSDB 和真实信号清单
   json_response.py             独立进程式 JSON 校验和聚合器，不是 SDK
   tests/run.sh                 使用假 CLI 的无 EDA 合约测试
+  tests/run_real_fsdb.sh       使用 Verdi 和随库 FSDB 的真实后端回归
+```
+
+## 随仓库提供的真实 FSDB、RTL 和信号
+
+示例不再要求用户先自行准备 `waves.fsdb`。仓库包含一套完整 fixture：
+
+```text
+fixtures/fsdb_handshake/
+  rtl/kverif_handshake_dut.sv  valid/ready 握手 DUT RTL
+  tb/tb_kverif_handshake.sv    产生 stall 和四次有效传输的 testbench
+  waves.fsdb                    VCS/Verdi 2018 真实生成的 9,107-byte FSDB
+  signal_manifest.json          FSDB 真实层次名、位宽、变化次数和检查点
+  SHA256SUMS                     FSDB 完整性校验
+  build_vcs.sh                   重新生成 FSDB 和 simv.daidir
+```
+
+预生成 FSDB 的 SHA-256 是：
+
+```text
+f1c50e6e502f84450469932ceb7fe151057a06df02487840911b034134d38fb0
+```
+
+以下信号均已在该 FSDB 中用 Verdi 2018 + 真实 kdebug 查询通过：
+
+| 信号 | 位宽 | RTL 含义 | FSDB 变化记录数 |
+| --- | ---: | --- | ---: |
+| `tb_kverif_handshake.clk` | 1 | 10ns 周期时钟 | 26 |
+| `tb_kverif_handshake.rst_n` | 1 | 低有效复位 | 2 |
+| `tb_kverif_handshake.dut.req_valid` | 1 | 请求有效 | 5 |
+| `tb_kverif_handshake.dut.req_ready` | 1 | 下游 ready | 7 |
+| `tb_kverif_handshake.dut.req_fire` | 1 | 内部 `valid && ready` | 7 |
+| `tb_kverif_handshake.dut.req_data` | 8 | 请求数据 | 5 |
+| `tb_kverif_handshake.dut.rsp_valid` | 1 | 响应有效 | 7 |
+| `tb_kverif_handshake.dut.rsp_data` | 8 | `req_data ^ 8'h5a` | 5 |
+| `tb_kverif_handshake.dut.accepted_count` | 4 | 已接收请求计数 | 5 |
+| `tb_kverif_handshake.dut.state_q` | 2 | IDLE/WAIT_READY/RESPOND | 8 |
+| `tb_kverif_handshake.dut.last_accepted_q` | 8 | 最近接收的数据 | 5 |
+
+开箱即用的直接查询：
+
+```bash
+export KVERIF_HOME=/home/host/kverif
+FIXTURE=$KVERIF_HOME/examples/secondary_development/fixtures/fsdb_handshake
+
+$KVERIF_HOME/tools/kdebug --json action signal.scan \
+  --fsdb $FIXTURE/waves.fsdb \
+  --arg signal=tb_kverif_handshake.dut.accepted_count \
+  --arg begin=0ns --arg end=125ns --arg format=hex \
+  --max-rows 100
+
+$KVERIF_HOME/tools/kdebug --json value-batch \
+  --fsdb $FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.req_fire \
+  --signal tb_kverif_handshake.dut.rsp_data \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --time 95ns --format hex
+```
+
+95ns 的实测值为 `accepted_count=4`、`rsp_data=ec`。完整 fixture 说明见
+[`fixtures/fsdb_handshake/README.md`](fixtures/fsdb_handshake/README.md)。
+重新生成的 FSDB 可能因内嵌路径或时间元数据而具有不同 SHA-256；应使用 manifest 的
+信号变化次数和检查点确认功能一致性。
+
+无需重新编译即可做 FSDB value/scan 查询。driver/load/graph 和 active-driver 还需要
+与当前设备 VCS/Verdi 匹配的 KDB；使用同一份 RTL 生成：
+
+```bash
+cd $FIXTURE
+export VCS_TARGET_ARCH=linux64
+bash ./build_vcs.sh
+# KDB:  $FIXTURE/build/simv.daidir
+# FSDB: $FIXTURE/build/waves.fsdb
 ```
 
 ## 跨设备与脱离仓库运行
@@ -50,9 +124,10 @@ cp -R /opt/kverif/examples/secondary_development \
 export PATH="/opt/kverif/tools:$PATH"
 
 cd /work/project-a
+FSDB="/work/team flow/kverif examples/fixtures/fsdb_handshake/waves.fsdb"
 bash "/work/team flow/kverif examples/sh/signal_health.sh" \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --require-complete \
+  --fsdb "$FSDB" --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --require-complete \
   --out "/work/project-a/reports/signal health"
 ```
 
@@ -116,25 +191,30 @@ Bash、csh 和 Perl 使用 `json_response.py wave-stats` 作为独立 JSON parse
 export KVERIF_HOME=/home/host/kverif
 export KDEBUG_BIN=$KVERIF_HOME/tools/kdebug
 export KVERIF_JSON_PYTHON=/usr/bin/python3
+export KVERIF_FSDB_FIXTURE=$KVERIF_HOME/examples/secondary_development/fixtures/fsdb_handshake
 
 bash $KVERIF_HOME/examples/secondary_development/sh/signal_health.sh \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/sh
 
 csh $KVERIF_HOME/examples/secondary_development/csh/signal_health.csh \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/csh
 
 perl $KVERIF_HOME/examples/secondary_development/perl/signal_health.pl \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/perl
 
 /usr/bin/python3 $KVERIF_HOME/examples/secondary_development/py/signal_health.py \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/python
 ```
 
@@ -150,8 +230,8 @@ perl $KVERIF_HOME/examples/secondary_development/perl/signal_health.pl \
     "reason": "signal activity satisfies all configured gates"
   },
   "evidence": {
-    "signal": "tb.dut.valid",
-    "change_count": 4,
+    "signal": "tb_kverif_handshake.dut.accepted_count",
+    "change_count": 5,
     "unknown_count": 0,
     "truncated": false
   },
@@ -195,21 +275,28 @@ perl $KVERIF_HOME/examples/secondary_development/perl/signal_health.pl \
 ```bash
 export KVERIF_HOME=/home/host/kverif
 export PATH="$KVERIF_HOME/tools:$PATH"
+FIXTURE=$KVERIF_HOME/examples/secondary_development/fixtures/fsdb_handshake
+
+# 只有 active-driver 和 connectivity 需要先生成本机 KDB。
+bash "$FIXTURE/build_vcs.sh"
 
 bash "$KVERIF_HOME/examples/secondary_development/sh/waveform_window.sh" \
-  --fsdb /data/run/waves.fsdb \
-  --daidir /data/run/simv.daidir \
-  --signal tb.dut.valid \
-  --signal tb.dut.ready \
-  --begin 0ns --end 1us \
-  --time 100ns --time 500ns \
-  --active-signal tb.dut.ready --active-time 500ns \
+  --fsdb "$FIXTURE/waves.fsdb" \
+  --daidir "$FIXTURE/build/simv.daidir" \
+  --signal tb_kverif_handshake.dut.req_valid \
+  --signal tb_kverif_handshake.dut.req_ready \
+  --signal tb_kverif_handshake.dut.req_fire \
+  --signal tb_kverif_handshake.dut.rsp_data \
+  --begin 0ns --end 125ns \
+  --time 45ns --time 95ns \
+  --active-signal tb_kverif_handshake.dut.rsp_data --active-time 95ns \
   --max-rows 1000 --min-changes 1 --max-unknown 0 --require-complete \
   --out /data/run/kverif-wave
 
 bash "$KVERIF_HOME/examples/secondary_development/sh/module_connectivity.sh" \
-  --daidir /data/run/simv.daidir \
-  --signal tb.dut.valid --signal tb.dut.ready \
+  --daidir "$FIXTURE/build/simv.daidir" \
+  --signal tb_kverif_handshake.dut.req_valid \
+  --signal tb_kverif_handshake.dut.rsp_data \
   --max-depth 8 --max-items 500 --require-edge --require-complete \
   --out /data/run/kverif-connectivity
 
@@ -223,9 +310,10 @@ bash "$KVERIF_HOME/examples/secondary_development/sh/coverage_convergence.sh" \
   --out /data/run/kverif-coverage
 
 perl "$KVERIF_HOME/examples/secondary_development/perl/waveform_window.pl" \
-  --fsdb /data/run/waves.fsdb \
-  --signal tb.dut.valid \
-  --begin 0ns --end 1us \
+  --fsdb "$FIXTURE/waves.fsdb" \
+  --signal tb_kverif_handshake.dut.req_valid \
+  --signal tb_kverif_handshake.dut.rsp_data \
+  --begin 0ns --end 125ns --time 45ns --time 95ns \
   --out /data/run/kverif-wave-perl
 ```
 
@@ -245,12 +333,13 @@ export KVERIF_JSON_HELPER=/opt/kverif/examples/secondary_development/json_respon
 
 ```bash
 bash "$KVERIF_HOME/examples/secondary_development/sh/regression_triage.sh" \
-  --fsdb /data/run/waves.fsdb \
-  --daidir /data/run/simv.daidir \
+  --fsdb "$FIXTURE/waves.fsdb" \
+  --daidir "$FIXTURE/build/simv.daidir" \
   --vdb /data/run/simv.vdb \
-  --signal tb.dut.valid --signal tb.dut.ready \
-  --begin 0ns --end 1us --time 100ns --time 500ns \
-  --active-signal tb.dut.ready --active-time 500ns \
+  --signal tb_kverif_handshake.dut.req_valid \
+  --signal tb_kverif_handshake.dut.rsp_data \
+  --begin 0ns --end 125ns --time 45ns --time 95ns \
+  --active-signal tb_kverif_handshake.dut.rsp_data --active-time 95ns \
   --min-changes 1 --fail-under 95 --max-final-holes 100 \
   --out /data/run/kverif-triage
 ```
@@ -272,3 +361,13 @@ make secondary-examples-test
 `KDEBUG_BIN`、`KCOV_BIN`、`KVERIF_HOME` 和 helper 覆盖后，仅通过 `PATH` 查找假
 `kdebug/kcov`。Bash、Perl、Python、coverage 和跨工具分诊必须全部生成有效报告；
 安装了 csh/tcsh 时还会执行 csh 合同。
+
+有真实 Verdi/VCS 环境时，再运行随库 FSDB 的完整后端测试：
+
+```bash
+KVERIF_HOME=/home/host/kverif \
+KDEBUG_BIN=/home/host/kverif/tools/kdebug \
+bash /home/host/kverif/examples/secondary_development/tests/run_real_fsdb.sh
+```
+
+等价的仓库目标是 `make secondary-examples-real-test`。

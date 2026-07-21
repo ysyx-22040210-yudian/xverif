@@ -1,6 +1,7 @@
 .agents/
 .codex/
 **/.keda_runner/
+examples/secondary_development/fixtures/fsdb_handshake/build/
 
 # Legacy unowned test and regression assets
 test/

@@ -4,6 +4,10 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 example_root="$(cd "$script_dir/.." && pwd)"
 json_helper="$example_root/json_response.py"
+fixture="$example_root/fixtures/fsdb_handshake"
+fixture_fsdb="$fixture/waves.fsdb"
+valid_signal=tb_kverif_handshake.dut.req_valid
+ready_signal=tb_kverif_handshake.dut.req_ready
 if [[ -n "${KVERIF_JSON_PYTHON:-}" ]]; then
   json_python="$KVERIF_JSON_PYTHON"
 elif [[ -n "${PYTHON:-}" ]]; then
@@ -21,15 +25,35 @@ for command_name in bash perl "$json_python"; do
   }
 done
 
+test -s "$fixture_fsdb"
+test -f "$fixture/rtl/kverif_handshake_dut.sv"
+test -f "$fixture/tb/tb_kverif_handshake.sv"
+"$json_python" - "$fixture/signal_manifest.json" "$fixture_fsdb" <<'PY'
+import hashlib
+import json
+import os
+import sys
+
+manifest_path, fsdb_path = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as stream:
+    manifest = json.load(stream)
+with open(fsdb_path, "rb") as stream:
+    digest = hashlib.sha256(stream.read()).hexdigest()
+assert manifest["top"] == "tb_kverif_handshake"
+assert len(manifest["signals"]) == 11
+assert manifest["artifact"]["size_bytes"] == os.path.getsize(fsdb_path)
+assert manifest["artifact"]["sha256"] == digest
+PY
+
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 chmod +x "$script_dir/fake_kdebug.sh" "$script_dir/fake_kcov.sh"
-touch "$tmp_dir/waves.fsdb" "$tmp_dir/simv.daidir" "$tmp_dir/run1.vdb" "$tmp_dir/run2.vdb"
+touch "$tmp_dir/simv.daidir" "$tmp_dir/run1.vdb" "$tmp_dir/run2.vdb"
 
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   bash "$example_root/sh/signal_health.sh" \
-    --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$fixture_fsdb" --signal "$valid_signal" \
     --begin 0ns --end 100ns --min-changes 2 --max-unknown 0 --require-complete \
     --out "$tmp_dir/signal-health-sh"
 
@@ -37,7 +61,7 @@ if command -v csh >/dev/null 2>&1; then
   KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
   KVERIF_JSON_PYTHON="$json_python" \
     csh "$example_root/csh/signal_health.csh" \
-      --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+      --fsdb "$fixture_fsdb" --signal "$valid_signal" \
       --begin 0ns --end 100ns --min-changes 2 --max-unknown 0 --require-complete \
       --out "$tmp_dir/signal-health-csh"
 else
@@ -47,21 +71,21 @@ fi
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   perl "$example_root/perl/signal_health.pl" \
-    --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$fixture_fsdb" --signal "$valid_signal" \
     --begin 0ns --end 100ns --min-changes 2 --max-unknown 0 --require-complete \
     --out "$tmp_dir/signal-health-perl"
 
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
   "$json_python" "$example_root/py/signal_health.py" \
-    --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$fixture_fsdb" --signal "$valid_signal" \
     --begin 0ns --end 100ns --min-changes 2 --max-unknown 0 --require-complete \
     --out "$tmp_dir/signal-health-python"
 
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   bash "$example_root/sh/waveform_window.sh" \
-    --fsdb "$tmp_dir/waves.fsdb" \
-    --signal tb.dut.valid --signal tb.dut.ready \
+    --fsdb "$fixture_fsdb" \
+    --signal "$valid_signal" --signal "$ready_signal" \
     --begin 0ns --end 100ns --time 50ns \
     --min-changes 1 --max-unknown 0 --require-complete \
     --out "$tmp_dir/wave-sh"
@@ -70,7 +94,7 @@ KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   bash "$example_root/sh/module_connectivity.sh" \
     --daidir "$tmp_dir/simv.daidir" \
-    --signal tb.dut.valid --signal tb.dut.ready \
+    --signal "$valid_signal" --signal "$ready_signal" \
     --require-edge --require-complete \
     --out "$tmp_dir/connectivity-sh"
 
@@ -86,27 +110,30 @@ KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KCOV_BIN="$script_dir/fake_kcov.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   bash "$example_root/sh/regression_triage.sh" \
-    --fsdb "$tmp_dir/waves.fsdb" \
+    --fsdb "$fixture_fsdb" \
     --daidir "$tmp_dir/simv.daidir" \
     --vdb "$tmp_dir/run2.vdb" \
-    --signal tb.dut.valid --signal tb.dut.ready \
+    --signal "$valid_signal" --signal "$ready_signal" \
     --begin 0ns --end 100ns --time 50ns \
     --min-changes 1 --fail-under 80 --max-final-holes 20 \
     --out "$tmp_dir/triage-sh"
 
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
   perl "$example_root/perl/waveform_window.pl" \
-    --fsdb "$tmp_dir/waves.fsdb" \
-    --signal tb.dut.valid --signal tb.dut.ready \
+    --fsdb "$fixture_fsdb" \
+    --signal "$valid_signal" --signal "$ready_signal" \
     --begin 0ns --end 100ns --time 50ns \
     --out "$tmp_dir/wave-perl"
 
-"$json_python" "$json_helper" check-ok "$tmp_dir/wave-sh/scan.tb.dut.valid.json"
-"$json_python" "$json_helper" check-ok "$tmp_dir/connectivity-sh/driver.tb.dut.valid.json"
+"$json_python" "$json_helper" check-ok \
+  "$tmp_dir/wave-sh/scan.tb_kverif_handshake.dut.req_valid.json"
+"$json_python" "$json_helper" check-ok \
+  "$tmp_dir/connectivity-sh/driver.tb_kverif_handshake.dut.req_valid.json"
 [[ "$(wc -l < "$tmp_dir/coverage-sh/runs.ndjson")" -eq 2 ]]
 "$json_python" "$json_helper" coverage-gate \
   --report "$tmp_dir/coverage-sh/convergence.json" --target 80
-"$json_python" "$json_helper" check-ok "$tmp_dir/wave-perl/scan.tb.dut.valid.json"
+"$json_python" "$json_helper" check-ok \
+  "$tmp_dir/wave-perl/scan.tb_kverif_handshake.dut.req_valid.json"
 test -s "$tmp_dir/triage-sh/report.json"
 
 for language in sh perl python; do
@@ -125,7 +152,7 @@ set +e
 FAKE_KDEBUG_UNKNOWN_COUNT=2 \
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
   "$json_python" "$example_root/py/signal_health.py" \
-    --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$fixture_fsdb" --signal "$valid_signal" \
     --begin 0ns --end 100ns --max-unknown 0 \
     --out "$tmp_dir/signal-health-python-fail"
 failure_rc=$?
@@ -140,7 +167,7 @@ FAKE_KDEBUG_CHANGE_COUNT=0 \
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   bash "$example_root/sh/signal_health.sh" \
-    --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$fixture_fsdb" --signal "$valid_signal" \
     --begin 0ns --end 100ns --min-changes 1 \
     --out "$tmp_dir/signal-health-sh-fail"
 failure_rc=$?
@@ -155,7 +182,7 @@ FAKE_KDEBUG_TRUNCATED=true \
 KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
 KVERIF_JSON_PYTHON="$json_python" \
   perl "$example_root/perl/signal_health.pl" \
-    --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$fixture_fsdb" --signal "$valid_signal" \
     --begin 0ns --end 100ns --require-complete \
     --out "$tmp_dir/signal-health-perl-fail"
 failure_rc=$?
@@ -171,7 +198,7 @@ if command -v csh >/dev/null 2>&1; then
   KDEBUG_BIN="$script_dir/fake_kdebug.sh" \
   KVERIF_JSON_PYTHON="$json_python" \
     csh "$example_root/csh/signal_health.csh" \
-      --fsdb "$tmp_dir/waves.fsdb" --signal tb.dut.valid \
+      --fsdb "$fixture_fsdb" --signal "$valid_signal" \
       --begin 0ns --end 100ns --max-unknown 0 \
       --out "$tmp_dir/signal-health-csh-fail"
   failure_rc=$?
@@ -193,8 +220,7 @@ cp -R "$example_root/." "$portable_root/"
 cp "$script_dir/fake_kdebug.sh" "$portable_bin/kdebug"
 cp "$script_dir/fake_kcov.sh" "$portable_bin/kcov"
 chmod +x "$portable_bin/kdebug" "$portable_bin/kcov"
-touch "$portable_work/input data/waves.fsdb" \
-  "$portable_work/input data/simv.daidir" \
+touch "$portable_work/input data/simv.daidir" \
   "$portable_work/input data/run1.vdb" \
   "$portable_work/input data/run2.vdb"
 
@@ -203,38 +229,41 @@ touch "$portable_work/input data/waves.fsdb" \
   export PYTHON="$json_python"
   export PATH="$portable_bin:$PATH"
   cd "$portable_work"
+  portable_fsdb="$portable_root/fixtures/fsdb_handshake/waves.fsdb"
+  portable_valid=tb_kverif_handshake.dut.req_valid
+  portable_ready=tb_kverif_handshake.dut.req_ready
 
   bash "$portable_root/sh/signal_health.sh" \
-    --fsdb "$portable_work/input data/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$portable_fsdb" --signal "$portable_valid" \
     --begin 0ns --end 100ns --min-changes 2 --require-complete \
     --out "$portable_work/reports/signal sh"
 
   perl "$portable_root/perl/signal_health.pl" \
-    --fsdb "$portable_work/input data/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$portable_fsdb" --signal "$portable_valid" \
     --begin 0ns --end 100ns --min-changes 2 --require-complete \
     --out "$portable_work/reports/signal perl"
 
   "$json_python" "$portable_root/py/signal_health.py" \
-    --fsdb "$portable_work/input data/waves.fsdb" --signal tb.dut.valid \
+    --fsdb "$portable_fsdb" --signal "$portable_valid" \
     --begin 0ns --end 100ns --min-changes 2 --require-complete \
     --out "$portable_work/reports/signal python"
 
   if command -v csh >/dev/null 2>&1; then
     csh "$portable_root/csh/signal_health.csh" \
-      --fsdb "$portable_work/input data/waves.fsdb" --signal tb.dut.valid \
+      --fsdb "$portable_fsdb" --signal "$portable_valid" \
       --begin 0ns --end 100ns --min-changes 2 --require-complete \
       --out "$portable_work/reports/signal csh"
   fi
 
   bash "$portable_root/sh/waveform_window.sh" \
-    --fsdb "$portable_work/input data/waves.fsdb" \
-    --signal tb.dut.valid --begin 0ns --end 100ns --time 50ns \
+    --fsdb "$portable_fsdb" \
+    --signal "$portable_valid" --begin 0ns --end 100ns --time 50ns \
     --min-changes 1 --require-complete \
     --out "$portable_work/reports/waveform"
 
   bash "$portable_root/sh/module_connectivity.sh" \
     --daidir "$portable_work/input data/simv.daidir" \
-    --signal tb.dut.valid --require-edge --require-complete \
+    --signal "$portable_valid" --require-edge --require-complete \
     --out "$portable_work/reports/connectivity"
 
   bash "$portable_root/sh/coverage_convergence.sh" \
@@ -244,16 +273,16 @@ touch "$portable_work/input data/waves.fsdb" \
     --out "$portable_work/reports/coverage"
 
   bash "$portable_root/sh/regression_triage.sh" \
-    --fsdb "$portable_work/input data/waves.fsdb" \
+    --fsdb "$portable_fsdb" \
     --daidir "$portable_work/input data/simv.daidir" \
     --vdb "$portable_work/input data/run2.vdb" \
-    --signal tb.dut.valid --begin 0ns --end 100ns --time 50ns \
+    --signal "$portable_valid" --begin 0ns --end 100ns --time 50ns \
     --min-changes 1 --fail-under 80 --max-final-holes 20 \
     --out "$portable_work/reports/triage"
 
   perl "$portable_root/perl/waveform_window.pl" \
-    --fsdb "$portable_work/input data/waves.fsdb" \
-    --signal tb.dut.valid --begin 0ns --end 100ns --time 50ns \
+    --fsdb "$portable_fsdb" \
+    --signal "$portable_valid" --begin 0ns --end 100ns --time 50ns \
     --out "$portable_work/reports/waveform perl"
 )
 
@@ -265,7 +294,7 @@ for report in \
   "$portable_work/reports/connectivity/report.json" \
   "$portable_work/reports/coverage/convergence.json" \
   "$portable_work/reports/triage/report.json" \
-  "$portable_work/reports/waveform perl/scan.tb.dut.valid.json"; do
+  "$portable_work/reports/waveform perl/scan.tb_kverif_handshake.dut.req_valid.json"; do
   test -s "$report"
 done
 if command -v csh >/dev/null 2>&1; then

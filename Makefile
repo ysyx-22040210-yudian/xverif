@@ -1,4 +1,4 @@
-.PHONY: all kdebug kbit kentry kloc kberif kcov test full-test clean kcov-test secondary-examples-test install-skill
+.PHONY: all kdebug kbit kentry kloc kberif kcov test full-test clean kcov-test secondary-examples-test secondary-examples-real-test install-skill
 
 PYTHON ?= python3
 SKILL_NAME ?= kverif
@@ -29,6 +29,9 @@ kcov-test:
 
 secondary-examples-test:
 	bash examples/secondary_development/tests/run.sh
+
+secondary-examples-real-test:
+	bash examples/secondary_development/tests/run_real_fsdb.sh
 
 install-skill:
 	@set -eu; \

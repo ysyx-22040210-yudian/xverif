@@ -1,0 +1,121 @@
+{
+  "schema": "kverif.example.fsdb-fixture.v1",
+  "name": "fsdb_handshake",
+  "top": "tb_kverif_handshake",
+  "fsdb": "waves.fsdb",
+  "artifact": {
+    "size_bytes": 9107,
+    "sha256": "f1c50e6e502f84450469932ceb7fe151057a06df02487840911b034134d38fb0",
+    "generated_by": {
+      "user": "host",
+      "vcs": "O-2018.09-1_Full64",
+      "verdi_fsdb_dumper": "Verdi_O-2018.09-SP2"
+    }
+  },
+  "time_range": {
+    "begin": "0ns",
+    "end": "125ns"
+  },
+  "sources": [
+    "rtl/kverif_handshake_dut.sv",
+    "tb/tb_kverif_handshake.sv"
+  ],
+  "signals": [
+    {
+      "name": "tb_kverif_handshake.clk",
+      "width": 1,
+      "expected_change_count": 26,
+      "meaning": "10 ns period testbench clock"
+    },
+    {
+      "name": "tb_kverif_handshake.rst_n",
+      "width": 1,
+      "expected_change_count": 2,
+      "meaning": "active-low reset"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.req_valid",
+      "width": 1,
+      "expected_change_count": 5,
+      "meaning": "request valid input at the DUT boundary"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.req_ready",
+      "width": 1,
+      "expected_change_count": 7,
+      "meaning": "request ready input at the DUT boundary"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.req_fire",
+      "width": 1,
+      "expected_change_count": 7,
+      "meaning": "internal req_valid && req_ready handshake event"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.req_data",
+      "width": 8,
+      "expected_change_count": 5,
+      "meaning": "request payload at the DUT boundary"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.rsp_valid",
+      "width": 1,
+      "expected_change_count": 7,
+      "meaning": "one-cycle response pulse after an accepted request"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.rsp_data",
+      "width": 8,
+      "expected_change_count": 5,
+      "meaning": "accepted request payload XOR 8'h5a"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.accepted_count",
+      "width": 4,
+      "expected_change_count": 5,
+      "meaning": "number of accepted requests"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.state_q",
+      "width": 2,
+      "expected_change_count": 8,
+      "meaning": "IDLE=0, WAIT_READY=1, RESPOND=2"
+    },
+    {
+      "name": "tb_kverif_handshake.dut.last_accepted_q",
+      "width": 8,
+      "expected_change_count": 5,
+      "meaning": "most recently accepted request payload"
+    }
+  ],
+  "checkpoints": [
+    {
+      "time": "45ns",
+      "expected": {
+        "tb_kverif_handshake.dut.accepted_count": "1",
+        "tb_kverif_handshake.dut.rsp_data": "48"
+      }
+    },
+    {
+      "time": "55ns",
+      "expected": {
+        "tb_kverif_handshake.dut.accepted_count": "2",
+        "tb_kverif_handshake.dut.rsp_data": "6e"
+      }
+    },
+    {
+      "time": "75ns",
+      "expected": {
+        "tb_kverif_handshake.dut.accepted_count": "3",
+        "tb_kverif_handshake.dut.rsp_data": "ff"
+      }
+    },
+    {
+      "time": "95ns",
+      "expected": {
+        "tb_kverif_handshake.dut.accepted_count": "4",
+        "tb_kverif_handshake.dut.rsp_data": "ec"
+      }
+    }
+  ]
+}

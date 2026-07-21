@@ -1,5 +1,6 @@
 *.sh text eol=lf
 *.tcl text eol=lf
+*.fsdb binary
 Makefile text eol=lf
 */Makefile text eol=lf
 tools/* text eol=lf

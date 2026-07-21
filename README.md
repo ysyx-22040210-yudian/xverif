@@ -101,6 +101,7 @@ kverif/
   kberif/                # 项目 context summary cards/detail 生成与查询
   ksva/                  # SystemVerilog Assertion lowering 和解释
   examples/secondary_development/ # Bash/csh/Perl/Python 调用 CLI 并生成结论的示例
+    fixtures/fsdb_handshake/      # 随库 RTL、testbench、真实 FSDB 和层级信号清单
   kverif_mcp/            # 统一 MCP server
   keda_runner/           # allowlist EDA command runner
   mk/                    # 仓库共享 Makefile 片段和编译参数
@@ -127,6 +128,7 @@ kverif/
 | `kberif/` | 项目背景卡片生成、brief/query、Agent 上下文管理 | 按需 |
 | `ksva/` | SVA property/assertion 列表、lowering、解释和 timeline IR | 按需 |
 | `examples/secondary_development/` | Bash/csh/Perl/Python 调用工具、处理 JSON 并生成项目结论的示例及合约测试 | 二次开发者常用 |
+| `examples/secondary_development/fixtures/fsdb_handshake/` | 可复现握手 RTL、testbench、Verdi 2018 真实 FSDB 和信号 manifest | 二次开发波形示例直接使用 |
 | `kverif_mcp/` | MCP server，把各工具暴露给 AI Agent 或支持 MCP 的客户端 | Agent 场景常用 |
 | `keda_runner/` | allowlist 方式执行 EDA 命令，限制 Agent 只能跑可审计动作 | Agent/自动化场景常用 |
 | `mk/` | 多个工具共享的 Makefile 片段、编译 flag 和公共规则 | 开发者常用 |
@@ -1599,6 +1601,51 @@ kverif 不要求二次开发者安装或导入语言 SDK。Bash、csh、Perl、P
 调用脚本不应导入 kdebug、kcov、MCP 或 Tcl backend 的内部模块。真实 NPI 查询仍
 由工具内部 Tcl backend 完成，调用方只消费稳定 CLI。
 
+### 随库真实 FSDB、RTL 和信号
+
+二次开发示例包含一套可以直接查询的真实输入：
+
+```text
+examples/secondary_development/fixtures/fsdb_handshake/
+  rtl/kverif_handshake_dut.sv
+  tb/tb_kverif_handshake.sv
+  waves.fsdb
+  signal_manifest.json
+  build_vcs.sh
+```
+
+`waves.fsdb` 由 VM 普通用户 `host` 使用 VCS `O-2018.09-1_Full64` 和 Verdi
+`Verdi_O-2018.09-SP2` 生成，大小 9,107 字节。真实信号包括：
+
+```text
+tb_kverif_handshake.dut.req_valid
+tb_kverif_handshake.dut.req_ready
+tb_kverif_handshake.dut.req_fire
+tb_kverif_handshake.dut.req_data
+tb_kverif_handshake.dut.rsp_valid
+tb_kverif_handshake.dut.rsp_data
+tb_kverif_handshake.dut.accepted_count
+tb_kverif_handshake.dut.state_q
+tb_kverif_handshake.dut.last_accepted_q
+```
+
+开箱即用：
+
+```bash
+export KVERIF_HOME=/home/host/kverif
+FIXTURE=$KVERIF_HOME/examples/secondary_development/fixtures/fsdb_handshake
+
+$KVERIF_HOME/tools/kdebug --json action signal.scan \
+  --fsdb $FIXTURE/waves.fsdb \
+  --arg signal=tb_kverif_handshake.dut.accepted_count \
+  --arg begin=0ns --arg end=125ns --arg format=hex \
+  --max-rows 100
+```
+
+完整层级名、位宽、变化次数、SHA-256 和关键时间点期望值见
+[`signal_manifest.json`](examples/secondary_development/fixtures/fsdb_handshake/signal_manifest.json)。
+真实后端回归入口为 `make secondary-examples-real-test`。
+
 ### 跨设备运行
 
 二次开发示例支持整体复制到仓库外，并从任意工作目录运行。工具按以下顺序发现：
@@ -1611,9 +1658,11 @@ cp -R /opt/kverif/examples/secondary_development "/work/team flow/kverif example
 export PATH="/opt/kverif/tools:$PATH"
 
 cd /work/project-a
+FSDB="/work/team flow/kverif examples/fixtures/fsdb_handshake/waves.fsdb"
 bash "/work/team flow/kverif examples/sh/signal_health.sh" \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --out "/work/project-a/reports/signal health"
+  --fsdb "$FSDB" --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 \
+  --out "/work/project-a/reports/signal health"
 ```
 
 脚本编排和 JSON 处理可移植，但真实 FSDB/KDB/VDB 查询仍要求目标设备安装可执行的
@@ -1631,25 +1680,30 @@ kverif 工具、兼容 EDA 环境、相应数据库和 license。`make secondary
 export KVERIF_HOME=/home/host/kverif
 export KDEBUG_BIN=$KVERIF_HOME/tools/kdebug
 export KVERIF_JSON_PYTHON=/usr/bin/python3
+export KVERIF_FSDB_FIXTURE=$KVERIF_HOME/examples/secondary_development/fixtures/fsdb_handshake
 
 bash $KVERIF_HOME/examples/secondary_development/sh/signal_health.sh \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/sh
 
 csh $KVERIF_HOME/examples/secondary_development/csh/signal_health.csh \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/csh
 
 perl $KVERIF_HOME/examples/secondary_development/perl/signal_health.pl \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/perl
 
 /usr/bin/python3 $KVERIF_HOME/examples/secondary_development/py/signal_health.py \
-  --fsdb /data/run/waves.fsdb --signal tb.dut.valid \
-  --begin 0ns --end 1us --min-changes 2 --max-unknown 0 --require-complete \
+  --fsdb $KVERIF_FSDB_FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.accepted_count \
+  --begin 0ns --end 125ns --min-changes 5 --max-unknown 0 --require-complete \
   --out /data/run/conclusions/python
 ```
 
@@ -1665,11 +1719,14 @@ export KDEBUG_BIN=$KVERIF_HOME/tools/kdebug
 export KCOV_BIN=$KVERIF_HOME/tools/kcov
 
 # 1. FSDB 波形窗口与采样点
+FIXTURE=$KVERIF_HOME/examples/secondary_development/fixtures/fsdb_handshake
 bash $KVERIF_HOME/examples/secondary_development/sh/waveform_window.sh \
-  --fsdb /home/host/testdata/clkfreq.fsdb \
-  --signal tb_clkfreq.clk \
-  --begin 0ns --end 100ns \
-  --time 25ns --time 75ns \
+  --fsdb $FIXTURE/waves.fsdb \
+  --signal tb_kverif_handshake.dut.req_valid \
+  --signal tb_kverif_handshake.dut.req_ready \
+  --signal tb_kverif_handshake.dut.rsp_data \
+  --begin 0ns --end 125ns \
+  --time 45ns --time 95ns \
   --min-changes 1 --max-unknown 0 --require-complete \
   --out /home/host/testdata/cli_reports/wave
 
@@ -1707,10 +1764,11 @@ bash $KVERIF_HOME/examples/secondary_development/sh/regression_triage.sh \
 export KDEBUG_BIN=/home/host/kverif/tools/kdebug
 
 perl /home/host/kverif/examples/secondary_development/perl/waveform_window.pl \
-  --fsdb /home/host/testdata/clkfreq.fsdb \
-  --signal tb_clkfreq.clk \
-  --begin 0ns --end 100ns \
-  --time 25ns --time 75ns \
+  --fsdb /home/host/kverif/examples/secondary_development/fixtures/fsdb_handshake/waves.fsdb \
+  --signal tb_kverif_handshake.dut.req_valid \
+  --signal tb_kverif_handshake.dut.rsp_data \
+  --begin 0ns --end 125ns \
+  --time 45ns --time 95ns \
   --out /home/host/testdata/cli_reports/wave-perl
 ```
 
