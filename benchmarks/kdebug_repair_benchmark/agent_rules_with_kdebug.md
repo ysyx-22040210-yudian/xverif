@@ -51,7 +51,9 @@ The filename must be one of the validated response files shown in the current
 case context. The fact must name a concrete signal, driver, source location,
 time, transaction, or launch fact. The runner rejects the patch before applying
 it when this line is missing, names an undeclared file, or contains only a
-generic statement such as "used KDebug evidence".
+generic statement such as "used KDebug evidence". At least one technical token
+from the stated fact must also occur in the cited KDebug response; a fabricated
+signal, file, transaction, address, or time does not satisfy the gate.
 
 Do not treat the existence of a valid manifest as proof that KDebug helped.
 Name the exact case-local signal, time, transaction, driver, or command fact

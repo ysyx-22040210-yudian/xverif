@@ -231,7 +231,8 @@ and `simv` artifacts must be private copies, not shared hardlinks.
 8. For `with_kdebug`, every proposed diff must cite one plan-declared response
    and a concrete observed fact using
    `KDEBUG_EVIDENCE_USED: <file> | <fact>`. The harness rejects uncited,
-   undeclared, or generic citations before applying the patch.
+   undeclared, generic, or response-content-mismatched citations before
+   applying the patch.
 9. The model proposes an allowed-scope unified diff.
 10. The harness applies the diff, then runs:
    - `scripts/build.sh`

@@ -714,7 +714,7 @@ def extract_diff_blocks(text):
     return ""
 
 
-def parse_kdebug_evidence_citation(answer, evidence_files):
+def parse_kdebug_evidence_citation(answer, evidence_files, evidence_dir=None):
     """Return a normalized, model-visible evidence citation or an empty string."""
     declared = {normalize_rel(path) for path in evidence_files if normalize_rel(path)}
     pattern = re.compile(
@@ -731,6 +731,29 @@ def parse_kdebug_evidence_citation(answer, evidence_files):
             "validated kdebug evidence",
         }:
             continue
+        if evidence_dir is not None:
+            root = Path(evidence_dir).resolve()
+            evidence_path = (root / cited).resolve()
+            try:
+                evidence_path.relative_to(root)
+            except ValueError:
+                continue
+            evidence_text = read_text(evidence_path, 200000).lower()
+            stopwords = {
+                "because", "concrete", "driver", "evidence", "finding", "kdebug",
+                "observed", "patch", "response", "result", "shows", "signal",
+                "source", "status", "trace", "used", "validated", "value",
+            }
+            tokens = {
+                token.lower()
+                for token in re.findall(
+                    r"[A-Za-z_][A-Za-z0-9_.$\[\]/:-]{4,}|0x[0-9A-Fa-f]+|[0-9]{3,}",
+                    fact,
+                )
+                if token.lower() not in stopwords
+            }
+            if not tokens or not any(token in evidence_text for token in tokens):
+                continue
         return f"{cited} | {fact}"
     return ""
 
@@ -1616,7 +1639,11 @@ Do not include shell commands unless they are explanatory.
 
         pending_evidence_citation = ""
         if args.group == "with_kdebug":
-            pending_evidence_citation = parse_kdebug_evidence_citation(answer, evidence_files)
+            pending_evidence_citation = parse_kdebug_evidence_citation(
+                answer,
+                evidence_files,
+                repair / "evidence" / "with_kdebug",
+            )
             if not pending_evidence_citation:
                 rule_violation = "kdebug_evidence_citation_missing_or_invalid"
                 messages.append({

@@ -352,6 +352,44 @@ print(json.dumps(payload))
             "",
         )
 
+    def test_patch_citation_fact_must_exist_in_declared_response(self):
+        evidence_dir = self.root / "evidence"
+        evidence_dir.mkdir()
+        self.write_json(
+            evidence_dir / "kdebug_value.json",
+            {
+                "ok": True,
+                "data": {
+                    "signal": "tb.dut.ready",
+                    "file": "rtl/dut.sv",
+                    "line": 42,
+                },
+            },
+        )
+        supported = (
+            "KDEBUG_EVIDENCE_USED: kdebug_value.json | "
+            "tb.dut.ready resolves to rtl/dut.sv line 42"
+        )
+        fabricated = (
+            "KDEBUG_EVIDENCE_USED: kdebug_value.json | "
+            "tb.dut.fabricated resolves to rtl/missing.sv line 999"
+        )
+        self.assertTrue(
+            parse_kdebug_evidence_citation(
+                supported,
+                ["kdebug_value.json"],
+                evidence_dir,
+            )
+        )
+        self.assertEqual(
+            parse_kdebug_evidence_citation(
+                fabricated,
+                ["kdebug_value.json"],
+                evidence_dir,
+            ),
+            "",
+        )
+
     def test_prepare_case_replaces_legacy_evidence_with_trace_plan(self):
         case = self.make_case()
         legacy = case / "evidence" / "with_xdebug" / "old_static_note.txt"
