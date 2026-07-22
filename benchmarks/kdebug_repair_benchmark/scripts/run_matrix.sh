@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  run_matrix.sh --suite-root DIR --bench-root DIR [--cases case_001,case_002] [--models gpt-5.5,glm-4.7,qwen3.6-35b] [--timeout 3600] [--evidence-mode collect|validate] [--force-evidence]
+  run_matrix.sh --suite-root DIR --bench-root DIR [--cases case_001,case_002] [--models gpt-5.5,glm-4.7,qwen3.6-35b] [--groups with_kdebug|without_kdebug|with_kdebug,without_kdebug] [--timeout 3600] [--evidence-mode collect|validate] [--force-evidence]
 
 Expected suite layout:
   <suite-root>/case_001/
@@ -24,6 +24,7 @@ Environment:
   MAAS_API_KEY        Required for glm-4.7/qwen3.6-35b. AIAPI_* names are still accepted for compatibility.
   KDEBUG_RESET_RESULTS        Set to 1 to discard an existing results.csv before running.
   KDEBUG_RATE_LIMIT_SLEEP_SEC  Delay before retrying a rate-limited model. Default: 1800.
+  KDEBUG_GROUPS                Comma-separated groups. Default: with_kdebug,without_kdebug.
   KDEBUG_BIN                  KDebug CLI path. Default: <repository>/tools/kdebug.
   KDEBUG_PYTHON               Python 3.8+ executable used by collection and runner code.
                               PYTHON is accepted as a fallback; default: python3.
@@ -39,6 +40,7 @@ suite_root=""
 bench_root=""
 cases=""
 models="gpt-5.5,glm-4.7,qwen3.6-35b"
+groups_csv="${KDEBUG_GROUPS:-with_kdebug,without_kdebug}"
 timeout_sec=3600
 rate_limit_sleep_sec="${KDEBUG_RATE_LIMIT_SLEEP_SEC:-1800}"
 evidence_mode="${KDEBUG_EVIDENCE_MODE:-collect}"
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
     --bench-root) bench_root="$2"; shift 2 ;;
     --cases) cases="$2"; shift 2 ;;
     --models) models="$2"; shift 2 ;;
+    --groups) groups_csv="$2"; shift 2 ;;
     --timeout) timeout_sec="$2"; shift 2 ;;
     --evidence-mode) evidence_mode="$2"; shift 2 ;;
     --force-evidence) force_evidence=1; shift ;;
@@ -99,42 +102,68 @@ fi
 
 IFS=',' read -r -a case_list <<< "$cases"
 IFS=',' read -r -a model_list <<< "$models"
-groups=(with_kdebug without_kdebug)
+if [[ -z "$groups_csv" || "$groups_csv" == ,* || "$groups_csv" == *, || "$groups_csv" == *,,* ]]; then
+  echo "ERROR: --groups must be a non-empty comma-separated list" >&2
+  exit 2
+fi
+IFS=',' read -r -a groups <<< "$groups_csv"
+declare -A seen_groups=()
+has_with_kdebug=0
+for group in "${groups[@]}"; do
+  if [[ "$group" != "with_kdebug" && "$group" != "without_kdebug" ]]; then
+    echo "ERROR: unsupported group '$group'; expected with_kdebug or without_kdebug" >&2
+    exit 2
+  fi
+  if [[ -n "${seen_groups[$group]:-}" ]]; then
+    echo "ERROR: duplicate group '$group'" >&2
+    exit 2
+  fi
+  seen_groups["$group"]=1
+  if [[ "$group" == "with_kdebug" ]]; then
+    has_with_kdebug=1
+  fi
+done
+
+echo "===== MATRIX CONFIG models=$models groups=$groups_csv evidence_mode=$evidence_mode cases=$cases ====="
 
 if [[ "${KDEBUG_RESET_RESULTS:-0}" == "1" ]]; then
   rm -f "$results_csv"
 fi
 mkdir -p "$repair_root" "$screenshot_dir" "$docx_dir"
 
-if [[ ! -f "$evidence_py" ]]; then
+if [[ "$has_with_kdebug" == "1" && ! -f "$evidence_py" ]]; then
   echo "ERROR: missing KDebug evidence collector: $evidence_py" >&2
   exit 2
 fi
-if [[ "$evidence_mode" == "collect" && ! -x "$kdebug_bin" ]]; then
+if [[ "$has_with_kdebug" == "1" && "$evidence_mode" == "collect" && ! -x "$kdebug_bin" ]]; then
   echo "ERROR: KDebug CLI is not executable: $kdebug_bin" >&2
   exit 2
 fi
 
-for case_id in "${case_list[@]}"; do
-  case_dir="$suite_root/$case_id"
-  if [[ ! -d "$case_dir" ]]; then
-    echo "ERROR: missing case dir $case_dir" >&2
-    exit 2
-  fi
-  if [[ "$evidence_mode" == "collect" ]]; then
-    collect_args=(collect --case-dir "$case_dir" --kdebug "$kdebug_bin")
-    if [[ "$force_evidence" == "1" ]]; then
-      collect_args+=(--force)
+if [[ "$has_with_kdebug" == "1" ]]; then
+  for case_id in "${case_list[@]}"; do
+    case_dir="$suite_root/$case_id"
+    if [[ ! -d "$case_dir" ]]; then
+      echo "ERROR: missing case dir $case_dir" >&2
+      exit 2
     fi
-    echo "===== KDEBUG EVIDENCE COLLECT case=$case_id ====="
-    "$python_bin" "$evidence_py" "${collect_args[@]}"
-  fi
-done
+    if [[ "$evidence_mode" == "collect" ]]; then
+      collect_args=(collect --case-dir "$case_dir" --kdebug "$kdebug_bin")
+      if [[ "$force_evidence" == "1" ]]; then
+        collect_args+=(--force)
+      fi
+      echo "===== KDEBUG EVIDENCE COLLECT case=$case_id ====="
+      "$python_bin" "$evidence_py" "${collect_args[@]}"
+    fi
+  done
 
-echo "===== KDEBUG EVIDENCE SUITE VALIDATION ====="
-"$python_bin" "$evidence_py" validate-suite \
-  --suite-root "$suite_root" \
-  --cases "$(IFS=,; echo "${case_list[*]}")"
+  echo "===== KDEBUG EVIDENCE SUITE VALIDATION ====="
+  "$python_bin" "$evidence_py" validate-suite \
+    --suite-root "$suite_root" \
+    --cases "$(IFS=,; echo "${case_list[*]}")"
+else
+  echo "===== KDEBUG EVIDENCE SKIPPED: with_kdebug group not selected ====="
+fi
 
 declare -a task_model=()
 declare -a task_group=()

@@ -265,9 +265,14 @@ bash /home/host/kverif/benchmarks/kdebug_repair_benchmark/scripts/run_matrix.sh 
   --suite-root /home/host/kverif_runs/suite \
   --bench-root /home/host/kverif/benchmarks/kdebug_repair_benchmark \
   --models qwen3.6-35b \
+  --groups with_kdebug \
   --timeout 3600 \
   --evidence-mode collect
 ```
+
+For a tool-required campaign, keep `--groups with_kdebug`; this prevents any
+`without_kdebug` task from entering the queue. To skip GLM while running both
+other configured models, use `--models gpt-5.5,qwen3.6-35b`.
 
 The lower-level single-trial command below is for runner development only. It
 assumes collection and `validate-suite` have already succeeded:

@@ -9,6 +9,8 @@ import unittest
 from pathlib import Path
 
 from kdebug_evidence import collect_case, validate_case_evidence, validate_suite
+from api_model_runner import parse_kdebug_evidence_citation
+from prepare_kdebug_case import prepare_case
 
 try:
     import jsonschema
@@ -38,6 +40,8 @@ payload = {
 }
 if request.get('args', {}).get('copy_fail_log'):
     payload['data']['observed_failure_tail'] = pathlib.Path('fail/run.log').read_text(encoding='utf-8')
+if request.get('args', {}).get('no_diagnostic_fact'):
+    payload['data'] = {'status': 'not_found', 'count': 0, 'handles': []}
 print(json.dumps(payload))
 """,
             encoding="utf-8",
@@ -222,6 +226,20 @@ print(json.dumps(payload))
         self.assertFalse(result["valid"])
         self.assertTrue(any("duplicates fail log" in error for error in result["errors"]))
 
+    def test_trace_not_found_cannot_satisfy_diagnostic_gate(self):
+        case = self.make_case()
+        request_path = case / "evidence" / "requests" / "first_value.json"
+        request = json.loads(request_path.read_text(encoding="utf-8"))
+        request["action"] = "trace.driver"
+        request["args"]["no_diagnostic_fact"] = True
+        self.write_json(request_path, request)
+        result = collect_case(case, self.command())
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("no concrete diagnostic fact" in error for error in result["errors"]),
+            result["errors"],
+        )
+
     def test_suite_rejects_reused_collection_id(self):
         first_case = self.make_case(1)
         second_case = self.make_case(2)
@@ -306,6 +324,58 @@ print(json.dumps(payload))
         self.assertEqual(metrics["final_status"], "TOOL_EVIDENCE_MISSING")
         self.assertFalse(metrics["tool_evidence_present"])
         self.assertNotIn("API_KEY", proc.stderr)
+
+    def test_patch_requires_declared_concrete_kdebug_citation(self):
+        answer = (
+            "KDEBUG_EVIDENCE_USED: kdebug_value.json | "
+            "tb.dut.ready is driven by rtl/dut.sv line 42\n"
+            "```diff\n--- a/rtl/dut.sv\n+++ b/rtl/dut.sv\n@@ -1 +1 @@\n-a\n+b\n```\n"
+        )
+        citation = parse_kdebug_evidence_citation(answer, ["kdebug_value.json"])
+        self.assertEqual(
+            citation,
+            "kdebug_value.json | tb.dut.ready is driven by rtl/dut.sv line 42",
+        )
+
+    def test_patch_rejects_undeclared_or_generic_kdebug_citation(self):
+        undeclared = (
+            "KDEBUG_EVIDENCE_USED: copied.json | "
+            "tb.dut.ready is driven by rtl/dut.sv line 42"
+        )
+        generic = "KDEBUG_EVIDENCE_USED: kdebug_value.json | used kdebug evidence"
+        self.assertEqual(
+            parse_kdebug_evidence_citation(undeclared, ["kdebug_value.json"]),
+            "",
+        )
+        self.assertEqual(
+            parse_kdebug_evidence_citation(generic, ["kdebug_value.json"]),
+            "",
+        )
+
+    def test_prepare_case_replaces_legacy_evidence_with_trace_plan(self):
+        case = self.make_case()
+        legacy = case / "evidence" / "with_xdebug" / "old_static_note.txt"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("not real KDebug evidence\n", encoding="utf-8")
+        (case / "out" / "simv.daidir").mkdir(parents=True)
+
+        result = prepare_case(
+            case,
+            "tool-only-rerun",
+            "out/simv.daidir",
+            ["driver,tb.dut.ready,kdebug_driver.json"],
+        )
+
+        self.assertEqual(result["suite"], "tool-only-rerun")
+        self.assertFalse(legacy.exists())
+        meta = json.loads((case / "case_meta.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["suite"], "tool-only-rerun")
+        self.assertEqual(meta["tool_evidence"]["expected_files"], ["kdebug_driver.json"])
+        request = json.loads(
+            (case / "evidence" / "requests" / "driver.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(request["action"], "trace.driver")
+        self.assertEqual(request["target"]["daidir"], "out/simv.daidir")
 
 
 if __name__ == "__main__":

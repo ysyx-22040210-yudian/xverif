@@ -87,6 +87,29 @@ def read_json(path: Path) -> dict:
     return value
 
 
+def diagnostic_response_has_fact(action: str, response: dict) -> bool:
+    data = response.get("data")
+    if action in {"trace.driver", "trace.load", "trace.query"}:
+        if not isinstance(data, dict) or data.get("status") != "ok":
+            return False
+        try:
+            return int(data.get("count") or 0) > 0
+        except (TypeError, ValueError):
+            return False
+    if action in {"trace.active_driver", "trace.active_driver_chain"}:
+        return isinstance(data, dict) and data.get("status") == "ok" and bool(
+            data.get("active_time") or data.get("active_call_rc") or data.get("dump_rc")
+        )
+    if action in {"signal.resolve", "signal.canonicalize"}:
+        return isinstance(data, dict) and bool(
+            data.get("canonical_signal") or data.get("canonical") or data.get("rtl_path")
+        )
+    if data not in (None, {}, []):
+        return True
+    findings = response.get("findings")
+    return isinstance(findings, list) and bool(findings)
+
+
 def safe_relative_path(value: str, label: str) -> Path:
     path = Path(str(value))
     if path.is_absolute() or not path.parts or ".." in path.parts:
@@ -572,7 +595,13 @@ def collect_case(case_dir: Path, command_prefix: list[str], force: bool = False,
         "successful_diagnostic_invocations": sum(
             1
             for item in manifest["invocations"]
-            if item["diagnostic"] and item["exit_code"] == 0 and item["response_ok"]
+            if item["diagnostic"]
+            and item["exit_code"] == 0
+            and item["response_ok"]
+            and diagnostic_response_has_fact(
+                str(item.get("action") or ""),
+                read_json(case_dir / item["response"]["path"]),
+            )
         ),
     }
     manifest_path = evidence_dir / MANIFEST_NAME
@@ -867,6 +896,8 @@ def _validate_case_evidence(case_dir: Path | str, verify_inputs: bool = True) ->
             ratio, reason = response_log_similarity(response, fail_texts)
             if ratio > max_similarity or reason == "response contains a long string copied from a fail log":
                 errors.append(f"{label} evidence duplicates fail log: {reason}; similarity={ratio:.3f}")
+            if diagnostic and action not in CONTROL_ACTIONS and not diagnostic_response_has_fact(action, response):
+                errors.append(f"{label} KDebug response contains no concrete diagnostic fact")
         if raw_path:
             try:
                 raw_response = parse_json_response(raw_path.read_bytes())
@@ -916,7 +947,11 @@ def _validate_case_evidence(case_dir: Path | str, verify_inputs: bool = True) ->
 
         if exit_code == 0 and response and response.get("ok") is True:
             successful += 1
-            if diagnostic and action not in CONTROL_ACTIONS:
+            if (
+                diagnostic
+                and action not in CONTROL_ACTIONS
+                and diagnostic_response_has_fact(action, response)
+            ):
                 diagnostic_successful += 1
 
     if seen_ids != set(plan_entries):

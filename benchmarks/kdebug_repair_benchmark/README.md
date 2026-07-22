@@ -285,6 +285,7 @@ scripts/run_repair_trial.sh
 scripts/run_matrix.sh
 scripts/api_model_runner.py
 scripts/kdebug_evidence.py
+scripts/prepare_kdebug_case.py
 scripts/test_kdebug_evidence.py
 scripts/collect_results.py
 scripts/capture_terminal_screenshots.py
@@ -318,6 +319,9 @@ The API runner:
 - enforces required repair class after judge pass;
 - validates KDebug evidence before API-key lookup and records
   `TOOL_EVIDENCE_MISSING` or `TOOL_EVIDENCE_INVALID` before any model call;
+- rejects a proposed `with_kdebug` patch unless the public response includes
+  `KDEBUG_EVIDENCE_USED: <declared file> | <specific fact>` and the named file
+  belongs to the current validated manifest;
 - returns `RETRY_LATER` with exit code 75 for API rate limits or temporary
   throttling; `run_matrix.sh` keeps the trial workdir, pauses that model for
   1800 seconds by default, continues other models, then retries the same
@@ -328,6 +332,12 @@ The API runner:
 - reports runner crashes, missing metrics, and non-recoverable environment
   issues as `INFRA_ERROR`, which makes the trial invalid rather than
   model-failed.
+
+`scripts/prepare_kdebug_case.py` migrates an already materialized failing case
+to the manifest-gated format. It removes legacy evidence in the destination
+copy, writes a case-local plan and one or more `trace.driver` requests, and
+updates `case_meta.json`. Run it only after the failing logs and a matching
+`-kdb` daidir exist; it does not fabricate either input.
 
 ## Example Run
 
@@ -346,9 +356,18 @@ export KDEBUG_REPORT_PYTHON=/bin/python3
 bash /home/host/kverif/benchmarks/kdebug_repair_benchmark/scripts/run_matrix.sh \
   --suite-root /home/host/kverif_runs/<suite> \
   --bench-root /home/host/kverif/benchmarks/kdebug_repair_benchmark \
+  --models gpt-5.5,qwen3.6-35b \
+  --groups with_kdebug \
   --timeout 3600 \
   --evidence-mode collect
 ```
+
+`--groups with_kdebug` runs only the tool-assisted group. This is the required
+mode when every repair must use KDebug. The default remains
+`with_kdebug,without_kdebug` for controlled comparison campaigns;
+`KDEBUG_GROUPS` provides the equivalent environment setting. The matrix log
+prints the resolved model and group lists before collection, so exclusions such
+as `--models gpt-5.5,qwen3.6-35b` are machine-auditable.
 
 只验证证据、不调用模型时：
 

@@ -714,6 +714,27 @@ def extract_diff_blocks(text):
     return ""
 
 
+def parse_kdebug_evidence_citation(answer, evidence_files):
+    """Return a normalized, model-visible evidence citation or an empty string."""
+    declared = {normalize_rel(path) for path in evidence_files if normalize_rel(path)}
+    pattern = re.compile(
+        r"(?im)^\s*KDEBUG_EVIDENCE_USED:\s*([^|\r\n]+?)\s*\|\s*(\S.*)\s*$"
+    )
+    for match in pattern.finditer(str(answer)):
+        cited = normalize_rel(match.group(1))
+        fact = match.group(2).strip()
+        if cited not in declared:
+            continue
+        if len(fact) < 12 or fact.lower() in {
+            "used kdebug evidence",
+            "see kdebug evidence",
+            "validated kdebug evidence",
+        }:
+            continue
+        return f"{cited} | {fact}"
+    return ""
+
+
 def rewrite_patch_token(token, repair, scope, side):
     norm = normalize_rel(token)
     if norm == "/dev/null":
@@ -1198,6 +1219,8 @@ def classify_failure(status, build_rc, run_rc, judge_rc, rule_violation):
             return "infrastructure_error"
         if "invalid_patch" in rule_violation:
             return "invalid_patch"
+        if "kdebug_evidence_citation" in rule_violation:
+            return "evidence_not_used"
         if "no_patch" in rule_violation:
             return "no_patch"
     if build_rc not in (0, "0"):
@@ -1224,9 +1247,10 @@ def make_metrics(
     build_sec=0.0, run_sec=0.0, judge_sec=0.0, iterations=0,
     final_build_rc=1, final_run_rc=1, final_judge_rc=1, final_status="TIMEOUT",
     rule_violation="", pass_marker="", evidence_files=None, modified=None,
-    notes="", evidence_validation=None,
+    notes="", evidence_validation=None, evidence_citations=None,
 ):
     evidence_files = evidence_files or []
+    evidence_citations = evidence_citations or []
     modified = modified or []
     rtl_files = sorted(rel for rel in modified if is_rtl_rel(rel))
     env_files = sorted(rel for rel in modified if is_env_rel(rel))
@@ -1302,7 +1326,9 @@ def make_metrics(
         "pass_marker": pass_marker,
         "evidence_used": (
             (
-                "validated kdebug manifest evidence + logs + repair-scope files"
+                "; ".join(evidence_citations)
+                if evidence_valid and evidence_citations
+                else "validated kdebug evidence available; no patch citation accepted"
                 if evidence_valid
                 else "no valid kdebug evidence; model was not called"
             )
@@ -1330,6 +1356,8 @@ Follow the rules exactly:
 - Do not modify protected files such as case_meta.json, fail logs, evidence, agent_logs, or scripts/judge.sh.
 - A case succeeds only after {req_text}, rebuild, rerun of the original failing workload, and final judge pass.
 - Return exactly one unified diff in a fenced ```diff block when you want to edit.
+- In with_kdebug, every proposed diff must be preceded by exactly one line:
+  KDEBUG_EVIDENCE_USED: <declared response filename> | <specific observed signal/driver/time/command fact>
 """
 
 
@@ -1456,6 +1484,7 @@ def main():
     located = False
     model_response_count = 0
     consecutive_api_errors = 0
+    evidence_citations = []
 
     build_cmd = meta.get("build_command") or "scripts/build.sh"
     run_cmd_text = meta.get("fail_command") or meta.get("run_command") or "scripts/run.sh"
@@ -1492,6 +1521,8 @@ Task for iteration {iterations + 1}:
 1. State the likely root cause briefly.
 2. If you need another allowed file, name it exactly.
 3. If ready to repair, return exactly one unified diff in a fenced ```diff block.
+4. For with_kdebug, put this line immediately before the diff:
+   KDEBUG_EVIDENCE_USED: <declared response filename> | <specific observed fact used by this patch>
 
 The harness will apply only allowed-scope diffs, then run:
 - {build_cmd}
@@ -1583,6 +1614,23 @@ Do not include shell commands unless they are explanatory.
             iterations += 1
             continue
 
+        pending_evidence_citation = ""
+        if args.group == "with_kdebug":
+            pending_evidence_citation = parse_kdebug_evidence_citation(answer, evidence_files)
+            if not pending_evidence_citation:
+                rule_violation = "kdebug_evidence_citation_missing_or_invalid"
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "The patch was not applied because it did not cite one validated, "
+                        "case-local KDebug response with a concrete fact. Before the diff, add "
+                        "exactly: KDEBUG_EVIDENCE_USED: <filename> | <specific observed fact>. "
+                        "The filename must be one of: " + ", ".join(evidence_files)
+                    ),
+                })
+                iterations += 1
+                continue
+
         edit_start = time.time()
         try:
             apply_rc, patch_file = apply_patch_with_git(diff_text, repair, scope, command_log)
@@ -1610,7 +1658,11 @@ Do not include shell commands unless they are explanatory.
             })
             iterations += 1
             continue
+        if pending_evidence_citation and pending_evidence_citation not in evidence_citations:
+            evidence_citations.append(pending_evidence_citation)
         if rule_violation.startswith("invalid_patch_format"):
+            rule_violation = ""
+        if rule_violation.startswith("kdebug_evidence_citation"):
             rule_violation = ""
 
         iterations += 1
@@ -1693,6 +1745,7 @@ Do not include shell commands unless they are explanatory.
         pass_marker=pass_marker,
         evidence_files=evidence_files,
         evidence_validation=evidence_validation,
+        evidence_citations=evidence_citations,
         modified=modified,
         notes=f"api_model_name={api_model_name}; api_key_env={api_key_env}; transcript={transcript.name}; command_log={command_log.name}",
     )

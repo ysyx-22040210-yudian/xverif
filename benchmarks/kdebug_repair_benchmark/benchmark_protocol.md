@@ -228,16 +228,21 @@ and `simv` artifacts must be private copies, not shared hardlinks.
    `case_meta.json` fields that can reveal the answer, such as detailed
    `bug_class`, private evidence expectations, and operator notes, must not be
    included in the model prompt.
-8. The model proposes an allowed-scope unified diff.
-9. The harness applies the diff, then runs:
+8. For `with_kdebug`, every proposed diff must cite one plan-declared response
+   and a concrete observed fact using
+   `KDEBUG_EVIDENCE_USED: <file> | <fact>`. The harness rejects uncited,
+   undeclared, or generic citations before applying the patch.
+9. The model proposes an allowed-scope unified diff.
+10. The harness applies the diff, then runs:
    - `scripts/build.sh`
    - `scripts/run.sh`
    - `scripts/judge.sh`
-10. If judge fails and time remains, the model may iterate.
-11. Stop when judge passes or timeout expires. If the workload passes but the
+11. If judge fails and time remains, the model may iterate.
+12. Stop when judge passes or timeout expires. If the workload passes but the
     required RTL/environment repair-scope rule is not satisfied, feed that rule
     violation back to the model and continue repairing within the same timeout.
-12. Record metrics, manifest identity, and terminal screenshot evidence.
+13. Record metrics, manifest identity, accepted evidence citations, and
+    terminal screenshot evidence.
 
 ## Judgement
 

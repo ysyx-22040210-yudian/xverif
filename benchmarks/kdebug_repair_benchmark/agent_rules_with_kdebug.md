@@ -40,6 +40,19 @@ When using kdebug, explain the concrete evidence you relied on, for example:
 - run/build command audit for environment bugs
 - relation between tool evidence and the patch
 
+Every response that proposes a diff must include exactly one machine-readable
+line immediately before the fenced diff:
+
+```text
+KDEBUG_EVIDENCE_USED: <plan-declared response filename> | <specific observed fact used by this patch>
+```
+
+The filename must be one of the validated response files shown in the current
+case context. The fact must name a concrete signal, driver, source location,
+time, transaction, or launch fact. The runner rejects the patch before applying
+it when this line is missing, names an undeclared file, or contains only a
+generic statement such as "used KDebug evidence".
+
 Do not treat the existence of a valid manifest as proof that KDebug helped.
 Name the exact case-local signal, time, transaction, driver, or command fact
 that affected the diagnosis so the post-run audit can compare it with the
