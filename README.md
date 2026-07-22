@@ -27,6 +27,7 @@
 - [典型使用流程](#典型使用流程)
 - [测试与验证](#测试与验证)
 - [常见问题](#常见问题)
+- [Benchmark 证据门禁](#benchmark-证据门禁)
 - [Benchmark 模型修复分析](doc/benchmark_model_case_analysis.md)
 - [Benchmark KDebug 工具调用审计](doc/benchmark_kdebug_evidence_audit.md)
 - [文档入口](#文档入口)
@@ -109,12 +110,13 @@ kverif/
   regression/            # 跨工具回归脚本
   skill/                 # Agent 使用说明和工具 reference
   doc/                   # 通用文档、静态配图和格式说明
+  benchmarks/kdebug_repair_benchmark/ # XiangShan repair benchmark 与 KDebug 证据门禁
   benchmark_results/     # 已纳入版本管理的 benchmark 结果快照
 ```
 
 用户通常不需要直接进入每个工具的内部目录。推荐先把 `tools/` 加入 `PATH`，之后直接使用 `kdebug`、`kbit`、`kentry`、`kloc`、`kberif`、`ksva`、`kcov` 和 `keda-runner`。
 
-当前工作区里还可能出现一些本地实验或缓存目录，例如 `benchmarks/`、`benchmark_artifacts/`、`reports/`、`tmp/` 和 `.pytest_cache/`。这些目录用于实验脚本、压测中间产物、报告草稿、临时文件或测试缓存，通常不作为工具源码的一部分提交，提交前需要按任务要求单独挑选结果产物。
+`benchmarks/kdebug_repair_benchmark/` 是受版本管理的 benchmark 协议、runner、证据采集器和模板。实际 suite、repair workdir、FSDB、截图与报告仍属于运行产物，不应整目录混入源码提交。当前工作区还可能出现 `benchmark_artifacts/`、`reports/`、`tmp/` 和 `.pytest_cache/` 等本地缓存或草稿，提交前需要按任务要求单独挑选。
 
 `benchmark_results/` 中已提交报告的工具组、命令、目录和文件名均按当前 `kverif/kdebug` 品牌展示。报告内嵌截图保留采集时的原始像素，属于更名前同一测试版本的历史证据；截图文字不代表当前命令名，实际调用统一使用 `kdebug` 等 `k*` 命令。
 
@@ -137,11 +139,40 @@ kverif/
 | `skill/` | 面向 Codex/Agent 的工具 skill 与引用文档 | Agent 场景常用 |
 | `doc/` | 通用文档、静态 SVG 截图、语法说明和说明性资料 | 是 |
 | `benchmark_results/` | 已整理并提交的 benchmark 结果快照 | 查看结果时使用 |
-| `benchmarks/` | 本地 benchmark、repair loop、XiangShan/UVM 实验脚本或运行目录 | 实验任务按需 |
+| `benchmarks/kdebug_repair_benchmark/` | repair benchmark 协议、matrix runner、独立 KDebug 证据采集/manifest 校验、结果和报告生成 | Benchmark 开发者常用 |
+| 其他 `benchmarks/` 子目录 | 本地实验脚本或运行目录 | 实验任务按需 |
 | `benchmark_artifacts/` | 本地 benchmark 中间产物、截图、归档包或临时复制结果 | 通常不直接使用 |
 | `reports/` | 本地评测报告、Word/Markdown 草稿或导出文件 | 查看/整理报告时使用 |
 | `tmp/` | 临时文件、调试 scratch、一次性生成物 | 通常不提交 |
 | `.pytest_cache/` | pytest 自动生成的本地测试缓存 | 不需要手动使用 |
+
+## Benchmark 证据门禁
+
+下一轮 benchmark 不再把“`evidence/` 中有非空文件”视为执行过 KDebug。每个 case 必须在注错和
+原始失败运行完成后，独立执行真实 KDebug 并生成 `kdebug-evidence-manifest.v1`。runner 会在
+模型 API 调用前复算 case、fail log、request、FSDB/daidir、KDebug runtime、raw stdout、
+parsed response、时间和 collection UUID；任一检查失败都会停止调度。
+
+```bash
+/usr/local/bin/python3.8 /home/host/kverif/benchmarks/kdebug_repair_benchmark/scripts/kdebug_evidence.py \
+  collect \
+  --case-dir /home/host/kverif_runs/xiangshan_next/case_001 \
+  --kdebug /home/host/kverif/tools/kdebug
+
+/usr/local/bin/python3.8 /home/host/kverif/benchmarks/kdebug_repair_benchmark/scripts/kdebug_evidence.py \
+  validate-suite \
+  --suite-root /home/host/kverif_runs/xiangshan_next
+```
+
+在当前 VM 上运行完整 matrix 时设置
+`KDEBUG_PYTHON=/usr/local/bin/python3.8`；`host` 的系统 `python3` 可能仍指向 Python 3.6。
+报告脚本所需 `python-docx/Pillow` 位于系统 Python，因此同时设置
+`KDEBUG_REPORT_PYTHON=/bin/python3`。
+
+缺失证据记为 `TOOL_EVIDENCE_MISSING`；manifest、hash、输入、真实调用、stdout/response
+自洽性、freshness 或跨 case 唯一性失败记为 `TOOL_EVIDENCE_INVALID`。两者都不算模型失败，
+也不能用于声称 KDebug 有效。完整目录、JSON plan/request、字段和普通用户 `host` 命令见
+[`benchmark_evidence_gate.md`](benchmarks/kdebug_repair_benchmark/benchmark_evidence_gate.md)。
 
 ## 工具矩阵
 
@@ -2080,6 +2111,8 @@ kdebug actions --json
 - [`doc/benchmark_fault_injection_audit.md`](doc/benchmark_fault_injection_audit.md): XiangShan benchmark 16 个 case 的实际注错前后代码及公开标签偏差审计
 - [`doc/benchmark_kdebug_evidence_audit.md`](doc/benchmark_kdebug_evidence_audit.md): 审计 16 个 case 是否真实调用 KDebug、evidence 来源及工具作用；结论是历史名义工具组未执行 KDebug
 - [`doc/benchmark_model_case_analysis.md`](doc/benchmark_model_case_analysis.md): GPT、Qwen、GLM 在 16 个 XiangShan case 中的外显诊断、补丁轨迹、终态和误判原因
+- [`benchmarks/kdebug_repair_benchmark/README.md`](benchmarks/kdebug_repair_benchmark/README.md): repair benchmark 目录、运行流程和结果说明
+- [`benchmarks/kdebug_repair_benchmark/benchmark_evidence_gate.md`](benchmarks/kdebug_repair_benchmark/benchmark_evidence_gate.md): 下一轮逐 case 独立 KDebug 采集、manifest 校验与 VM 命令
 - [`kverif_mcp/README.md`](kverif_mcp/README.md): MCP server 配置和工具说明
 - [`keda_runner/README.md`](keda_runner/README.md): EDA runner
 - [`skill/SKILL.md`](skill/SKILL.md): 面向 Agent 的使用入口

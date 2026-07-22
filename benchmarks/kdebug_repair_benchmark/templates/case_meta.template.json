@@ -1,0 +1,92 @@
+{
+  "suite": "xiangshan_repair_benchmark_v2",
+  "case_id": "case_001",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "control",
+  "bug_domain": "rtl",
+  "bug_class": "anonymous_control_failure",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "public_description": "Anonymous XiangShan repair benchmark case. The public metadata intentionally does not reveal the injected location.",
+  "fail_workload_or_case": "flash_recursion_test.bin",
+  "fail_command": "scripts/run.sh",
+  "build_command": "scripts/build.sh",
+  "judge_command": "scripts/judge.sh",
+  "timeout_sec": 3600,
+  "pass_markers": [
+    "HIT GOOD TRAP",
+    "DIFFTEST WORKLOAD DONE"
+  ],
+  "public_design_refs": [
+    "design_refs/common/rtl_debug_common.md",
+    "design_refs/fullchip/control/control_fullchip_design.md"
+  ],
+  "repair_scope": {
+    "allowed_roots": [
+      "rtl"
+    ],
+    "allowed_files": [
+      "Makefile",
+      "filelist.f",
+      "vcs_args.f",
+      "run_args.txt"
+    ],
+    "requires_rtl_change": true,
+    "requires_env_change": false,
+    "forbidden_roots": [
+      "fail",
+      "evidence",
+      "agent_logs"
+    ],
+    "forbidden_files": [
+      "answer_key_private.json"
+    ],
+    "notes": "For env cases use allowed_roots such as scripts, env, config, filelists, tb, cases, plus allowed_files when needed."
+  },
+  "tool_evidence": {
+    "required_for_with_kdebug": true,
+    "plan": "evidence/kdebug_plan.json",
+    "expected_files": [
+      "kdebug_failure_value.json"
+    ],
+    "minimum_nonempty_files": 1,
+    "minimum_successful_invocations": 1,
+    "minimum_diagnostic_invocations": 1,
+    "max_fail_log_similarity": 0.8,
+    "notes": "Replace the template request signal/time/input with this case's real values. with_kdebug is valid only after kdebug_evidence.py verifies the case-specific manifest, inputs, requests, raw stdout, parsed responses, hashes, timestamps, and unique collection id."
+  },
+  "allowed_evidence": {
+    "with_kdebug": [
+      "case_meta.json",
+      "design_refs/",
+      "docs/",
+      "design_docs/",
+      "spec/",
+      "fail/run.log",
+      "fail/run.rc",
+      "rtl/",
+      "scripts/",
+      "env/",
+      "config/",
+      "evidence/with_kdebug/"
+    ],
+    "without_kdebug": [
+      "case_meta.json",
+      "design_refs/",
+      "docs/",
+      "design_docs/",
+      "spec/",
+      "fail/run.log",
+      "fail/run.rc",
+      "rtl/",
+      "scripts/",
+      "env/",
+      "config/"
+    ]
+  },
+  "private": {
+    "answer_key_location": "Do not place this in model-visible workdirs."
+  }
+}

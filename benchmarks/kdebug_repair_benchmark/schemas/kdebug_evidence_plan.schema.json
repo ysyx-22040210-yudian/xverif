@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kverif.dev/schemas/kdebug-evidence-plan.v1.json",
+  "title": "KDebug benchmark evidence collection plan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "case_id",
+    "minimum_successful_invocations",
+    "minimum_diagnostic_invocations",
+    "max_fail_log_similarity",
+    "requests"
+  ],
+  "properties": {
+    "schema_version": {"const": "kdebug-evidence-plan.v1"},
+    "case_id": {"type": "string", "pattern": "^case_[0-9]{3}$"},
+    "request_timeout_sec": {"type": "integer", "minimum": 1},
+    "minimum_successful_invocations": {"type": "integer", "minimum": 1},
+    "minimum_diagnostic_invocations": {"type": "integer", "minimum": 1},
+    "max_fail_log_similarity": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+    "requests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "request", "output", "diagnostic"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "request": {"type": "string"},
+          "output": {"type": "string"},
+          "diagnostic": {"const": true},
+          "timeout_sec": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

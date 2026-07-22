@@ -1,0 +1,53 @@
+field,type,required,description
+suite,string,yes,Benchmark suite name
+model_id,string,yes,gpt-5.5 glm-4.7 or qwen3.6-35b
+case_id,string,yes,Anonymous case id
+group,string,yes,with_kdebug or without_kdebug
+benchmark_layer,string,yes,generated_wrapper real_rtl_ut real_rtl_it fullchip
+layer,string,yes,generated_uvm fullchip or future standalone harness
+level,string,yes,UT IT or SOC
+subsystem,string,yes,AXI memory peripheral pipeline control LSU cache MMU branch difftest build_cache etc
+bug_domain,string,yes,rtl env or mixed
+bug_class,string,yes,Anonymous bug category
+env_fault_class,string,no,Environment bug class for env or mixed cases
+target_flow,string,yes,uvm_generated fullchip_vcs or future standalone harness
+repair_scope,string,yes,Semicolon-separated allowed repair scope roots such as rtl;env;scripts
+requires_rtl_change,bool,yes,true if PASS requires at least one RTL file change
+requires_env_change,bool,yes,true if PASS requires at least one environment/script/config change
+tool_evidence_required,bool,yes,true if with_kdebug must have actual tool evidence
+tool_evidence_present,bool,yes,true if all plan-declared response files are present and nonempty; validity is recorded separately
+tool_evidence_valid,bool,yes,true only when the case-specific KDebug manifest and all provenance checks pass
+tool_evidence_files,string,no,Semicolon-separated evidence files used or found
+tool_evidence_manifest,string,no,Case-relative path to the validated manifest.json
+tool_evidence_collection_id,string,no,Unique collection UUID; reuse across cases is invalid
+tool_evidence_validation,string,yes,valid not_required or the manifest validation errors
+public_design_refs,string,no,Semicolon-separated read-only RTL design references supplied to both groups
+timeout_sec,int,yes,Hard timeout for this trial
+start_time,string,yes,Trial start timestamp
+end_time,string,yes,Trial end timestamp
+elapsed_sec,float,yes,Total wall-clock seconds
+locate_sec,float,yes,Time spent before first concrete root-cause claim
+edit_sec,float,yes,Time spent editing files
+build_sec,float,yes,Total build time across iterations
+run_sec,float,yes,Total simulation/run time across iterations
+judge_sec,float,yes,Total judge time across iterations
+iterations,int,yes,Number of edit-build-run iterations
+token_input,int,no,Actual or estimated input tokens
+token_output,int,no,Actual or estimated output tokens
+token_total,int,no,Actual or estimated total tokens
+token_is_estimate,bool,yes,true if platform did not expose actual token count
+rtl_changed,bool,yes,true if any RTL file changed
+env_changed,bool,yes,true if any script/config/env/build harness file changed
+modified_files,string,yes,Semicolon-separated repair-local modified files
+modified_rtl_files,string,no,Semicolon-separated modified RTL files
+modified_env_files,string,no,Semicolon-separated modified environment files
+final_build_rc,int,yes,Final build return code
+final_run_rc,int,yes,Final run return code
+final_judge_rc,int,yes,Final judge return code
+final_status,string,yes,PASS TIMEOUT TOOL_EVIDENCE_MISSING TOOL_EVIDENCE_INVALID RULE_VIOLATION INFRA_ERROR or RETRY_LATER
+repair_class,string,no,rtl_only env_only mixed no_effective_patch
+failure_class,string,no,api_rate_limited infrastructure_error invalid_patch build_fail run_fail judge_fail timeout evidence_missing evidence_invalid rule_violation no_patch
+pass_marker,string,yes,Observed pass marker or failure summary
+evidence_used,string,yes,Allowed evidence summary
+rule_violation,string,no,Violation details if any
+notes,string,no,Extra notes

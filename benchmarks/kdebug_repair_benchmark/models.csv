@@ -1,0 +1,4 @@
+model_id,runner,provider,base_url_env,api_key_env,api_model_name,notes
+gpt-5.5,openai_compatible_api,gpt55_api,GPT55_BASE_URL,GPT55_API_KEY,gpt-5.5,"OpenAI-compatible API; default base URL is http://165.154.147.120:8080/v1"
+glm-4.7,openai_compatible_api,xfyun_maas_coding,MAAS_BASE_URL,MAAS_API_KEY,xopglmv47flash,"OpenAI-compatible API; default base URL is https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
+qwen3.6-35b,openai_compatible_api,xfyun_maas_coding,MAAS_BASE_URL,MAAS_API_KEY,xopqwen36v35b,"OpenAI-compatible API; default base URL is https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"

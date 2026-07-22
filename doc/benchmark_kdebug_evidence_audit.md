@@ -342,42 +342,38 @@ runner 提示中还明确写有 `Do not include shell commands unless they are e
 成绩可以描述“该 prompt 变体的结果”，但不能测量 KDebug 的真实效应。尤其不能用
 `case_002`、`005`、`006` 的单侧 PASS 直接宣称工具有效。
 
-## 7. 下一轮 benchmark 的最低合格标准
+## 7. 下一轮 benchmark 的最低合格标准（已实现）
 
-每个 case 应先由独立采集步骤真实执行 KDebug，并生成机器可校验的 manifest：
+上述审计建议已经落地为 runner 的强制前置门禁，规范和命令见：
 
-```json
-{
-  "case_id": "case_006",
-  "tool": "kdebug",
-  "tool_version": "<git commit or --version>",
-  "command_argv": ["kdebug", "actions", "--json", "request.json"],
-  "action": "<actual action>",
-  "input": {
-    "fsdb": "<absolute path>",
-    "fsdb_sha256": "<sha256>",
-    "elab": "<absolute path>",
-    "request_sha256": "<sha256>"
-  },
-  "start_time": "<ISO-8601>",
-  "end_time": "<ISO-8601>",
-  "exit_code": 0,
-  "stdout_sha256": "<sha256>",
-  "stderr_sha256": "<sha256>"
-}
-```
+- [`benchmarks/kdebug_repair_benchmark/benchmark_evidence_gate.md`](../benchmarks/kdebug_repair_benchmark/benchmark_evidence_gate.md)
+- [`kdebug_evidence.py`](../benchmarks/kdebug_repair_benchmark/scripts/kdebug_evidence.py)
+- [`kdebug-evidence-manifest.v1` Schema](../benchmarks/kdebug_repair_benchmark/schemas/kdebug_evidence_manifest.schema.json)
 
-同时应满足：
+`run_matrix.sh` 现在先逐 case 调用 collector，再执行 suite-wide validation；全部通过后才会
+调度模型。collector 保存真实 command argv、case 来源、KDebug wrapper/Tcl runtime、Git
+commit、FSDB 或 daidir 全量指纹、source/canonical request、raw stdout、stderr、parsed
+response、时间戳和独立 collection UUID。
 
-1. evidence 采集在 case 注错和失败运行之后执行，不能从基础 case 继承。
-2. 每个 case 使用当前构建、当前 workload 和当前 FSDB/KDB。
-3. 工具组和基线组共享 `fail/run.log`，工具组的增量必须是可机器比对的独有字段。
-4. evidence 不得只是 shared log 的子串；runner 应做重复率检测并拒绝。
-5. mixed case 必须分别覆盖 RTL 动态链路和环境命令审计。
-6. 模型 prompt 应记录 evidence 文件哈希；报告只总结公开回复，不披露隐藏推理。
-7. 评分时分别统计“工具调用成功”“独有证据被引用”“补丁命中根因”“最终 PASS”。
-8. 缺少 manifest、退出码非 0、输入不匹配或 evidence 重复时，标记
-   `TOOL_EVIDENCE_INVALID`，不能计入工具组。
+validator 会重新计算这些信息，并额外检查：
+
+1. evidence 采集晚于当前 case metadata、plan 和失败日志，不能从基础 case 继承。
+2. canonical request 能由当前 case 的 source request 重建，request/response action 和
+   `request_id` 一致。
+3. parsed response 与真实 raw stdout 中的 KDebug response 完全一致。
+4. KDebug 返回 `ok=true`、统一后的 `tool.name=kdebug` 和版本，且 diagnostic action 不是
+   `actions`、`schema`、`server.ping` 等控制操作。
+5. response 不是 shared fail log 的长子串或高相似度包装。
+6. manifest summary 和 reported versions 可由 invocation 重新计算。
+7. `evidence/with_kdebug/` 没有 plan 未声明的额外文件。
+8. suite 内没有跨 case 复用 collection UUID。
+
+缺少声明文件时标记 `TOOL_EVIDENCE_MISSING`；manifest、退出码、输入、工具 runtime、hash、
+freshness、raw response 自洽性或唯一性失败时标记 `TOOL_EVIDENCE_INVALID`。校验发生在 API
+key 查询和模型调用之前，两种状态都不计为模型失败或有效工具组结果。
+
+工具调用有效仍不等于工具对修复有贡献。最终逐 case 报告仍应分别审计“manifest 有效”“模型
+公开回复引用了哪个独有事实”“补丁是否命中该事实指向的根因”“judge 是否 PASS”。
 
 ## 8. 可复核命令
 

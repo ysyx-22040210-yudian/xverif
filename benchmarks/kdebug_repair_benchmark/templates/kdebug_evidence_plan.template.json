@@ -1,0 +1,17 @@
+{
+  "schema_version": "kdebug-evidence-plan.v1",
+  "case_id": "case_001",
+  "request_timeout_sec": 600,
+  "minimum_successful_invocations": 1,
+  "minimum_diagnostic_invocations": 1,
+  "max_fail_log_similarity": 0.8,
+  "requests": [
+    {
+      "id": "failure_value",
+      "request": "evidence/requests/failure_value.json",
+      "output": "kdebug_failure_value.json",
+      "diagnostic": true,
+      "timeout_sec": 600
+    }
+  ]
+}

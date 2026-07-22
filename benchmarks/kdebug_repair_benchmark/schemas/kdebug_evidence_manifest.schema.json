@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kverif.dev/schemas/kdebug-evidence-manifest.v1.json",
+  "title": "KDebug benchmark evidence manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "collection_id",
+    "case_id",
+    "case_root",
+    "started_at",
+    "started_at_epoch_ns",
+    "ended_at",
+    "ended_at_epoch_ns",
+    "collector",
+    "policy",
+    "case_meta",
+    "plan",
+    "fail_logs",
+    "tool",
+    "invocations",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {"const": "kdebug-evidence-manifest.v1"},
+    "collection_id": {"type": "string", "format": "uuid"},
+    "case_id": {"type": "string", "pattern": "^case_[0-9]{3}$"},
+    "case_root": {"type": "string", "minLength": 1},
+    "started_at": {"type": "string", "format": "date-time"},
+    "started_at_epoch_ns": {"type": "integer", "minimum": 1},
+    "ended_at": {"type": "string", "format": "date-time"},
+    "ended_at_epoch_ns": {"type": "integer", "minimum": 1},
+    "collector": {
+      "type": "object",
+      "required": ["name", "version", "sha256"],
+      "properties": {
+        "name": {"const": "kdebug_evidence.py"},
+        "version": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "minimum_successful_invocations",
+        "minimum_diagnostic_invocations",
+        "max_fail_log_similarity",
+        "require_direct_target"
+      ],
+      "properties": {
+        "minimum_successful_invocations": {"type": "integer", "minimum": 1},
+        "minimum_diagnostic_invocations": {"type": "integer", "minimum": 1},
+        "max_fail_log_similarity": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "require_direct_target": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "case_meta": {"$ref": "#/$defs/artifact"},
+    "plan": {"$ref": "#/$defs/artifact"},
+    "fail_logs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "tool": {"$ref": "#/$defs/tool"},
+    "invocations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/invocation"}
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "invocation_count",
+        "successful_invocations",
+        "successful_diagnostic_invocations"
+      ],
+      "properties": {
+        "invocation_count": {"type": "integer", "minimum": 1},
+        "successful_invocations": {"type": "integer", "minimum": 0},
+        "successful_diagnostic_invocations": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["path", "size", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "size": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "command_artifact": {
+      "type": "object",
+      "required": ["argv_index", "role", "path", "size", "sha256"],
+      "properties": {
+        "argv_index": {"type": ["integer", "null"], "minimum": 0},
+        "role": {"enum": ["command", "runtime"]},
+        "path": {"type": "string", "minLength": 1},
+        "size": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "repository": {
+      "type": "object",
+      "required": ["root", "commit"],
+      "properties": {
+        "root": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "pattern": "^[0-9a-fA-F]{40,64}$"}
+      },
+      "additionalProperties": false
+    },
+    "tool": {
+      "type": "object",
+      "required": ["name", "command_prefix", "command_artifacts", "repository", "reported_versions"],
+      "properties": {
+        "name": {"const": "kdebug"},
+        "command_prefix": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "command_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/command_artifact"}
+        },
+        "repository": {
+          "oneOf": [
+            {"$ref": "#/$defs/repository"},
+            {"type": "null"}
+          ]
+        },
+        "reported_versions": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "input": {
+      "type": "object",
+      "required": ["kind", "path", "size", "sha256", "target_field"],
+      "properties": {
+        "kind": {"enum": ["file", "directory"]},
+        "path": {"type": "string", "minLength": 1},
+        "size": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "target_field": {"enum": ["fsdb", "daidir"]},
+        "file_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "invocation": {
+      "type": "object",
+      "required": [
+        "id",
+        "diagnostic",
+        "action",
+        "command_argv",
+        "started_at",
+        "started_at_epoch_ns",
+        "ended_at",
+        "ended_at_epoch_ns",
+        "duration_sec",
+        "timeout_sec",
+        "timed_out",
+        "exit_code",
+        "request",
+        "source_request",
+        "raw_stdout",
+        "stderr",
+        "inputs",
+        "response",
+        "response_ok",
+        "parse_error"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "diagnostic": {"type": "boolean"},
+        "action": {"type": "string", "minLength": 1},
+        "command_argv": {
+          "type": "array",
+          "minItems": 3,
+          "items": {"type": "string"}
+        },
+        "started_at": {"type": "string", "format": "date-time"},
+        "started_at_epoch_ns": {"type": "integer", "minimum": 1},
+        "ended_at": {"type": "string", "format": "date-time"},
+        "ended_at_epoch_ns": {"type": "integer", "minimum": 1},
+        "duration_sec": {"type": "number", "minimum": 0},
+        "timeout_sec": {"type": "integer", "minimum": 1},
+        "timed_out": {"type": "boolean"},
+        "exit_code": {"type": "integer"},
+        "request": {"$ref": "#/$defs/artifact"},
+        "source_request": {"$ref": "#/$defs/artifact"},
+        "raw_stdout": {"$ref": "#/$defs/artifact"},
+        "stderr": {"$ref": "#/$defs/artifact"},
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/input"}
+        },
+        "response": {
+          "oneOf": [
+            {"$ref": "#/$defs/artifact"},
+            {"type": "null"}
+          ]
+        },
+        "response_ok": {"type": "boolean"},
+        "parse_error": {"type": "string"},
+        "fail_log_similarity": {"type": "number", "minimum": 0, "maximum": 1},
+        "fail_log_similarity_reason": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

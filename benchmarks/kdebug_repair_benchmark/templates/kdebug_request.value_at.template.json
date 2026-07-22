@@ -1,0 +1,15 @@
+{
+  "api_version": "kdebug.v1",
+  "action": "value.at",
+  "target": {
+    "fsdb": "inputs/waves.fsdb"
+  },
+  "args": {
+    "signal": "tb_top.dut.failure_signal",
+    "time": "100ns",
+    "format": "hex"
+  },
+  "limits": {
+    "max_rows": 64
+  }
+}
