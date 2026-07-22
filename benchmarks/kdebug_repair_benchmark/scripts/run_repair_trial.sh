@@ -80,6 +80,7 @@ slim_retry_later_dir() {
     "$dir/out/simv.daidir" \
     "$dir/out/csrc" \
     "$dir/simv.daidir" \
+    "$dir/kdebug.daidir" \
     "$dir/simv-compile" \
     "$dir/csrc" \
     "$dir/DVEfiles" \
@@ -231,6 +232,7 @@ slim_repair_dir() {
     "$dir/run" \
     "$dir/simv" \
     "$dir/simv.daidir" \
+    "$dir/kdebug.daidir" \
     "$dir/simv-compile" \
     "$dir/csrc" \
     "$dir/ucli.key" \
