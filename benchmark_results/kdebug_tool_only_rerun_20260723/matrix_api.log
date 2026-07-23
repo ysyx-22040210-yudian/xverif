@@ -1,0 +1,2121 @@
+===== MATRIX CONFIG models=gpt-5.5,qwen3.6-35b groups=with_kdebug evidence_mode=collect cases=case_001,case_002,case_003,case_004,case_005,case_006,case_007,case_008,case_009,case_010,case_011,case_012,case_013,case_014,case_015,case_016 =====
+===== KDEBUG EVIDENCE COLLECT case=case_001 =====
+{
+  "case_id": "case_001",
+  "collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_handshake_window.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_001/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_002 =====
+{
+  "case_id": "case_002",
+  "collection_id": "888b43c9-d819-404e-bbf1-15028dc00430",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_first_bad_beat.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_002/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_003 =====
+{
+  "case_id": "case_003",
+  "collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_data_mismatch.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_003/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_004 =====
+{
+  "case_id": "case_004",
+  "collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_decode_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_004/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_005 =====
+{
+  "case_id": "case_005",
+  "collection_id": "2de56ff8-bbf9-492c-99f1-32a0a31670ab",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_response_order.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_005/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_006 =====
+{
+  "case_id": "case_006",
+  "collection_id": "506a1f71-8014-4680-9de6-eacde580b67f",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_commit_window.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_006/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_007 =====
+{
+  "case_id": "case_007",
+  "collection_id": "f1506470-1a70-4fab-ba92-26010f3814ab",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_control_first_divergence.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_007/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_008 =====
+{
+  "case_id": "case_008",
+  "collection_id": "7fef9539-9f95-4e13-99eb-e4e85f5af5e4",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_lsu_first_bad_load.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_008/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_009 =====
+{
+  "case_id": "case_009",
+  "collection_id": "dc261573-363d-4489-8388-1fa296e21704",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_redirect_pc_divergence.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_009/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_010 =====
+{
+  "case_id": "case_010",
+  "collection_id": "74ccf3c0-6c39-425d-ae43-86a9a78e3c6b",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_tlb_cache_refill.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_010/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_011 =====
+{
+  "case_id": "case_011",
+  "collection_id": "105923ad-3362-4689-9c59-8f53254ec0f4",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_011/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_012 =====
+{
+  "case_id": "case_012",
+  "collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_012/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_013 =====
+{
+  "case_id": "case_013",
+  "collection_id": "aa5532a7-be8c-4705-a7e6-c1c305e2a056",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_013/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_014 =====
+{
+  "case_id": "case_014",
+  "collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_rtl_observation.json",
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_014/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 2,
+  "successful_invocations": 2,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_015 =====
+{
+  "case_id": "case_015",
+  "collection_id": "0d4a1fb9-6761-4fab-b7aa-01d415036dd8",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_rtl_observation.json",
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_015/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 2,
+  "successful_invocations": 2,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_016 =====
+{
+  "case_id": "case_016",
+  "collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_rtl_observation.json",
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_016/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 2,
+  "successful_invocations": 2,
+  "valid": true
+}
+===== KDEBUG EVIDENCE SUITE VALIDATION =====
+{
+  "case_count": 16,
+  "cases": [
+    {
+      "case_id": "case_001",
+      "collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_handshake_window.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_001/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_002",
+      "collection_id": "888b43c9-d819-404e-bbf1-15028dc00430",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_first_bad_beat.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_002/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_003",
+      "collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_data_mismatch.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_003/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_004",
+      "collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_decode_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_004/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_005",
+      "collection_id": "2de56ff8-bbf9-492c-99f1-32a0a31670ab",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_response_order.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_005/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_006",
+      "collection_id": "506a1f71-8014-4680-9de6-eacde580b67f",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_commit_window.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_006/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_007",
+      "collection_id": "f1506470-1a70-4fab-ba92-26010f3814ab",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_control_first_divergence.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_007/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_008",
+      "collection_id": "7fef9539-9f95-4e13-99eb-e4e85f5af5e4",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_lsu_first_bad_load.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_008/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_009",
+      "collection_id": "dc261573-363d-4489-8388-1fa296e21704",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_redirect_pc_divergence.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_009/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_010",
+      "collection_id": "74ccf3c0-6c39-425d-ae43-86a9a78e3c6b",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_tlb_cache_refill.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_010/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_011",
+      "collection_id": "105923ad-3362-4689-9c59-8f53254ec0f4",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_011/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_012",
+      "collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_012/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_013",
+      "collection_id": "aa5532a7-be8c-4705-a7e6-c1c305e2a056",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_013/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_014",
+      "collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_014/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    },
+    {
+      "case_id": "case_015",
+      "collection_id": "0d4a1fb9-6761-4fab-b7aa-01d415036dd8",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_015/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    },
+    {
+      "case_id": "case_016",
+      "collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_016/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    }
+  ],
+  "errors": [],
+  "suite_root": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723",
+  "valid": true
+}
+===== RUN model=gpt-5.5 group=with_kdebug case=case_001 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_001",
+  "group": "with_kdebug",
+  "benchmark_layer": "generated_wrapper",
+  "layer": "generated_uvm",
+  "level": "UT",
+  "subsystem": "axi",
+  "bug_domain": "rtl",
+  "bug_class": "ready_valid_aw_w_b_order",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_handshake_window.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/ut/axi/axi_ut_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T14:18:01+08:00",
+  "end_time": "2026-07-23T14:18:31+08:00",
+  "elapsed_sec": 30.961,
+  "locate_sec": 11.165,
+  "edit_sec": 0.008,
+  "build_sec": 9.379,
+  "run_sec": 10.391,
+  "judge_sec": 0.014,
+  "iterations": 1,
+  "token_input": 18409,
+  "token_output": 447,
+  "token_total": 18856,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T14:18:31+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_handshake_window.json | xs_bench_tb.dut.addr_q is driven by bus.req_addr in rtl/xs_generated_rtl_bridge.sv, so the later AW address transform must preserve addr_q for burst transactions",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=31 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_001 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_001: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_001 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_001",
+  "group": "with_kdebug",
+  "benchmark_layer": "generated_wrapper",
+  "layer": "generated_uvm",
+  "level": "UT",
+  "subsystem": "axi",
+  "bug_domain": "rtl",
+  "bug_class": "ready_valid_aw_w_b_order",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_handshake_window.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/ut/axi/axi_ut_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T14:18:32+08:00",
+  "end_time": "2026-07-23T14:19:23+08:00",
+  "elapsed_sec": 50.628,
+  "locate_sec": 10.579,
+  "edit_sec": 0.013,
+  "build_sec": 10.599,
+  "run_sec": 9.266,
+  "judge_sec": 0.016,
+  "iterations": 2,
+  "token_input": 52540,
+  "token_output": 5634,
+  "token_total": 58174,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T14:19:23+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_handshake_window.json | The driver trace for `xs_bench_tb.dut.addr_q` confirms the address signal is driven by `bus.req_addr`. The mismatch in read data (got vs exp) in the run log indicates the DUT is reading from incorrect memory locations. The `xs_generated_rtl_bridge.sv` applies a spurious XOR (`^ 31'h8`) to the address sent to `AXI4RAM` for burst transactions, which is not present in the reference `xs_bench_dut.sv` logic, causing address divergence and data mismatch.; kdebug_handshake_window.json | The driver trace confirms `addr_q` is driven by `bus.req_addr`. The syntax error in the build log (`token is 'addr_q'`) at the address port connection suggests a parsing issue with the bit-select expression `addr_q[30:0]` in the module instantiation, likely resolved by parenthesizing the expression or using the full signal.",
+  "rule_violation": "",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=51 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=qwen3.6-35b group=with_kdebug case=case_001 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_001: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_002 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_002",
+  "group": "with_kdebug",
+  "benchmark_layer": "generated_wrapper",
+  "layer": "generated_uvm",
+  "level": "UT",
+  "subsystem": "axi",
+  "bug_domain": "rtl",
+  "bug_class": "burst_len_or_last",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_first_bad_beat.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "888b43c9-d819-404e-bbf1-15028dc00430",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/ut/axi/axi_ut_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T14:19:23+08:00",
+  "end_time": "2026-07-23T14:19:59+08:00",
+  "elapsed_sec": 35.789,
+  "locate_sec": 18.776,
+  "edit_sec": 0.005,
+  "build_sec": 8.159,
+  "run_sec": 8.833,
+  "judge_sec": 0.012,
+  "iterations": 1,
+  "token_input": 17760,
+  "token_output": 800,
+  "token_total": 18560,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T14:19:59+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_first_bad_beat.json | xs_bench_tb.dut.status_q is driven by select_status at rtl/xs_generated_rtl_bridge.sv line 224",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=36 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_002 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_002: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_002 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_002 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_002: DONE status=TIMEOUT =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_003 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_003",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "memory",
+  "bug_domain": "rtl",
+  "bug_class": "address_or_mask",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_data_mismatch.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/memory/memory_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T15:20:00+08:00",
+  "end_time": "2026-07-23T15:20:28+08:00",
+  "elapsed_sec": 28.261,
+  "locate_sec": 13.251,
+  "edit_sec": 0.003,
+  "build_sec": 7.117,
+  "run_sec": 7.877,
+  "judge_sec": 0.011,
+  "iterations": 1,
+  "token_input": 18501,
+  "token_output": 482,
+  "token_total": 18983,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T15:20:28+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_data_mismatch.json | xs_bench_tb.dut.eff_mask_q is driven by mask_q at rtl/xs_generated_rtl_bridge.sv line 28 and constants 'h00/'hff",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=28 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_003 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_003: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_003 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_003",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "memory",
+  "bug_domain": "rtl",
+  "bug_class": "address_or_mask",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_data_mismatch.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/memory/memory_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T15:20:28+08:00",
+  "end_time": "2026-07-23T15:21:42+08:00",
+  "elapsed_sec": 73.124,
+  "locate_sec": 58.603,
+  "edit_sec": 0.004,
+  "build_sec": 7.131,
+  "run_sec": 7.372,
+  "judge_sec": 0.01,
+  "iterations": 1,
+  "token_input": 20860,
+  "token_output": 5301,
+  "token_total": 26161,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T15:21:42+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_data_mismatch.json | driver of xs_bench_tb.dut.eff_mask_q is mask_q from xs_generated_rtl_bridge.sv line 28, and the internal RAM write strobe incorrectly masks the LSB for beats > 0",
+  "rule_violation": "",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=74 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=qwen3.6-35b group=with_kdebug case=case_003 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_003: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_004 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_004",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "peripheral",
+  "bug_domain": "rtl",
+  "bug_class": "mmio_resp_or_decode",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_decode_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/peripheral/peripheral_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T15:21:42+08:00",
+  "end_time": "2026-07-23T15:22:08+08:00",
+  "elapsed_sec": 25.893,
+  "locate_sec": 11.342,
+  "edit_sec": 0.004,
+  "build_sec": 7.104,
+  "run_sec": 7.43,
+  "judge_sec": 0.011,
+  "iterations": 1,
+  "token_input": 16874,
+  "token_output": 383,
+  "token_total": 17257,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T15:22:08+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_decode_observation.json | xs_bench_tb.dut.sel_uart is driven by xs_bench_tb.dut.target_q at rtl/xs_generated_rtl_bridge.sv line 22",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=26 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_004 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_004: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_004 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_004",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "peripheral",
+  "bug_domain": "rtl",
+  "bug_class": "mmio_resp_or_decode",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_decode_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/peripheral/peripheral_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T15:22:08+08:00",
+  "end_time": "2026-07-23T15:27:34+08:00",
+  "elapsed_sec": 326.102,
+  "locate_sec": 11.676,
+  "edit_sec": 0.003,
+  "build_sec": 7.064,
+  "run_sec": 7.303,
+  "judge_sec": 0.009,
+  "iterations": 1,
+  "token_input": 18423,
+  "token_output": 1022,
+  "token_total": 19445,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": false,
+  "modified_files": "",
+  "modified_rtl_files": "",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "no_effective_patch",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "kdebug_decode_observation.json | Driver trace for sel_uart points to xs_generated_rtl_bridge.sv where is_uart_addr incorrectly matches 0x1bad0000 base address",
+  "rule_violation": "api_retryable_retry_later: API call timed out after 300s",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=326 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_004 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_004 retry_count=1 PENDING cumulative_elapsed_sec=326.102 retry_later_attempts=1 remaining_sec=3273: skip this model until epoch=1784793454 and continue other models =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_005 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_005",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "peripheral",
+  "bug_domain": "rtl",
+  "bug_class": "error_backpressure",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_response_order.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "2de56ff8-bbf9-492c-99f1-32a0a31670ab",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/peripheral/peripheral_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T15:27:35+08:00",
+  "end_time": "2026-07-23T15:28:11+08:00",
+  "elapsed_sec": 36.011,
+  "locate_sec": 21.623,
+  "edit_sec": 0.004,
+  "build_sec": 6.974,
+  "run_sec": 7.398,
+  "judge_sec": 0.011,
+  "iterations": 1,
+  "token_input": 17141,
+  "token_output": 697,
+  "token_total": 17838,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T15:28:11+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_response_order.json | xs_bench_tb.dut.status_q is driven by select_status(bus.req_kind, bus.req_addr, norm_beats(bus.req_len), select_target(...)) at rtl/xs_generated_rtl_bridge.sv line 224",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=36 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_005 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_005: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_006 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_006",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "pipeline",
+  "bug_domain": "rtl",
+  "bug_class": "late_pipeline_bug",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_commit_window.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "506a1f71-8014-4680-9de6-eacde580b67f",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/pipeline/pipeline_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T15:28:24+08:00",
+  "end_time": "2026-07-23T16:12:35+08:00",
+  "elapsed_sec": 2650.923,
+  "locate_sec": 37.419,
+  "edit_sec": 0.004,
+  "build_sec": 181.75,
+  "run_sec": 2420.337,
+  "judge_sec": 0.012,
+  "iterations": 2,
+  "token_input": 38277,
+  "token_output": 1807,
+  "token_total": 40084,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/Alu_3.sv",
+  "modified_rtl_files": "rtl/Alu_3.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T16:12:35+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_commit_window.json | driver trace shows Alu_3.sv line 33 drives io_out_bits_res_data from _T_0, io_in_bits_perfDebugInfo_issueTime, constant 'h0000000000001388, and constant 'h0000000000000001",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=2651 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_006 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_006: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_004 timeout=3273 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_004/20260723_161236
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_004",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "peripheral",
+  "bug_domain": "rtl",
+  "bug_class": "mmio_resp_or_decode",
+  "env_fault_class": "",
+  "target_flow": "uvm_generated",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_decode_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/peripheral/peripheral_it_design.md",
+  "timeout_sec": 3273,
+  "start_time": "2026-07-23T16:12:37+08:00",
+  "end_time": "2026-07-23T16:13:01+08:00",
+  "elapsed_sec": 24.191,
+  "locate_sec": 9.385,
+  "edit_sec": 0.006,
+  "build_sec": 7.212,
+  "run_sec": 7.575,
+  "judge_sec": 0.01,
+  "iterations": 1,
+  "token_input": 18423,
+  "token_output": 1585,
+  "token_total": 20008,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T16:13:01+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_decode_observation.json | Signal xs_bench_tb.dut.sel_uart driven by target_q in xs_generated_rtl_bridge.sv determines peripheral routing; address 0x1bad0000 incorrectly routed to T_UART instead of T_ERR causing status mismatch.",
+  "rule_violation": "",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=24 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=qwen3.6-35b group=with_kdebug case=case_004 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_004: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_005 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_005 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_005: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_006 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_006",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "pipeline",
+  "bug_domain": "rtl",
+  "bug_class": "late_pipeline_bug",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_commit_window.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "506a1f71-8014-4680-9de6-eacde580b67f",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/pipeline/pipeline_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T17:13:04+08:00",
+  "end_time": "2026-07-23T17:18:22+08:00",
+  "elapsed_sec": 318.509,
+  "locate_sec": 18.127,
+  "edit_sec": 0.004,
+  "build_sec": 0.0,
+  "run_sec": 0.0,
+  "judge_sec": 0.0,
+  "iterations": 1,
+  "token_input": 27303,
+  "token_output": 2668,
+  "token_total": 29971,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": false,
+  "modified_files": "",
+  "modified_rtl_files": "",
+  "modified_env_files": "",
+  "final_build_rc": 1,
+  "final_run_rc": 1,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "no_effective_patch",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "validated kdebug evidence available; no patch citation accepted",
+  "rule_violation": "api_retryable_retry_later: API call timed out after 300s",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=318 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_006 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_006 retry_count=2 PENDING cumulative_elapsed_sec=318.509 retry_later_attempts=1 remaining_sec=3281: skip this model until epoch=1784800102 and continue other models =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_007 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_007",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "control",
+  "bug_domain": "rtl",
+  "bug_class": "valid_ready_rfWen_flush",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_control_first_divergence.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "f1506470-1a70-4fab-ba92-26010f3814ab",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/control/control_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T17:18:26+08:00",
+  "end_time": "2026-07-23T17:21:52+08:00",
+  "elapsed_sec": 205.795,
+  "locate_sec": 11.448,
+  "edit_sec": 0.005,
+  "build_sec": 178.489,
+  "run_sec": 3.99,
+  "judge_sec": 0.01,
+  "iterations": 2,
+  "token_input": 38788,
+  "token_output": 649,
+  "token_total": 39437,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/Alu_3.sv",
+  "modified_rtl_files": "rtl/Alu_3.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T17:21:52+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_control_first_divergence.json | driver trace shows io_out_bits_ctrl_rfWen has an unintended driver from io_in_bits_perfDebugInfo_issueTime at rtl/Alu_3.sv line 15",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=206 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_007 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_007: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_008 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_008",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "lsu_cache",
+  "bug_domain": "rtl",
+  "bug_class": "address_mask_data_resp",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_lsu_first_bad_load.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "7fef9539-9f95-4e13-99eb-e4e85f5af5e4",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/lsu_cache/lsu_cache_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T17:21:57+08:00",
+  "end_time": "2026-07-23T17:25:29+08:00",
+  "elapsed_sec": 212.067,
+  "locate_sec": 18.035,
+  "edit_sec": 0.006,
+  "build_sec": 177.847,
+  "run_sec": 4.059,
+  "judge_sec": 0.011,
+  "iterations": 2,
+  "token_input": 41351,
+  "token_output": 771,
+  "token_total": 42122,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/NewLoadUnit.sv",
+  "modified_rtl_files": "rtl/NewLoadUnit.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T17:25:29+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_lsu_first_bad_load.json | io_ldout_toIntRf_bits_data is driven by _dataPath_io_s3ShiftAndExtData[63:0] at rtl/NewLoadUnit.sv line 758",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=212 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_008 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_008: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_009 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_009",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "branch_redirect",
+  "bug_domain": "rtl",
+  "bug_class": "pc_redirect_without_early_rf_mismatch",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_redirect_pc_divergence.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "dc261573-363d-4489-8388-1fa296e21704",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/branch_redirect/branch_redirect_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T17:25:34+08:00",
+  "end_time": "2026-07-23T17:29:55+08:00",
+  "elapsed_sec": 261.057,
+  "locate_sec": 65.049,
+  "edit_sec": 0.003,
+  "build_sec": 178.433,
+  "run_sec": 3.982,
+  "judge_sec": 0.01,
+  "iterations": 2,
+  "token_input": 39811,
+  "token_output": 2843,
+  "token_total": 42654,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/BranchUnit.sv",
+  "modified_rtl_files": "rtl/BranchUnit.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T17:29:55+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_redirect_pc_divergence.json | io_out_bits_res_redirect_bits_target is driven at rtl/BranchUnit.sv line 79 by _addModule_io_target[49:0] and constant 'h0000000000002",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=261 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_009 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_009: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_010 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=gpt-5.5 group=with_kdebug case=case_010 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_010: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_006 timeout=3281 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_006/20260723_182959
+FINAL_STATUS=TIMEOUT elapsed_sec=3281 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_006 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_006: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_007 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_007 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_007: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_008 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_008",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "lsu_cache",
+  "bug_domain": "rtl",
+  "bug_class": "address_mask_data_resp",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_lsu_first_bad_load.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "7fef9539-9f95-4e13-99eb-e4e85f5af5e4",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/lsu_cache/lsu_cache_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T20:24:52+08:00",
+  "end_time": "2026-07-23T20:28:36+08:00",
+  "elapsed_sec": 224.138,
+  "locate_sec": 28.149,
+  "edit_sec": 0.006,
+  "build_sec": 184.49,
+  "run_sec": 4.842,
+  "judge_sec": 0.015,
+  "iterations": 2,
+  "token_input": 51893,
+  "token_output": 4674,
+  "token_total": 56567,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": false,
+  "modified_files": "rtl/NewLoadUnit.sv",
+  "modified_rtl_files": "rtl/NewLoadUnit.sv",
+  "modified_env_files": "",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "rtl_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T20:28:36+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_lsu_first_bad_load.json | Driver _dataPath_io_s3ShiftAndExtData[63:0] in rtl/NewLoadUnit.sv line 758 drives io_ldout_toIntRf_bits_data, which is XORed with 1 causing LSB flip (0x1a vs 0x1b) for lwu at PC 0x800001de.",
+  "rule_violation": "",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=224 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=qwen3.6-35b group=with_kdebug case=case_008 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_008: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_009 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_009 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_009: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_010 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_010",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "memory_subsystem",
+  "bug_domain": "rtl",
+  "bug_class": "cache_mmu_interaction",
+  "env_fault_class": "",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "rtl",
+  "requires_rtl_change": true,
+  "requires_env_change": false,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_tlb_cache_refill.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "74ccf3c0-6c39-425d-ae43-86a9a78e3c6b",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/memory_subsystem/memory_subsystem_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T21:28:44+08:00",
+  "end_time": "2026-07-23T22:28:21+08:00",
+  "elapsed_sec": 3576.574,
+  "locate_sec": 53.656,
+  "edit_sec": 1.515,
+  "build_sec": 0.0,
+  "run_sec": 0.0,
+  "judge_sec": 0.0,
+  "iterations": 272,
+  "token_input": 10445178,
+  "token_output": 463690,
+  "token_total": 10908868,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": false,
+  "modified_files": "",
+  "modified_rtl_files": "",
+  "modified_env_files": "",
+  "final_build_rc": 1,
+  "final_run_rc": 1,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "no_effective_patch",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "validated kdebug evidence available; no patch citation accepted",
+  "rule_violation": "api_retryable_retry_later: API worker error: RuntimeError: API HTTP 502: {\"error\":{\"message\":\"diverted request failed: Post \\\"https://maas-coding-api-temp.xf-yun.com/v2/chat/completions\\\": read tcp 10.109.186.25:59450-\\u003e39.96.25.223:443: read: connection reset by peer (request id: 2026072322275115476264771483714)\",\"type\":\"one_api_error\",\"param\":\"\",\"code\":\"divert_request_failed\"}}",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=3577 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_010 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_010 retry_count=3 PENDING cumulative_elapsed_sec=3576.574 retry_later_attempts=1 remaining_sec=23: skip this model until epoch=1784818701 and continue other models =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_011 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_011",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "difftest",
+  "bug_domain": "env",
+  "bug_class": "dropped_diff_plusarg",
+  "env_fault_class": "run_option",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "config;env;filelists;scripts;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": false,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "105923ad-3362-4689-9c59-8f53254ec0f4",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/memory_subsystem/memory_subsystem_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T22:28:22+08:00",
+  "end_time": "2026-07-23T22:29:12+08:00",
+  "elapsed_sec": 49.82,
+  "locate_sec": 45.382,
+  "edit_sec": 0.005,
+  "build_sec": 0.008,
+  "run_sec": 4.41,
+  "judge_sec": 0.012,
+  "iterations": 1,
+  "token_input": 4123,
+  "token_output": 1311,
+  "token_total": 5434,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "scripts/run.sh",
+  "modified_rtl_files": "",
+  "modified_env_files": "scripts/run.sh",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "env_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T22:29:12+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_runtime_observation.json | tb_top.sim.difftest_exit is driven only by npiConstant 'h0000000000000000, matching an environment startup abort before RTL difftest exit",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=50 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_011 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_011: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_012 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_012",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_ut",
+  "layer": "generated_uvm",
+  "level": "UT",
+  "subsystem": "axi",
+  "bug_domain": "env",
+  "bug_class": "wrong_case_or_seed",
+  "env_fault_class": "run_dispatch",
+  "target_flow": "uvm_generated",
+  "repair_scope": "config;env;filelists;scripts;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": false,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/ut/axi/axi_ut_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T22:29:14+08:00",
+  "end_time": "2026-07-23T22:29:55+08:00",
+  "elapsed_sec": 41.625,
+  "locate_sec": 13.724,
+  "edit_sec": 0.007,
+  "build_sec": 8.143,
+  "run_sec": 8.515,
+  "judge_sec": 0.011,
+  "iterations": 2,
+  "token_input": 14339,
+  "token_output": 976,
+  "token_total": 15315,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "config/case.env;scripts/run.sh",
+  "modified_rtl_files": "",
+  "modified_env_files": "config/case.env;scripts/run.sh",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "env_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T22:29:55+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_runtime_observation.json | KDebug driver trace shows xs_bench_tb.dut.addr_q has driver source bus.req_addr in xs_generated_rtl_bridge.sv line 1",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=42 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_012 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_012: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_013 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_013",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "build_cache",
+  "bug_domain": "env",
+  "bug_class": "stale_or_unwritable_simv",
+  "env_fault_class": "build_cache",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "config;env;filelists;scripts;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": false,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "aa5532a7-be8c-4705-a7e6-c1c305e2a056",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/memory_subsystem/memory_subsystem_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T22:29:57+08:00",
+  "end_time": "2026-07-23T22:30:10+08:00",
+  "elapsed_sec": 13.016,
+  "locate_sec": 8.675,
+  "edit_sec": 0.003,
+  "build_sec": 0.008,
+  "run_sec": 4.317,
+  "judge_sec": 0.01,
+  "iterations": 1,
+  "token_input": 3955,
+  "token_output": 259,
+  "token_total": 4214,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "config/run_target.env",
+  "modified_rtl_files": "",
+  "modified_env_files": "config/run_target.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "env_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T22:30:10+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_runtime_observation.json | tb_top.sim.difftest_exit is driven by constant 'h0000000000000000, matching the stale executable path with DIFFTEST not active",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=13 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_013 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_013: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_014 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_014",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "memory",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_memory_mask_plus_wrong_judge",
+  "env_fault_class": "judge_masking",
+  "target_flow": "uvm_generated",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/memory/memory_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T22:30:11+08:00",
+  "end_time": "2026-07-23T22:30:42+08:00",
+  "elapsed_sec": 31.076,
+  "locate_sec": 15.336,
+  "edit_sec": 0.004,
+  "build_sec": 7.802,
+  "run_sec": 7.918,
+  "judge_sec": 0.013,
+  "iterations": 1,
+  "token_input": 23332,
+  "token_output": 612,
+  "token_total": 23944,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": true,
+  "modified_files": "config/case.env;rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "config/case.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "mixed",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T22:30:42+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_rtl_observation.json | xs_bench_tb.dut.eff_mask_q is driven by mask_q at rtl/xs_generated_rtl_bridge.sv line 28 and constants 'h00/'hff",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=31 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_014 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_014: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_015 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "gpt-5.5",
+  "case_id": "case_015",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "branch_redirect",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_redirect_plus_bad_ref",
+  "env_fault_class": "ref_model",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "0d4a1fb9-6761-4fab-b7aa-01d415036dd8",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/branch_redirect/branch_redirect_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-23T22:30:45+08:00",
+  "end_time": "2026-07-23T22:41:42+08:00",
+  "elapsed_sec": 657.539,
+  "locate_sec": 24.528,
+  "edit_sec": 0.028,
+  "build_sec": 541.811,
+  "run_sec": 7.435,
+  "judge_sec": 0.011,
+  "iterations": 4,
+  "token_input": 91511,
+  "token_output": 4647,
+  "token_total": 96158,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": true,
+  "modified_files": "rtl/BranchUnit.sv;scripts/run.sh",
+  "modified_rtl_files": "rtl/BranchUnit.sv",
+  "modified_env_files": "scripts/run.sh",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "mixed",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-23T22:41:42+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_rtl_observation.json | io_out_bits_res_redirect_bits_target is driven at rtl/BranchUnit.sv line 79 by _addModule_io_target[49:0] and constant 'h0000000000002; kdebug_rtl_observation.json | io_out_bits_res_redirect_bits_target driver includes BranchUnit.sv line 79 _addModule_io_target[49:0] and constant 'h0000000000002; kdebug_rtl_observation.json | io_out_bits_res_redirect_bits_target has a driver from BranchUnit.sv line 79 source _addModule_io_target[49:0]",
+  "rule_violation": "",
+  "notes": "api_model_name=gpt-5.5; api_key_env=GPT55_API_KEY; transcript=gpt-5.5_transcript.jsonl; command_log=gpt-5.5_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=658 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=gpt-5.5 group=with_kdebug case=case_015 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_015: DONE status=PASS =====
+===== RUN model=gpt-5.5 group=with_kdebug case=case_016 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=gpt-5.5 group=with_kdebug case=case_016 =====
+===== FINALIZED model=gpt-5.5 group=with_kdebug case=case_016: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_010 timeout=23 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_010/20260723_234146
+FINAL_STATUS=TIMEOUT elapsed_sec=23 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_010 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_010: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_011 timeout=3600 =====
+FINAL_STATUS=TIMEOUT elapsed_sec=3600 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_011 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_011: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_012 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_012",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_ut",
+  "layer": "generated_uvm",
+  "level": "UT",
+  "subsystem": "axi",
+  "bug_domain": "env",
+  "bug_class": "wrong_case_or_seed",
+  "env_fault_class": "run_dispatch",
+  "target_flow": "uvm_generated",
+  "repair_scope": "config;env;filelists;scripts;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": false,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/ut/axi/axi_ut_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-24T00:42:14+08:00",
+  "end_time": "2026-07-24T00:42:36+08:00",
+  "elapsed_sec": 21.179,
+  "locate_sec": 5.813,
+  "edit_sec": 0.003,
+  "build_sec": 7.487,
+  "run_sec": 7.862,
+  "judge_sec": 0.011,
+  "iterations": 1,
+  "token_input": 5504,
+  "token_output": 852,
+  "token_total": 6356,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "config/case.env",
+  "modified_rtl_files": "",
+  "modified_env_files": "config/case.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "env_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-24T00:42:35+08:00 :: scripts/judge.sh ===== | PASS: generated UVM case passed | ",
+  "evidence_used": "kdebug_runtime_observation.json | driver trace shows bus.req_addr correctly drives xs_bench_tb.dut.addr_q, confirming RTL bridge is functional and issue is environmental/test mismatch",
+  "rule_violation": "",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=22 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=qwen3.6-35b group=with_kdebug case=case_012 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_012: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_013 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_013",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "build_cache",
+  "bug_domain": "env",
+  "bug_class": "stale_or_unwritable_simv",
+  "env_fault_class": "build_cache",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "config;env;filelists;scripts;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": false,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "aa5532a7-be8c-4705-a7e6-c1c305e2a056",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/memory_subsystem/memory_subsystem_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-24T00:42:37+08:00",
+  "end_time": "2026-07-24T00:42:47+08:00",
+  "elapsed_sec": 9.83,
+  "locate_sec": 5.761,
+  "edit_sec": 0.002,
+  "build_sec": 0.008,
+  "run_sec": 4.044,
+  "judge_sec": 0.011,
+  "iterations": 1,
+  "token_input": 4057,
+  "token_output": 526,
+  "token_total": 4583,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "config/run_target.env",
+  "modified_rtl_files": "",
+  "modified_env_files": "config/run_target.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 0,
+  "final_status": "PASS",
+  "repair_class": "env_only",
+  "failure_class": "",
+  "pass_marker": " | ===== JUDGE 2026-07-24T00:42:47+08:00 :: scripts/judge.sh ===== | PASS: full-chip workload passed | ",
+  "evidence_used": "kdebug_runtime_observation.json | tb_top.sim.difftest_exit driven by constant 'h0000000000000000 indicating DiffTest inactive due to stale simv",
+  "rule_violation": "",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=PASS elapsed_sec=10 agent_rc=0 judge_rc=0
+===== DONE rc=0 model=qwen3.6-35b group=with_kdebug case=case_013 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_013: DONE status=PASS =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_014 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_014",
+  "group": "with_kdebug",
+  "benchmark_layer": "real_rtl_it",
+  "layer": "generated_uvm",
+  "level": "IT",
+  "subsystem": "memory",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_memory_mask_plus_wrong_judge",
+  "env_fault_class": "judge_masking",
+  "target_flow": "uvm_generated",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/it/memory/memory_it_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-24T00:42:48+08:00",
+  "end_time": "2026-07-24T00:48:21+08:00",
+  "elapsed_sec": 332.28,
+  "locate_sec": 17.105,
+  "edit_sec": 0.005,
+  "build_sec": 7.36,
+  "run_sec": 7.619,
+  "judge_sec": 0.009,
+  "iterations": 1,
+  "token_input": 26227,
+  "token_output": 2896,
+  "token_total": 29123,
+  "token_is_estimate": false,
+  "rtl_changed": true,
+  "env_changed": true,
+  "modified_files": "config/case.env;rtl/xs_generated_rtl_bridge.sv",
+  "modified_rtl_files": "rtl/xs_generated_rtl_bridge.sv",
+  "modified_env_files": "config/case.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "mixed",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "kdebug_runtime_observation.json | observed driver for xs_bench_tb.dut.addr_q is bus.req_addr, and bridge truncates to addr_q[30:0] for AXI4RAM, causing address mismatch with scoreboard's addr[18:3] key.",
+  "rule_violation": "api_retryable_retry_later: API call timed out after 300s",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=333 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_014 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_014 retry_count=4 PENDING cumulative_elapsed_sec=332.280 retry_later_attempts=1 remaining_sec=3267: skip this model until epoch=1784827101 and continue other models =====
+===== ALL_PENDING_MODELS_RATE_LIMITED sleep=1800s =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_014 timeout=3267 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_014/20260724_011821
+FINAL_STATUS=TIMEOUT elapsed_sec=3267 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_014 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_014: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_015 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_015",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "branch_redirect",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_redirect_plus_bad_ref",
+  "env_fault_class": "ref_model",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "0d4a1fb9-6761-4fab-b7aa-01d415036dd8",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/branch_redirect/branch_redirect_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-24T02:13:25+08:00",
+  "end_time": "2026-07-24T02:51:14+08:00",
+  "elapsed_sec": 2268.274,
+  "locate_sec": 34.181,
+  "edit_sec": 0.575,
+  "build_sec": 0.0,
+  "run_sec": 0.0,
+  "judge_sec": 0.0,
+  "iterations": 125,
+  "token_input": 4884832,
+  "token_output": 271392,
+  "token_total": 5156224,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": false,
+  "modified_files": "",
+  "modified_rtl_files": "",
+  "modified_env_files": "",
+  "final_build_rc": 1,
+  "final_run_rc": 1,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "no_effective_patch",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "validated kdebug evidence available; no patch citation accepted",
+  "rule_violation": "api_retryable_retry_later: API worker error: RuntimeError: API HTTP 502: {\"error\":{\"message\":\"diverted request failed: Post \\\"https://maas-coding-api-temp.xf-yun.com/v2/chat/completions\\\": read tcp 10.109.186.25:45436-\\u003e39.96.25.223:443: read: connection reset by peer (request id: 2026072402504377981868332157431)\",\"type\":\"one_api_error\",\"param\":\"\",\"code\":\"divert_request_failed\"}}",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=2269 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_015 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_015 retry_count=5 PENDING cumulative_elapsed_sec=2268.274 retry_later_attempts=1 remaining_sec=1331: skip this model until epoch=1784834474 and continue other models =====
+===== ALL_PENDING_MODELS_RATE_LIMITED sleep=1800s =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_015 timeout=1331 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_015/20260724_032114
+FINAL_STATUS=TIMEOUT elapsed_sec=1331 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_015 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_015: DONE status=TIMEOUT =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_016 timeout=3600 =====
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_016",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "lsu_cache",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_lsu_plus_timeout_config",
+  "env_fault_class": "timeout_config",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/lsu_cache/lsu_cache_fullchip_design.md",
+  "timeout_sec": 3600,
+  "start_time": "2026-07-24T03:43:54+08:00",
+  "end_time": "2026-07-24T04:27:55+08:00",
+  "elapsed_sec": 2640.654,
+  "locate_sec": 28.458,
+  "edit_sec": 1.09,
+  "build_sec": 189.79,
+  "run_sec": 10.911,
+  "judge_sec": 0.009,
+  "iterations": 253,
+  "token_input": 10001653,
+  "token_output": 228953,
+  "token_total": 10230606,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "config/run.env",
+  "modified_rtl_files": "",
+  "modified_env_files": "config/run.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "env_only",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "kdebug_rtl_observation.json | Driver for io_ldout_toIntRf_bits_data is _dataPath_io_s3ShiftAndExtData[63:0] in NewLoadUnit.sv, indicating LSU data path bug.",
+  "rule_violation": "api_retryable_retry_later: API worker error: RuntimeError: API HTTP 502: {\"error\":{\"message\":\"diverted request failed: Post \\\"https://maas-coding-api-temp.xf-yun.com/v2/chat/completions\\\": read tcp 10.109.184.80:46484-\\u003e39.96.25.223:443: read: connection reset by peer (request id: 2026072404272516953855925335316)\",\"type\":\"one_api_error\",\"param\":\"\",\"code\":\"divert_request_failed\"}}",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=2641 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_016 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_016 retry_count=6 PENDING cumulative_elapsed_sec=2640.654 retry_later_attempts=1 remaining_sec=959: skip this model until epoch=1784840275 and continue other models =====
+===== ALL_PENDING_MODELS_RATE_LIMITED sleep=1800s =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_016 timeout=959 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_016/20260724_045755
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_016",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "lsu_cache",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_lsu_plus_timeout_config",
+  "env_fault_class": "timeout_config",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/lsu_cache/lsu_cache_fullchip_design.md",
+  "timeout_sec": 959,
+  "start_time": "2026-07-24T04:57:58+08:00",
+  "end_time": "2026-07-24T05:02:59+08:00",
+  "elapsed_sec": 301.137,
+  "locate_sec": 0.0,
+  "edit_sec": 0.0,
+  "build_sec": 0.0,
+  "run_sec": 0.0,
+  "judge_sec": 0.0,
+  "iterations": 0,
+  "token_input": 0,
+  "token_output": 0,
+  "token_total": 0,
+  "token_is_estimate": true,
+  "rtl_changed": false,
+  "env_changed": false,
+  "modified_files": "",
+  "modified_rtl_files": "",
+  "modified_env_files": "",
+  "final_build_rc": 1,
+  "final_run_rc": 1,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "no_effective_patch",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "validated kdebug evidence available; no patch citation accepted",
+  "rule_violation": "api_retryable_retry_later: API call timed out after 300s",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=302 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_016 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_016 retry_count=7 PENDING cumulative_elapsed_sec=2941.791 retry_later_attempts=2 remaining_sec=658: skip this model until epoch=1784842379 and continue other models =====
+===== ALL_PENDING_MODELS_RATE_LIMITED sleep=1800s =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_016 timeout=658 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_016/20260724_053259
+{
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "model_id": "qwen3.6-35b",
+  "case_id": "case_016",
+  "group": "with_kdebug",
+  "benchmark_layer": "fullchip",
+  "layer": "fullchip",
+  "level": "SOC",
+  "subsystem": "lsu_cache",
+  "bug_domain": "mixed",
+  "bug_class": "rtl_lsu_plus_timeout_config",
+  "env_fault_class": "timeout_config",
+  "target_flow": "fullchip_vcs",
+  "repair_scope": "cases;config;env;filelists;rtl;scripts;tb;Makefile;build_kdb.sh;filelist.f;makefile;run_args.txt;run_case.sh;vcs_args.f;vcs_command.sh",
+  "requires_rtl_change": true,
+  "requires_env_change": true,
+  "tool_evidence_required": true,
+  "tool_evidence_present": true,
+  "tool_evidence_valid": true,
+  "tool_evidence_files": "kdebug_rtl_observation.json;kdebug_runtime_observation.json",
+  "tool_evidence_manifest": "evidence/with_kdebug/manifest.json",
+  "tool_evidence_collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+  "tool_evidence_validation": "valid",
+  "public_design_refs": "design_refs/common/rtl_debug_common.md;design_refs/fullchip/lsu_cache/lsu_cache_fullchip_design.md",
+  "timeout_sec": 658,
+  "start_time": "2026-07-24T05:33:01+08:00",
+  "end_time": "2026-07-24T05:42:02+08:00",
+  "elapsed_sec": 541.333,
+  "locate_sec": 41.803,
+  "edit_sec": 0.004,
+  "build_sec": 188.131,
+  "run_sec": 10.962,
+  "judge_sec": 0.009,
+  "iterations": 1,
+  "token_input": 27442,
+  "token_output": 6619,
+  "token_total": 34061,
+  "token_is_estimate": false,
+  "rtl_changed": false,
+  "env_changed": true,
+  "modified_files": "config/run.env",
+  "modified_rtl_files": "",
+  "modified_env_files": "config/run.env",
+  "final_build_rc": 0,
+  "final_run_rc": 0,
+  "final_judge_rc": 1,
+  "final_status": "RETRY_LATER",
+  "repair_class": "env_only",
+  "failure_class": "api_rate_limited",
+  "pass_marker": "",
+  "evidence_used": "kdebug_rtl_observation.json | Driver for io_ldout_toIntRf_bits_data is _dataPath_io_s3ShiftAndExtData in NewLoadUnit.sv, indicating load data path bug; environment fix for RUN_TIMEOUT_SEC=1 causing potential timeout issues.",
+  "rule_violation": "api_retryable_retry_later: API call timed out after 300s",
+  "notes": "api_model_name=xopqwen36v35b; api_key_env=MAAS_API_KEY; transcript=qwen3.6-35b_transcript.jsonl; command_log=qwen3.6-35b_commands.log"
+}
+FINAL_STATUS=RETRY_LATER elapsed_sec=541 agent_rc=75 judge_rc=1
+===== DONE rc=75 model=qwen3.6-35b group=with_kdebug case=case_016 =====
+===== RATE_LIMIT model=qwen3.6-35b group=with_kdebug case=case_016 retry_count=8 PENDING cumulative_elapsed_sec=3483.124 retry_later_attempts=3 remaining_sec=116: skip this model until epoch=1784844723 and continue other models =====
+===== ALL_PENDING_MODELS_RATE_LIMITED sleep=1800s =====
+===== RUN model=qwen3.6-35b group=with_kdebug case=case_016 timeout=116 =====
+Archived previous RETRY_LATER repair dir to /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/repair/_retry_later_archive/qwen3.6-35b/with_kdebug/case_016/20260724_061203
+FINAL_STATUS=TIMEOUT elapsed_sec=116 agent_rc=124 judge_rc=1
+===== DONE rc=1 model=qwen3.6-35b group=with_kdebug case=case_016 =====
+===== FINALIZED model=qwen3.6-35b group=with_kdebug case=case_016: DONE status=TIMEOUT =====
+created=32
+RESULTS: /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/results.csv
+SCREENSHOTS: /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/screenshots
+DOCX: /home/host/kverif_runs/kdebug_tool_only_rerun_20260723/docx_out

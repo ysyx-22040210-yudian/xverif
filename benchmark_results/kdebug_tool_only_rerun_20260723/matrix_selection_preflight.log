@@ -1,0 +1,433 @@
+===== MATRIX CONFIG models=gpt-5.5,qwen3.6-35b groups=with_kdebug evidence_mode=collect cases=case_001,case_002,case_003,case_004,case_005,case_006,case_007,case_008,case_009,case_010,case_011,case_012,case_013,case_014,case_015,case_016 =====
+===== KDEBUG EVIDENCE COLLECT case=case_001 =====
+{
+  "case_id": "case_001",
+  "collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_handshake_window.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_001/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_002 =====
+{
+  "case_id": "case_002",
+  "collection_id": "888b43c9-d819-404e-bbf1-15028dc00430",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_first_bad_beat.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_002/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_003 =====
+{
+  "case_id": "case_003",
+  "collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_data_mismatch.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_003/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_004 =====
+{
+  "case_id": "case_004",
+  "collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_decode_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_004/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_005 =====
+{
+  "case_id": "case_005",
+  "collection_id": "2de56ff8-bbf9-492c-99f1-32a0a31670ab",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_response_order.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_005/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_006 =====
+{
+  "case_id": "case_006",
+  "collection_id": "506a1f71-8014-4680-9de6-eacde580b67f",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_commit_window.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_006/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_007 =====
+{
+  "case_id": "case_007",
+  "collection_id": "f1506470-1a70-4fab-ba92-26010f3814ab",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_control_first_divergence.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_007/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_008 =====
+{
+  "case_id": "case_008",
+  "collection_id": "7fef9539-9f95-4e13-99eb-e4e85f5af5e4",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_lsu_first_bad_load.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_008/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_009 =====
+{
+  "case_id": "case_009",
+  "collection_id": "dc261573-363d-4489-8388-1fa296e21704",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_redirect_pc_divergence.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_009/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_010 =====
+{
+  "case_id": "case_010",
+  "collection_id": "74ccf3c0-6c39-425d-ae43-86a9a78e3c6b",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_tlb_cache_refill.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_010/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_011 =====
+{
+  "case_id": "case_011",
+  "collection_id": "105923ad-3362-4689-9c59-8f53254ec0f4",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_011/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_012 =====
+{
+  "case_id": "case_012",
+  "collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_012/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_013 =====
+{
+  "case_id": "case_013",
+  "collection_id": "aa5532a7-be8c-4705-a7e6-c1c305e2a056",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_013/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 1,
+  "successful_invocations": 1,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_014 =====
+{
+  "case_id": "case_014",
+  "collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_rtl_observation.json",
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_014/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 2,
+  "successful_invocations": 2,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_015 =====
+{
+  "case_id": "case_015",
+  "collection_id": "0d4a1fb9-6761-4fab-b7aa-01d415036dd8",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_rtl_observation.json",
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_015/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 2,
+  "successful_invocations": 2,
+  "valid": true
+}
+===== KDEBUG EVIDENCE COLLECT case=case_016 =====
+{
+  "case_id": "case_016",
+  "collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+  "errors": [],
+  "evidence_files": [
+    "kdebug_rtl_observation.json",
+    "kdebug_runtime_observation.json"
+  ],
+  "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_016/evidence/with_kdebug/manifest.json",
+  "reused": true,
+  "successful_diagnostic_invocations": 2,
+  "successful_invocations": 2,
+  "valid": true
+}
+===== KDEBUG EVIDENCE SUITE VALIDATION =====
+{
+  "case_count": 16,
+  "cases": [
+    {
+      "case_id": "case_001",
+      "collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_handshake_window.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_001/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_002",
+      "collection_id": "888b43c9-d819-404e-bbf1-15028dc00430",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_first_bad_beat.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_002/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_003",
+      "collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_data_mismatch.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_003/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_004",
+      "collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_decode_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_004/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_005",
+      "collection_id": "2de56ff8-bbf9-492c-99f1-32a0a31670ab",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_response_order.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_005/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_006",
+      "collection_id": "506a1f71-8014-4680-9de6-eacde580b67f",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_commit_window.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_006/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_007",
+      "collection_id": "f1506470-1a70-4fab-ba92-26010f3814ab",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_control_first_divergence.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_007/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_008",
+      "collection_id": "7fef9539-9f95-4e13-99eb-e4e85f5af5e4",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_lsu_first_bad_load.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_008/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_009",
+      "collection_id": "dc261573-363d-4489-8388-1fa296e21704",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_redirect_pc_divergence.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_009/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_010",
+      "collection_id": "74ccf3c0-6c39-425d-ae43-86a9a78e3c6b",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_tlb_cache_refill.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_010/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_011",
+      "collection_id": "105923ad-3362-4689-9c59-8f53254ec0f4",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_011/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_012",
+      "collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_012/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_013",
+      "collection_id": "aa5532a7-be8c-4705-a7e6-c1c305e2a056",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_013/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_014",
+      "collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_014/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    },
+    {
+      "case_id": "case_015",
+      "collection_id": "0d4a1fb9-6761-4fab-b7aa-01d415036dd8",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_015/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    },
+    {
+      "case_id": "case_016",
+      "collection_id": "158247dc-83fe-4154-a038-e9e0571d4fc4",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_016/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    }
+  ],
+  "errors": [],
+  "suite_root": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723",
+  "valid": true
+}
+ERROR: GPT55_API_KEY or OPENAI_API_KEY is required for gpt-5.5

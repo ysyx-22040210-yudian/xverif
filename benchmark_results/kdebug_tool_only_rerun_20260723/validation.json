@@ -1,0 +1,165 @@
+{
+  "schema": "kdebug-benchmark-validation.v1",
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "validated_at": "2026-07-23T22:57:27.134148+00:00",
+  "scope": {
+    "models": [
+      "gpt-5.5",
+      "qwen3.6-35b"
+    ],
+    "groups": [
+      "with_kdebug"
+    ],
+    "skipped_models": [
+      "glm-4.7"
+    ],
+    "excluded_groups": [
+      "without_kdebug"
+    ]
+  },
+  "results": {
+    "rows": 32,
+    "status_counts": {
+      "PASS": 20,
+      "TIMEOUT": 12
+    },
+    "model_status_counts": {
+      "gpt-5.5": {
+        "PASS": 14,
+        "TIMEOUT": 2
+      },
+      "qwen3.6-35b": {
+        "PASS": 6,
+        "TIMEOUT": 10
+      }
+    },
+    "evidence_invalid_tasks": []
+  },
+  "screenshots": {
+    "count": 32,
+    "minimum_bytes": 29553,
+    "minimum_variance": 211.17,
+    "dimensions": [
+      [
+        1400,
+        900
+      ]
+    ]
+  },
+  "documents": {
+    "benchmark_summary_report.docx": {
+      "paragraphs": 20,
+      "tables": 4,
+      "tables_with_repeating_header": 4,
+      "inline_images": 0,
+      "contains_scope_note": true,
+      "contains_excluded_group_note": true,
+      "contains_question_mark_corruption": false,
+      "contains_legacy_three_model_title": false,
+      "contains_legacy_comparison_subtitle": false
+    },
+    "gpt-5.5_benchmark_report.docx": {
+      "paragraphs": 111,
+      "tables": 18,
+      "tables_with_repeating_header": 18,
+      "inline_images": 16,
+      "contains_scope_note": true,
+      "contains_excluded_group_note": true,
+      "contains_question_mark_corruption": false,
+      "contains_legacy_three_model_title": false,
+      "contains_legacy_comparison_subtitle": false
+    },
+    "qwen3.6-35b_benchmark_report.docx": {
+      "paragraphs": 111,
+      "tables": 18,
+      "tables_with_repeating_header": 18,
+      "inline_images": 16,
+      "contains_scope_note": true,
+      "contains_excluded_group_note": true,
+      "contains_question_mark_corruption": false,
+      "contains_legacy_three_model_title": false,
+      "contains_legacy_comparison_subtitle": false
+    }
+  },
+  "visual_qa": {
+    "renderer": "LibreOffice 26.2.2.2 + Poppler",
+    "manually_reviewed_pages": 59,
+    "reports": {
+      "benchmark_summary_report": {
+        "pages": 6,
+        "dimensions": [
+          [
+            1547,
+            2002
+          ]
+        ],
+        "minimum_margins": [
+          137,
+          131,
+          138,
+          138
+        ],
+        "minimum_ink_ratio": 0.0521,
+        "near_edge_pages": 0,
+        "nearly_blank_pages": 0
+      },
+      "gpt-5.5_benchmark_report": {
+        "pages": 27,
+        "dimensions": [
+          [
+            1547,
+            2002
+          ]
+        ],
+        "minimum_margins": [
+          137,
+          131,
+          137,
+          133
+        ],
+        "minimum_ink_ratio": 0.0427,
+        "near_edge_pages": 0,
+        "nearly_blank_pages": 0
+      },
+      "qwen3.6-35b_benchmark_report": {
+        "pages": 26,
+        "dimensions": [
+          [
+            1547,
+            2002
+          ]
+        ],
+        "minimum_margins": [
+          137,
+          131,
+          137,
+          135
+        ],
+        "minimum_ink_ratio": 0.043,
+        "near_edge_pages": 0,
+        "nearly_blank_pages": 0
+      }
+    }
+  },
+  "checks": {
+    "row_count_32": true,
+    "terminal_statuses_only": true,
+    "status_counts": true,
+    "unique_tasks": true,
+    "models_exact": true,
+    "group_only_with_kdebug": true,
+    "all_cases_per_model": true,
+    "all_tool_evidence_valid": true,
+    "summary_scope_text_valid": true,
+    "screenshot_names_exact": true,
+    "screenshots_nonblank": true,
+    "docx_names_exact": true,
+    "model_reports_embed_16_screenshots": true,
+    "docx_scope_text_valid": true,
+    "docx_tables_repeat_headers": true,
+    "rendered_page_counts": true,
+    "rendered_pages_nonblank": true,
+    "rendered_pages_inside_margins": true
+  },
+  "passed": true
+}

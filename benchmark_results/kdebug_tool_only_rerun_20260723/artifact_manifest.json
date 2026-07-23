@@ -1,0 +1,212 @@
+{
+  "schema": "kdebug-benchmark-artifact-manifest.v1",
+  "suite": "kdebug_tool_only_rerun_20260723",
+  "files": [
+    {
+      "path": "docx_out/benchmark_summary_report.docx",
+      "bytes": 42161,
+      "sha256": "ef0e744f9a5bf2e1f9d39958e96824d220248d43ff658e70992f23cfa56b1a00"
+    },
+    {
+      "path": "docx_out/gpt-5.5_benchmark_report.docx",
+      "bytes": 2193353,
+      "sha256": "67d3f4bbba4f4606836be475a1b0a93d8c595ebb73aaa4e8352e64272bf26e2e"
+    },
+    {
+      "path": "docx_out/qwen3.6-35b_benchmark_report.docx",
+      "bytes": 1420503,
+      "sha256": "c8343b60a6e9040a2d220be89d40e654ff7d9b1dcb701b726f1e37b207a02323"
+    },
+    {
+      "path": "matrix_api.log",
+      "bytes": 90428,
+      "sha256": "6a0df92022a1d0e3a499cb8edd6b4ea1a997fb91a7ed4834c3d1ec2b3fcb01af"
+    },
+    {
+      "path": "matrix_preflight_no_key.log",
+      "bytes": 3398,
+      "sha256": "184b687b62af839d5cacbf89e78891d467ab580d6f994ccb40da0683f12530eb"
+    },
+    {
+      "path": "matrix_selection_preflight.log",
+      "bytes": 14517,
+      "sha256": "7f64f2623be5a8996e36dd1159ec20a03b2accd126d8e631aed97892ca109e47"
+    },
+    {
+      "path": "results.csv",
+      "bytes": 31535,
+      "sha256": "a27dbb3e55425cb8cb2674f6d5bca90f8bdb8de393555962fbd852ece30ecd6e"
+    },
+    {
+      "path": "screenshots/case_001_gpt-5.5_with_kdebug.png",
+      "bytes": 165359,
+      "sha256": "00843ee07a8c60ea9669593d7b99bbb2ae1d9325cf7917bf9a7ae7cd11982a5b"
+    },
+    {
+      "path": "screenshots/case_001_qwen3.6-35b_with_kdebug.png",
+      "bytes": 166866,
+      "sha256": "0047a6a0fcb649b7f95e21eb51ebabfc3cafe29b654457711aa1208a345cd533"
+    },
+    {
+      "path": "screenshots/case_002_gpt-5.5_with_kdebug.png",
+      "bytes": 167853,
+      "sha256": "cfe9b033c168eb1ca51b118dd01caeb32e2a908797906d08d2fbd9318fd97bf1"
+    },
+    {
+      "path": "screenshots/case_002_qwen3.6-35b_with_kdebug.png",
+      "bytes": 95515,
+      "sha256": "e830bce5ac559a0fb9f2a15048952886ae59ce164af5ad78958845cb16189d21"
+    },
+    {
+      "path": "screenshots/case_003_gpt-5.5_with_kdebug.png",
+      "bytes": 167242,
+      "sha256": "87e814cb627c5516342ea8b5d6500e28de09d0d46c10677f17e1012c2cf9751c"
+    },
+    {
+      "path": "screenshots/case_003_qwen3.6-35b_with_kdebug.png",
+      "bytes": 168557,
+      "sha256": "966e1b197e5fceec50087e4858d2731ef95a8b9fe4461ede69c93b2f1d35844a"
+    },
+    {
+      "path": "screenshots/case_004_gpt-5.5_with_kdebug.png",
+      "bytes": 164339,
+      "sha256": "b15cbaf71a766457dcf5e16372d8f296685988d687aef484ae26b3b20f8482ca"
+    },
+    {
+      "path": "screenshots/case_004_qwen3.6-35b_with_kdebug.png",
+      "bytes": 165678,
+      "sha256": "b05f8fc7863d7008415535f862320eccf75548f2d83bf1dc32a4d562764da7ca"
+    },
+    {
+      "path": "screenshots/case_005_gpt-5.5_with_kdebug.png",
+      "bytes": 162411,
+      "sha256": "5d2402f012711d090329d59dd6e34a690dccf5894526bf28913a57020697df28"
+    },
+    {
+      "path": "screenshots/case_005_qwen3.6-35b_with_kdebug.png",
+      "bytes": 91763,
+      "sha256": "e6ce3e90b8a7761985558db23a866a75f24e54b7e514f812c7da210995fae412"
+    },
+    {
+      "path": "screenshots/case_006_gpt-5.5_with_kdebug.png",
+      "bytes": 137412,
+      "sha256": "f4b65ec39d9f45fa12a7ff971cbb16d925fc43393ef3dee1dbe68ca3a09eeeb5"
+    },
+    {
+      "path": "screenshots/case_006_qwen3.6-35b_with_kdebug.png",
+      "bytes": 61135,
+      "sha256": "47ce5f7f5176d6ee3e9592289c33152e5119ea046c7fd999a8562a66354bc899"
+    },
+    {
+      "path": "screenshots/case_007_gpt-5.5_with_kdebug.png",
+      "bytes": 149198,
+      "sha256": "d79cfbacfd8955992724a24e398fc4d5b724a9ed8725e4dc0df866fe0e2cf975"
+    },
+    {
+      "path": "screenshots/case_007_qwen3.6-35b_with_kdebug.png",
+      "bytes": 67154,
+      "sha256": "3954a518dd42d9ed5e6a46a3d2ff6f67d378f012b78f93a6583045def3fc8bb1"
+    },
+    {
+      "path": "screenshots/case_008_gpt-5.5_with_kdebug.png",
+      "bytes": 149108,
+      "sha256": "cfea1bd10c23dc0759bdbd537aef19dd8e832282fdffade440897a5889449c68"
+    },
+    {
+      "path": "screenshots/case_008_qwen3.6-35b_with_kdebug.png",
+      "bytes": 146382,
+      "sha256": "044ec2ff4dda6812b97fa7bec6c3a15e966e0747c230fa66e2303f050a4c7fd9"
+    },
+    {
+      "path": "screenshots/case_009_gpt-5.5_with_kdebug.png",
+      "bytes": 149784,
+      "sha256": "bc35419a3cd92177e746e530174f5be570f25d927e235ef20c53dc9b6ac197d8"
+    },
+    {
+      "path": "screenshots/case_009_qwen3.6-35b_with_kdebug.png",
+      "bytes": 63729,
+      "sha256": "640ac01074ad2c27e17893599c207336790b3a2e01faa75b121010efff52e881"
+    },
+    {
+      "path": "screenshots/case_010_gpt-5.5_with_kdebug.png",
+      "bytes": 157497,
+      "sha256": "3adeacfd3159aba781ba5854411bcda8eec48a38a5c02ca379c3833141c83b8d"
+    },
+    {
+      "path": "screenshots/case_010_qwen3.6-35b_with_kdebug.png",
+      "bytes": 29553,
+      "sha256": "1944c743b42680b59fbe4ec19d5ef631fada7a1ee283a7aa3bdae1f6a11b2ad8"
+    },
+    {
+      "path": "screenshots/case_011_gpt-5.5_with_kdebug.png",
+      "bytes": 142259,
+      "sha256": "3c5184631aee6e5b3fb8bf3d834eb7f948ea7abde8b0d36d322330fe0c18b6de"
+    },
+    {
+      "path": "screenshots/case_011_qwen3.6-35b_with_kdebug.png",
+      "bytes": 71881,
+      "sha256": "94166487cb3d640e04392d62ff97b97dd9d6dd65788c5f7bae5fd8a572584e85"
+    },
+    {
+      "path": "screenshots/case_012_gpt-5.5_with_kdebug.png",
+      "bytes": 165656,
+      "sha256": "5cd869a1ef987379976fd0ea6381e0b61b01fa063a0bcf6b137b2d368819c586"
+    },
+    {
+      "path": "screenshots/case_012_qwen3.6-35b_with_kdebug.png",
+      "bytes": 167231,
+      "sha256": "68ab6ae03fbc835573724187f21a082babb5365b62197b617dccff05f670d820"
+    },
+    {
+      "path": "screenshots/case_013_gpt-5.5_with_kdebug.png",
+      "bytes": 148958,
+      "sha256": "e06ab69712b027ecc2efeb683de0aff025dc38e5ca0caeb183130fdf09fa44f3"
+    },
+    {
+      "path": "screenshots/case_013_qwen3.6-35b_with_kdebug.png",
+      "bytes": 149222,
+      "sha256": "c3e8cb67e44cacd735db55854eaf0e7335c95f566a721f44cc989dbbb97b9f8f"
+    },
+    {
+      "path": "screenshots/case_014_gpt-5.5_with_kdebug.png",
+      "bytes": 167809,
+      "sha256": "b1e92ec56a8356a0cd167302b07a7afc9fcbcc7caeaae21808b58ae95b41ab29"
+    },
+    {
+      "path": "screenshots/case_014_qwen3.6-35b_with_kdebug.png",
+      "bytes": 81606,
+      "sha256": "d677bc89b5cae4c634387922073163241cd356abd3953c82b04b7c30f7642432"
+    },
+    {
+      "path": "screenshots/case_015_gpt-5.5_with_kdebug.png",
+      "bytes": 150675,
+      "sha256": "bfdf707184f4eb2b6f3ac0be229c326263d5b5d66b07aa685715e2aca79feb7c"
+    },
+    {
+      "path": "screenshots/case_015_qwen3.6-35b_with_kdebug.png",
+      "bytes": 83426,
+      "sha256": "3d89a38b9d79da4bf55d6f7db122f10effe4eee093d33d73718014156c14db67"
+    },
+    {
+      "path": "screenshots/case_016_gpt-5.5_with_kdebug.png",
+      "bytes": 105940,
+      "sha256": "7a711be77238df6d2a90bb97612444ae7c8445897e3de096e73dec89bdaa87eb"
+    },
+    {
+      "path": "screenshots/case_016_qwen3.6-35b_with_kdebug.png",
+      "bytes": 29652,
+      "sha256": "402f10cbabea222884ebbbced5257f8b245bb711c6b6cb0c4ac8264ac806c0a9"
+    },
+    {
+      "path": "summary.md",
+      "bytes": 8963,
+      "sha256": "6a0ac32e39e0792c28d459a1c660079ee0f5a130dfb47655c4f11cd22923391f"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 3908,
+      "sha256": "02430b8d1f60538a5a697692e6d780969fbf920caad3e1bd02dfa16287e1c208"
+    }
+  ],
+  "hash_basis": "git_blob_after_clean_filters"
+}

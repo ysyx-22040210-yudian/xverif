@@ -1,0 +1,96 @@
+===== MATRIX CONFIG models=gpt-5.5,qwen3.6-35b groups=with_kdebug evidence_mode=validate cases=case_001,case_002,case_003,case_004,case_005,case_012,case_014 =====
+===== KDEBUG EVIDENCE SUITE VALIDATION =====
+{
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "case_001",
+      "collection_id": "f74770e8-7f56-4286-a370-583ce436f8f6",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_handshake_window.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_001/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_002",
+      "collection_id": "888b43c9-d819-404e-bbf1-15028dc00430",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_first_bad_beat.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_002/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_003",
+      "collection_id": "ed87d8e4-bc59-41b4-8537-5b5ebdfbeecf",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_data_mismatch.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_003/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_004",
+      "collection_id": "f9d9226d-5db5-46bc-b1ce-e43dd0216624",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_decode_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_004/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_005",
+      "collection_id": "2de56ff8-bbf9-492c-99f1-32a0a31670ab",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_response_order.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_005/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_012",
+      "collection_id": "416f0f69-7dae-4a19-bec0-f2048cff83b1",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_012/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 1,
+      "successful_invocations": 1,
+      "valid": true
+    },
+    {
+      "case_id": "case_014",
+      "collection_id": "0bff7ff8-7c85-40de-b3d0-61c364c9e65b",
+      "errors": [],
+      "evidence_files": [
+        "kdebug_rtl_observation.json",
+        "kdebug_runtime_observation.json"
+      ],
+      "manifest": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723/case_014/evidence/with_kdebug/manifest.json",
+      "successful_diagnostic_invocations": 2,
+      "successful_invocations": 2,
+      "valid": true
+    }
+  ],
+  "errors": [],
+  "suite_root": "/home/host/kverif_runs/kdebug_tool_only_rerun_20260723",
+  "valid": true
+}
+ERROR: GPT55_API_KEY or OPENAI_API_KEY is required for gpt-5.5
